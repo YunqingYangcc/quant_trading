@@ -1,0 +1,81 @@
+{
+  "track_name": "storage",
+  "stock_codes": [
+    "002185.SZ",
+    "300223.SZ",
+    "600584.SH",
+    "603986.SH",
+    "688008.SH"
+  ],
+  "n_stocks": 5,
+  "train_rows": 15199,
+  "val_rows": 1452,
+  "test_rows": 3449,
+  "cv_mean_r2": -0.0136,
+  "cv_std_r2": 0.0112,
+  "train_r2": 0.0607,
+  "val_r2": -0.0512,
+  "test_r2": -0.0436,
+  "r2_gap": 0.1119,
+  "overfitting": false,
+  "params": {
+    "objective": "regression",
+    "metric": "mse",
+    "boosting_type": "gbdt",
+    "num_leaves": 8,
+    "max_depth": 4,
+    "min_child_samples": 50,
+    "min_child_weight": 10,
+    "learning_rate": 0.01,
+    "feature_fraction": 0.6,
+    "bagging_fraction": 0.7,
+    "bagging_freq": 3,
+    "n_estimators": 100,
+    "reg_alpha": 5.0,
+    "reg_lambda": 10.0,
+    "verbose": -1,
+    "random_state": 42
+  },
+  "top_features": [
+    {
+      "name": "track_storage_amihud_illiq",
+      "importance": 98
+    },
+    {
+      "name": "adx",
+      "importance": 91
+    },
+    {
+      "name": "track_storage_max_ret_5d",
+      "importance": 73
+    },
+    {
+      "name": "roc_60",
+      "importance": 68
+    },
+    {
+      "name": "sma_5",
+      "importance": 56
+    },
+    {
+      "name": "adx_neg",
+      "importance": 40
+    },
+    {
+      "name": "ret_skew_20",
+      "importance": 25
+    },
+    {
+      "name": "macd_hist",
+      "importance": 20
+    },
+    {
+      "name": "atr_5",
+      "importance": 20
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 17
+    }
+  ]
+}
