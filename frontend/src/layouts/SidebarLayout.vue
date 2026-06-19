@@ -1,47 +1,40 @@
 <template>
   <el-container class="app-container">
     <!-- 侧边栏 -->
-    <el-aside :width="isCollapse ? '56px' : '200px'" class="app-sidebar">
-      <div class="sidebar-header" @click="isCollapse = !isCollapse">
-        <div v-if="!isCollapse" class="logo-text">📈 Quant Trading</div>
-        <div v-else class="logo-text logo-collapsed">Q</div>
+    <el-aside width="200px" class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="logo-text">📈 Quant Trading @杨布拉德</div>
       </div>
 
       <el-menu
         :default-active="activeMenu"
-        :collapse="isCollapse"
-        :collapse-transition="false"
         router
       >
         <el-menu-item index="/">
           <el-icon><Monitor /></el-icon>
-          <template #title>Dashboard</template>
+          <template #title>
+            <span>🏠 总览</span>
+            <span class="menu-phase">Phase H</span>
+          </template>
         </el-menu-item>
-        <el-menu-item index="/data" disabled>
+        <el-menu-item index="/data">
           <el-icon><DataAnalysis /></el-icon>
-          <template #title>Data</template>
+          <template #title>
+            <span>📖 因子手册</span>
+            <span class="menu-phase">A-D</span>
+          </template>
         </el-menu-item>
-        <el-menu-item index="/train" disabled>
-          <el-icon><TrendCharts /></el-icon>
-          <template #title>Training</template>
-        </el-menu-item>
-        <el-menu-item index="/backtest" disabled>
+        <el-menu-item index="/backtest">
           <el-icon><Coin /></el-icon>
-          <template #title>Backtest</template>
+          <template #title>
+            <span>📊 回测</span>
+            <span class="menu-phase">Phase G</span>
+          </template>
         </el-menu-item>
       </el-menu>
 
       <div class="sidebar-footer">
         <div class="watermark">@杨布拉德</div>
-        <el-button
-          :icon="isCollapse ? 'Expand' : 'Fold'"
-          text
-          bg
-          size="small"
-          @click="isCollapse = !isCollapse"
-        >
-          <template #default v-if="!isCollapse">收起侧栏</template>
-        </el-button>
       </div>
     </el-aside>
 
@@ -49,11 +42,10 @@
     <el-container class="main-container">
       <el-header class="app-header" height="52px">
         <div class="header-left">
-          <el-icon @click="isCollapse = !isCollapse" class="collapse-btn"><Fold /></el-icon>
-          <span class="header-title">Quant Trading Terminal</span>
+          <span class="header-title">Quant Trading Terminal @杨布拉德</span>
         </div>
         <div class="header-right">
-          <span class="header-status">Phase A ✅</span>
+          <span class="header-status" :style="{ color: currentPhaseColor, background: currentPhaseBg }">{{ currentPhase }}</span>
         </div>
       </el-header>
       <el-main class="app-main">
@@ -64,13 +56,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, DataAnalysis, TrendCharts, Coin, Fold } from '@element-plus/icons-vue'
+import { Monitor, DataAnalysis, Coin } from '@element-plus/icons-vue'
 
 const route = useRoute()
-const isCollapse = ref(false)
 const activeMenu = computed(() => route.path)
+
+const currentPhase = computed(() => {
+  const phases: Record<string, { label: string; color: string; bg: string }> = {
+    '/': { label: '🏠 赛道总览', color: '#3b82f6', bg: '#eff6ff' },
+    '/data': { label: '📖 因子手册', color: '#22c55e', bg: '#f0fdf4' },
+    '/backtest': { label: '📊 回测', color: '#8b5cf6', bg: '#f5f3ff' },
+  }
+  return phases[route.path]?.label || '🎯 Track: ' + (route.path.split('/track/')[1] || '')
+})
+
+const currentPhaseColor = computed(() => {
+  const phases: Record<string, string> = {
+    '/': '#3b82f6', '/data': '#22c55e', '/backtest': '#8b5cf6',
+  }
+  return phases[route.path] || '#8b5cf6'
+})
+
+const currentPhaseBg = computed(() => {
+  const phases: Record<string, string> = {
+    '/': '#eff6ff', '/data': '#f0fdf4', '/backtest': '#f5f3ff',
+  }
+  return phases[route.path] || '#f5f3ff'
+})
 </script>
 
 <style scoped>
@@ -84,7 +98,6 @@ const activeMenu = computed(() => route.path)
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   box-shadow: 1px 0 8px rgba(0, 0, 0, 0.12);
   position: relative;
@@ -96,13 +109,7 @@ const activeMenu = computed(() => route.path)
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  transition: all 0.3s;
-}
-
-.sidebar-header:hover {
-  background: rgba(255, 255, 255, 0.03);
 }
 
 .logo-text {
@@ -112,12 +119,6 @@ const activeMenu = computed(() => route.path)
   letter-spacing: 0.5px;
   white-space: nowrap;
   overflow: hidden;
-  transition: opacity 0.3s;
-}
-
-.logo-collapsed {
-  font-size: 22px;
-  letter-spacing: 0;
 }
 
 /* ── 菜单覆盙 ── */
@@ -136,6 +137,25 @@ const activeMenu = computed(() => route.path)
   color: rgba(255, 255, 255, 0.55);
   font-size: 14px;
   transition: all 0.25s ease;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-sidebar :deep(.el-menu-item .menu-phase) {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 6px;
+  margin-left: 6px;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.app-sidebar :deep(.el-menu-item.is-active .menu-phase) {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .app-sidebar :deep(.el-menu-item:hover) {
@@ -160,17 +180,7 @@ const activeMenu = computed(() => route.path)
   margin-right: 8px;
 }
 
-/* 折叠状态菜单居中 */
-.app-sidebar :deep(.el-menu--collapse .el-menu-item) {
-  padding: 0 !important;
-  text-align: center;
-}
-
-.app-sidebar :deep(.el-menu--collapse .el-menu-item .el-icon) {
-  margin-right: 0;
-}
-
-/* ── 底部按钮 + 水印 ── */
+/* ── 底部水印 ── */
 .sidebar-footer {
   margin-top: auto;
   padding: 12px 10px;
@@ -181,22 +191,8 @@ const activeMenu = computed(() => route.path)
   text-align: center;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.2);
-  margin-bottom: 8px;
   font-weight: 500;
   letter-spacing: 0.5px;
-  transition: opacity 0.3s;
-}
-
-.sidebar-footer :deep(.el-button) {
-  width: 100%;
-  color: rgba(255, 255, 255, 0.45);
-  border-radius: 6px;
-  transition: all 0.25s;
-}
-
-.sidebar-footer :deep(.el-button:hover) {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.06);
 }
 
 /* ── 主内容区 ── */
@@ -219,20 +215,6 @@ const activeMenu = computed(() => route.path)
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.collapse-btn {
-  font-size: 18px;
-  cursor: pointer;
-  color: #94a3b8;
-  transition: all 0.2s;
-  border-radius: 4px;
-  padding: 4px;
-}
-
-.collapse-btn:hover {
-  color: #3b82f6;
-  background: #f1f5f9;
 }
 
 .header-title {

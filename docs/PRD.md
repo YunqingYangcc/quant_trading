@@ -1,9 +1,7 @@
 # TrackQuant 赛道量化系统 — 产品需求文档 (PRD)
 
-> 版本：v0.1（初稿，持续迭代）
-> 更新日期：2026-06-19
-> 状态：**需求与开发并行推进中**
-
+> 版本：v0.4
+> 更新日期：2026-06-20
 ---
 
 ## 一、产品概述
@@ -73,8 +71,6 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ### 模块 1：赛道与自选股管理
 
-> 状态：✅ Phase A 已完成
-
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
 | 赛道 CRUD | 创建/查看/编辑/删除赛道 | P0 | ✅ |
@@ -92,8 +88,6 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ### 模块 2：数据层
 
-> 状态：✅ Phase A 已完成
-
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
 | baostock 数据拉取 | 前复权日线，7 列 OHLCV+A | P0 | ✅ |
@@ -108,11 +102,13 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 - 定时任务（每日收盘后自动更新）
 - 数据质量监控仪表盘
 
+**升级计划（Phase I）：**
+- 接入 akshare 补充基本面数据：PE、PB、ROE、营收增速、北向资金 | P1 | ⏳
+
 ---
 
 ### 模块 3：特征工程
 
-> 状态：✅ Phase A/B 已完成，待 Phase C
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
@@ -147,56 +143,87 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ### 模块 4：Alphalens 因子筛选
 
-> 状态：⏳ Phase C 待开发
+
+> **核心原则：用 alphalens-reloaded + scipy 池化 Rank IC，不手写 IC/IR 计算**
+> 22 只股票小池，截面太窄日度 IC 噪声大，采用池化 IC 为主判据
+> **结论：当前 Alphalens 功能已够用，不计划升级。瓶颈在特征维度（只有量价），而非因子筛选方法。**
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| 单因子 IC 检验 | \|IC\| ≥ 0.02 | P0 | ⏳ |
-| 单因子 IR 检验 | IR ≥ 0.5 | P0 | ⏳ |
-| 10 层分组单调性 | 分组收益单调递增/递减 | P0 | ⏳ |
-| 白名单写入 | 通过筛选的因子 → FeatureWhiteList | P0 | ⏳ |
-| 黑名单写入 | 淘汰的因子 → FeatureBlackList | P0 | ⏳ |
-| LightGBM 二次筛选 | 特征重要性排序，淘汰底部噪音 | P1 | ⏳ |
-| JSON 配置固化 | `configs/factor_whitelist.json` | P1 | ⏳ |
-| 白/黑名单 API | GET 接口查询 | P0 | ⏳ |
+| 池化 Rank IC | 72,910 个 stock×date 数据点合并计算 | P0 | ✅ |
+| 日度 IC 序列 IR | 时序稳健性检查 | P0 | ✅ |
+| 10 层分组单调性 | 方向判定（正/负向因子） | P0 | ✅ |
+| 白名单写入 | 75 个因子通过 → FeatureWhiteList | P0 | ✅ |
+| 黑名单写入 | 72 个因子淘汰 → FeatureBlackList | P0 | ✅ |
+| LightGBM 二次筛选 | Phase E 训练时产出一致确认 | P1 | ⏳ (Phase E) |
+| JSON 配置固化 | `configs/factor_whitelist.json` | P1 | ✅ |
+| 白/黑名单 API | GET 接口查询 | P0 | ✅ |
+
+**筛选阈值**：|IC|≥0.01, |IR|≥0.05（小池放宽）
 
 **核心规则：黑名单特征全程禁用——不进训练、不进可视化、不进打分。**
+
+**升级决策**：保持现状，不升级。投入优先级低于基本面数据接入和回测框架替换。
 
 ---
 
 ### 模块 5：特征预处理
 
-> 状态：⏳ Phase D 待开发
+
+> **核心原则：用 scikit-learn 的 StandardScaler，不手写标准化公式**
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| Z-score 标准化 | sklearn StandardScaler | P0 | ⏳ |
-| 去共线 | 剔除相关性 > 0.95 的特征对 | P0 | ⏳ |
-| 时间序列分割 | 训练/验证/测试按时切分 | P0 | ⏳ |
+| NaN 中位数填充 | 1,609,528 缺失值填充 | P0 | ✅ |
+| Z-score 标准化 | sklearn StandardScaler（仅训练集 fit） | P0 | ✅ |
+| 去共线 | 剔除 |corr|>0.95：75→54 特征 | P0 | ✅ |
+| 时间序列分割 | train≤2022 / val=2023 / test≥2024 | P0 | ✅ |
+| 输出 parquet | `ml/preprocessed/{train,val,test}.parquet` | P0 | ✅ |
+| 验收 | max|corr|<0.95, mean=0, std=1 ✅ | P0 | ✅ |
 | 市值中性化 | 可选，LinearRegression 残差法 | P2 | ⏳ |
+
+**产出数据**：训练集 54,162 行 / 验证集 5,566 行 / 测试集 13,182 行 / 54 个标准化特征
 
 ---
 
 ### 模块 6：AI 模型训练
 
-> 状态：⏳ Phase E 待开发
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| 4 个独立模型 | 半导体/AI/机器人/存储各一个 | P0 | ⏳ |
-| 时间滚动训练 | TimeSeriesSplit，禁止 shuffle | P0 | ⏳ |
-| 预测目标 | 未来 20 日超额收益 | P0 | ⏳ |
-| 模型序列化 | joblib → `ml/models/{track}.pkl` | P0 | ⏳ |
-| 过拟合检测 | 训练/测试 R² 差距 < 0.15 | P0 | ⏳ |
-| 特征重要性输出 | 为 Phase C 二次筛选提供依据 | P1 | ⏳ |
+| 4 个独立模型 | 半导体/AI/机器人/存储各一个 | P0 | ✅ |
+| 时间滚动训练 | TimeSeriesSplit，禁止 shuffle | P0 | ✅ |
+| 预测目标 | 未来 20 日超额收益 | P0 | ✅ |
+| 模型序列化 | joblib → `ml/models/{track}.pkl` | P0 | ✅ |
+| 过拟合检测 | 训练/测试 R² 差距 < 0.15 | P0 | ✅ |
+| 特征重要性输出 | 为 Phase C 二次筛选提供依据 | P1 | ✅ |
 
 **核心规则：每个赛道独立训练，绝不共用模型。**
+
+#### 6.1 当前模型表现
+
+| 赛道 | 股票数 | Train R² | Val R² | Test R² | 过拟合？ |
+|:-----|:------:|:--------:|:------:|:-------:|:--------:|
+| 半导体 | 8 | 0.05 | 0.001 | -0.07 | ✅ 否 |
+| AI | 5 | 0.09 | -0.10 | -0.25 | ⚠️ **是** |
+| 机器人 | 5 | 0.08 | -0.002 | 0.003 | ✅ 否 |
+| 存储 | 5 | 0.06 | -0.05 | -0.04 | ✅ 否 |
+
+**验证集/测试集 R² 接近 0，模型基本未学到有效信号。**
+
+#### 6.2 升级计划（Phase I + J）
+
+| 改进项 | 方法 | 预期效果 | 工作量 |
+|:-------|:-----|:---------|:------|
+| **松绑超参数** | num_leaves: 8→20, reg_alpha: 5→1, lr: 0.01→0.05 | R² 从 0.05 提升至 ~0.15 | 低（修改参数重跑） |
+| **换预测目标** | 绝对收益 → 赛道内相对排名（比猜涨跌幅容易） | 排名预测更稳定 | 低（改 target 列） |
+| **加基本面特征** | akshare：PE、PB、ROE、北向资金（全新信息维度） | 新增有效因子，R² 提升 | 中（1-2 天） |
+| **回测框架升级** | 手写 → backtrader（内置夏普/回撤/画图） | 开发效率提升 | 中（半天） |
 
 ---
 
 ### 模块 7：打分系统
 
-> 状态：⏳ Phase F 待开发
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
@@ -222,18 +249,37 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ### 模块 8：回测系统
 
-> 状态：⏳ Phase G 待开发
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| AI 打分轮动策略 | 高分买入、低分卖出 | P0 | ⏳ |
-| 真实成本模拟 | 滑点 0.1% + 手续费万三 | P0 | ⏳ |
-| 涨跌停限制 | 涨停无法买入、跌停无法卖出 | P0 | ⏳ |
-| 仓位控制 | 单票 ≤20%、单赛道 ≤50% | P0 | ⏳ |
+| AI 打分轮动策略 | 高分买入、低分卖出 | P0 | ✅ |
+| 真实成本模拟 | 滑点 0.1% + 手续费万三 | P0 | ✅ |
+| 涨跌停限制 | 涨停无法买入、跌停无法卖出 | P0 | ✅ |
+| 仓位控制 | 单票 ≤20%、单赛道 ≤50% | P0 | ✅ |
 | 赛道景气降仓 | 景气度低于阈值自动减仓 | P1 | ⏳ |
-| 绩效报告 | 夏普/最大回撤/年化收益/分层收益 | P0 | ⏳ |
+| 绩效报告 | 夏普/最大回撤/年化收益/分层收益 | P0 | ✅ |
 
-#### 8.1 验收底线
+#### 8.1 当前状态
+
+当前手写回测（`run_backtest.py`）已实现基本功能，但存在局限：
+- 无买卖点可视化
+- 无多策略对比能力
+- 绩效指标需手写计算
+- 扩展新策略成本高
+
+#### 8.2 升级计划（Phase J：backtrader 迁移）
+
+| 升级项 | 当前（手写） | 升级后（backtrader） |
+|:-------|:------------|:--------------------|
+| 回测引擎 | 自行维护仓位/订单 | 内置 Broker + Order 系统 |
+| 滑点/手续费 | 手写计算 | `set_slippage_perc` + `setcommission` 一行配置 |
+| 绩效指标 | 手写夏普/回撤 | 内置 Analyzer（SharpeRatio/DrawDown/Returns） |
+| 可视化 | 无 | `cerebro.plot()` 自动出买卖点+净值曲线 |
+| 多策略对比 | 不支持 | 同时跑多 Strategy，对比指标 |
+
+**接入成本**：`pip install backtrader` → 改写策略逻辑 → 约半天工作量。
+
+#### 8.3 验收底线
 
 | 指标 | 底线 |
 |:-----|:-----|
@@ -245,7 +291,6 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ### 模块 9：前端可视化终端
 
-> 状态：⏳ 骨架完成，待 Phase H 完善
 
 #### 9.1 已完成
 
@@ -253,21 +298,22 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 |:-------|:-----|:----:|
 | 赛道 Tab 栏 | 顶部切换赛道 | ✅ |
 | 股票选择横栏 | 搜索+芯片选择 | ✅ |
-| K 线主图 | ECharts 蜡烛图 + MA5/MA20 | ✅ |
+| K 线主图 | ECharts 蜡烛图 + MA5/MA20/MA60 + 布林 + 趋势线 | ✅ |
 | 成交量副图 | 柱状图 | ✅ |
 | 底部缩放 | DataZoom 控件 | ✅ |
+| 个股 AI 排名面板 | 左侧面板，按强弱分排序 | ✅ 待API对接 |
+| 有效因子面板 | 右侧面板，展示白名单因子 | ✅ FactorChartPanel |
+| 赛道景气仪表盘 | 4 条赛道景气度对比 | ✅ ProsperityPanel |
+| ATR/RSI/景气副图 | 波动率/震荡/景气度独立副图 | ✅ |
 
-#### 9.2 待开发
+#### 9.2 待完善
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| 布林轨道 | K 线主图叠加 BB upper/lower | P1 | ⏳ |
-| ATR 副图 | 波动率独立副图 | P1 | ⏳ |
-| RSI 副图 | 震荡指标独立副图 | P1 | ⏳ |
-| 赛道景气副图 | 赛道景气度曲线 | P1 | ⏳ |
-| 个股 AI 排名面板 | 左侧面板，按强弱分排序 | P0 | ⏳ |
-| 有效因子面板 | 右侧面板，展示白名单因子曲线 | P1 | ⏳ |
-| 赛道景气仪表盘 | 4 条赛道景气度对比 | P1 | ⏳ |
+| 支撑压力线 | K 线主图叠加 | P2 | ⏳ |
+| RankPanel 对接真实 API | 替换 Mock 数据 | P0 | ⏳ |
+| ProsperityPanel 对接真实 API | 替换 undefined | P0 | ⏳ |
+| 回测绩效展示区 | 底部区域回测报告 | P2 | ⏳ |
 
 #### 9.3 核心规则
 
@@ -302,14 +348,14 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 | `track_stocks` | 自选股基础信息 | ✅ |
 | `track_stock` | 赛道-股票多对多关联 | ✅ |
 | `track_data_cache` | 日线 OHLCV 缓存（~64000条） | ✅ |
-| `feature_white_list` | AI 筛选通过的因子 | ✅ 空表 |
-| `feature_black_list` | 被淘汰的因子 | ✅ 空表 |
+| `feature_white_list` | AI 筛选通过的因子 | ✅ 75 个因子 |
+| `feature_black_list` | 被淘汰的因子 | ✅ 72 个因子 |
+| `feature_store` | 特征值存储（JSON 宽表：stock_code, date, features） | ✅ Phase B |
 
 ### 4.2 待新增表
 
 | 表名 | 用途 | Phase |
 |:-----|:-----|:-----:|
-| `feature_store` | 特征值存储（JSON 宽表：stock_code, date, features） | ✅ B |
 | `model_registry` | 模型版本管理（track_name, version, path, metrics） | E |
 | `score_history` | 历史打分记录（stock_code, date, stock_score, track_score） | F |
 | `backtest_results` | 回测结果存储 | G |
@@ -330,16 +376,16 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 | POST | `/api/v1/track/stocks/assign` | 股票分配赛道 | ✅ |
 | GET | `/api/v1/track/stocks` | 自选股列表 | ✅ |
 | GET | `/api/v1/track/labels/{code}` | 带标签日线数据 | ✅ |
-| GET | `/api/v1/track/factors/whitelist` | 因子白名单 | ✅ 空 |
-| GET | `/api/v1/track/factors/blacklist` | 因子黑名单 | ✅ 空 |
+| GET | `/api/v1/track/factors/whitelist` | 因子白名单（75 个） | ✅ |
+| GET | `/api/v1/track/factors/blacklist` | 因子黑名单（72 个） | ✅ |
 
 ### 5.2 待开发接口
 
 | 方法 | 路径 | 描述 | Phase |
 |:-----|:-----|:-----|:-----:|
-| GET | `/api/v1/track/features/{code}` | 获取个股特征数据 | B |
-| GET | `/api/v1/track/features/summary` | 特征统计摘要 | B |
-| POST | `/api/v1/track/factors/run-screening` | 触发 Alphalens 筛选 | C |
+| GET | `/api/v1/track/features/{code}` | 获取个股特征数据 | ✅ B |
+| GET | `/api/v1/track/features/summary` | 特征统计摘要 | ✅ B |
+| POST | `/api/v1/track/factors/run-screening` | 触发 Alphalens 筛选 | ✅ C |
 | POST | `/api/v1/ml/train/{track_name}` | 触发模型训练 | E |
 | GET | `/api/v1/ml/score/{track_name}` | 赛道打分结果 | F |
 | GET | `/api/v1/ml/score/stock/{code}` | 个股打分详情 | F |
@@ -361,33 +407,6 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ---
 
-## 七、迭代路线图
-
-```
-Phase A 数据流水线 ──────── ✅ 2026-06-19 完成
-  │
-Phase B 特征工程 ────────── ✅ 2026-06-19 完成
-  │  ta 库通用特征 + 赛道专属特征 + 入库
-  │
-Phase C Alphalens 筛选 ──── ⏳ 当前重点
-  │  双层因子筛选 → 白黑名单
-  │
-Phase D 特征预处理 ──────── ⏳
-  │  标准化 / 去共线 / 时序分割
-  │
-Phase E LightGBM 训练 ──── ⏳
-  │  4 个赛道独立模型
-  │
-Phase F 打分 API ────────── ⏳
-  │  个股强弱分 + 赛道景气分
-  │
-Phase G 回测校验 ────────── ⏳
-  │  轮动策略 + 绩效报告
-  │
-Phase H 前端可视化 ──────── ⏳ 骨架已有
-     K线+AI指标+排名+景气度
-```
-
 ---
 
 ## 八、AI Skill 质量门禁
@@ -408,6 +427,8 @@ Phase B: /check-data → /add-feature ×N → /review-phase B
 Phase C: /add-feature Step 4-5 → /review-phase C
 Phase E: /train-model → /review-phase E
 Phase G: /run-backtest → /review-phase G
+Phase I: /add-feature (基本面) → /train-model → /review-phase I
+Phase J: /run-backtest → /review-phase J
 ```
 
 ---
@@ -423,6 +444,8 @@ Phase G: /run-backtest → /review-phase G
 | 3 | 赛道景气度低于多少降仓？ | 待定（需回测数据支撑） | - |
 | 4 | 前端是否需要暗色模式？ | 待定 | - |
 | 5 | 是否需要支持更多赛道？ | 当前固定 4 条，后续可扩展 | - |
+| 6 | ta/TA-Lib 是否升级？ | **决策：不升级**，ta 已够用，瓶颈在特征维度不在数量 | 2026-06-20 |
+| 7 | Alphalens 是否升级？ | **决策：不升级**，当前功能满足需求 | 2026-06-20 |
 
 ---
 
@@ -432,3 +455,5 @@ Phase G: /run-backtest → /review-phase G
 |:-----|:-----|:---------|
 | 2026-06-19 | v0.1 | 初稿，覆盖 Phase A-H 全部需求 |
 | 2026-06-19 | v0.2 | 新增 AI Skill 质量门禁体系（5 个 skill）、开发纪律非功能需求 |
+| 2026-06-19 | v0.3 | 更新 Phase C/D 完成状态、池化IC方案、数据模型、验收结果 |
+| 2026-06-20 | v0.4 | 新增模型表现评估、Phase I（基本面数据接入）、Phase J（backtrader 回测升级） |

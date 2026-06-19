@@ -7,3 +7,10 @@ dist/
 .venv/
 venv/
 *.egg-info/
+
+# 模型文件
+*.pkl
+
+# 回测输出 & 数据文件
+*.csv
+*.parquet

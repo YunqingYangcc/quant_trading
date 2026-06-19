@@ -1,0 +1,11 @@
+{
+  "initial_capital": 100000,
+  "final_value": 70906.9,
+  "total_return": -29.09,
+  "annual_return": -39.22,
+  "annual_volatility": 99.3,
+  "sharpe_ratio": 0.18,
+  "max_drawdown": -60.27,
+  "win_rate": 46.24,
+  "total_trades": 173
+}

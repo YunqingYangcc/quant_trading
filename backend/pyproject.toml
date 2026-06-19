@@ -17,9 +17,14 @@ dependencies = [
     "alphalens-reloaded>=0.4.0",
     "scipy>=1.10.0",
     "scikit-learn>=1.3.0",
+    "lightgbm>=4.0.0",
     "pyarrow>=14.0.0",
+    "joblib>=1.3.0",
     "greenlet>=3.0.0",
 ]
+
+[tool.setuptools.packages.find]
+include = ["app*", "ml*"]
 
 [build-system]
 requires = ["setuptools>=68.0"]

@@ -77,10 +77,18 @@ export function getTrackScore(trackName: string) {
   return request.get(`/ml/score/${trackName}`)
 }
 
-export function listTrackModels(trackName: string) {
-  return request.get(`/ml/models/${trackName}`)
+export function getAllTrackScores() {
+  return request.get('/ml/score/all')
 }
 
 export function trainTrackModel(trackName: string) {
   return request.post(`/ml/train/${trackName}`)
+}
+
+export function trainAllModels() {
+  return request.get('/ml/train/all')
+}
+
+export function listTrackModels(trackName: string) {
+  return request.get(`/ml/models/${trackName}`)
 }

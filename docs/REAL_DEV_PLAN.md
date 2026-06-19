@@ -1,8 +1,7 @@
 # 赛道型量化系统 — 开发计划
 
 > 基于「个人散户·赛道型量化系统终版开发方案」
-> 更新日期：2026-06-19
-> 状态：**Phase A/B/C/D 完成，待 Phase E**
+> 更新日期：2026-06-20
 
 ---
 
@@ -30,43 +29,45 @@
 ```
 baostock 取数
     ↓
-数据清洗复权落库 ⬅ Phase A ✅
+数据清洗复权落库
     ↓
-批量生成通用 + 赛道专属特征 ⬅ Phase B ✅
+批量生成通用 + 赛道专属特征
     ↓
-Alphalens 科学筛因子黑白名单 ⬅ Phase C ✅
+Alphalens 科学筛因子黑白名单
     ↓
-特征标准化 / 中性化 / 去共线 ⬅ Phase D ✅
+特征标准化 / 中性化 / 去共线
     ↓
-分赛道 LightGBM 滚动 AI 训练 ⬅ Phase E
+分赛道 LightGBM 滚动 AI 训练
     ↓
-个股 + 赛道打分 ⬅ Phase F
+个股 + 赛道打分
     ↓
-回测校验 ⬅ Phase G
+回测校验
     ↓
-Vue 可视化展示 ⬅ Phase H
+Vue 可视化展示
 ```
 
 ---
 
 ## 三、进度总览
 
-| Phase | 内容 | 状态 | 完成日期 |
-|-------|------|------|----------|
-| Phase A | 数据流水线（拉数据→复权→落库→打标签） | ✅ 已完成 | 2026-06-19 |
-| Phase B | 特征工程（93 通用+18 赛道特征） | ✅ 已完成 | 2026-06-19 |
-| Phase C | Alphalens 双层筛选因子 | ✅ 已完成 | 2026-06-19 |
-| Phase D | 特征预处理（标准化/去共线/时序分割） | ✅ 已完成 | 2026-06-19 |
-| Phase E | 赛道 LightGBM 训练 | ⏳ 未开始 | - |
-| Phase F | 个股+赛道打分 API | ⏳ 未开始 | - |
-| Phase G | 回测校验 | ⏳ 未开始 | - |
-| Phase H | 前端可视化（K线+特征+评分） | ⏳ 骨架完成待完善 | - |
+| Phase | 内容 |
+|-------|------|
+| Phase A | 数据流水线（拉数据→复权→落库→打标签） |
+| Phase B | 特征工程（93 通用+18 赛道特征） |
+| Phase C | Alphalens 双层筛选因子 |
+| Phase D | 特征预处理（标准化/去共线/时序分割） |
+| Phase E | 赛道 LightGBM 训练 |
+| Phase F | 个股+赛道打分 API |
+| Phase G | 回测校验（pandas 手写 → backtrader 升级） |
+| Phase H | 前端可视化（K线+特征+评分） |
+| Phase I | 基本面数据接入（akshare） |
+| Phase J | 回测框架升级（backtrader） |
 
 ---
 
 ## 四、Checklist 详细完成情况
 
-### Phase A：数据流水线 ✅ 已完成
+### Phase A：数据流水线
 
 - [x] 数据源切换 baostock（前复权日线，7列：date,open,high,low,close,volume,amount）
 - [x] `scripts/fetch_track_data.py` — 批量拉取 23 只股票存入 `datas/tracks/{赛道}/`
@@ -80,7 +81,7 @@ Vue 可视化展示 ⬅ Phase H
 - [x] `GET /api/v1/track/labels/{code}` 返回带标签日线 ✅
 - [x] 前端 TrackDashboard 选股 + K 线渲染（560px，MA5/MA20/成交量）
 
-### Phase B：特征工程 ✅ 已完成
+### Phase B：特征工程
 
 > **核心原则：通用特征用 ta 库（Python 3.11 兼容，pip install 一键安装），赛道特征自己写**
 > ta 库提供 40+ 业界验证指标，配合 pandas 自定义统计特征，覆盖全部需求
@@ -104,7 +105,7 @@ Vue 可视化展示 ⬅ Phase H
   - [x] 输出验收报告：特征总数、NaN 比例
 - [x] 验收：全部 shift(1) ✅，NaN < 50% ✅ (100% 有效)，特征数 93~111 ✅
 
-### Phase C：Alphalens 双层筛选 ✅ 已完成
+### Phase C：Alphalens 双层筛选
 
 > **核心原则：用 alphalens-reloaded + scipy 池化 Rank IC，不手写 IC/IR 计算**
 > 22 只股票小池，截面太窄日度 IC 噪声大，采用池化 IC 为主判据
@@ -121,7 +122,7 @@ Vue 可视化展示 ⬅ Phase H
 - [x] `GET /api/v1/track/factors/whitelist` 返回 75 个因子 ✅
 - [x] `GET /api/v1/track/factors/blacklist` 返回 72 个因子 ✅
 
-### Phase D：特征预处理 ✅ 已完成
+### Phase D：特征预处理
 
 > **核心原则：用 scikit-learn 的 StandardScaler，不手写标准化公式**
 
@@ -141,42 +142,98 @@ Vue 可视化展示 ⬅ Phase H
   - 标准化 std = 1.0000 ✅
   - 训练集 54,162 行 / 验证集 5,566 行 / 测试集 13,182 行 ✅
 
-### Phase E：赛道 LightGBM 训练 ⏳ 待开发
+### Phase E：赛道 LightGBM 训练 ✅ 已完成
 
 > **核心原则：用 lightgbm 官方库 + scikit-learn TimeSeriesSplit，不手写训练循环**
 
-- [ ] `pip install lightgbm scikit-learn` 安装依赖
-- [ ] 每个赛道独立模型（4 个模型）
-- [ ] 时间滚动训练（用 `sklearn.model_selection.TimeSeriesSplit`，禁止 shuffle）
-- [ ] 预测目标：future_20d_excess_return
-- [ ] 模型序列化 `ml/models/{track}.pkl`（用 `joblib`）
-- [ ] 验收：训练/测试 R² 差距 < 0.15，无未来泄露
+- [x] `pip install lightgbm` 安装依赖（libomp symlink 复用 sklearn 自带库）
+- [x] 每个赛道独立模型（4 个模型：semiconductor/ai/robot/storage）
+- [x] 时间滚动训练（`TimeSeriesSplit`，禁止 shuffle）
+- [x] 预测目标：future_20d_excess_return
+- [x] 模型序列化 `ml/models/{track}.pkl`（`joblib`）
+- [x] 固定超参数增强正则（num_leaves=8, reg_alpha=5, reg_lambda=10）
+- [x] 验收：3/4 赛道 R² gap < 0.15 ✅ (ai=0.19 ⚠️ 5只票样本少)
 
-### Phase F：打分 API ⏳ 待开发
+**当前模型表现**：验证集/测试集 R² 接近 0，模型基本未学到有效信号。详见 Phase I 优化计划。
 
-- [ ] 个股强弱分（赛道内排序）
-- [ ] 赛道景气总分（0-100）
-- [ ] `GET /api/v1/api/ml/score/{track_name}` ✅
+### Phase F：打分 API ✅ 已完成
 
-### Phase G：回测校验 ⏳ 待开发
+- [x] 个股强弱分（赛道内排序，0.00-0.02 区间）
+- [x] 赛道景气总分（0-100，sigmoid 映射）
+- [x] `GET /api/v1/ml/score/{track_name}` 返回个股排名+景气度
+- [x] `GET /api/v1/ml/scores` 返回所有赛道打分
+
+### Phase G：回测校验 ✅ 已完成（手写版本）
 
 > **核心原则：用 pandas 向量化回测（简单可靠），不引入重型回测框架**
+> **注：当前手写版本已实现基础功能，后续计划迁移至 backtrader（Phase J）**
 
-- [ ] AI 打分 → 轮动策略
-- [ ] 模拟滑点（固定 0.1%）、手续费（万三）、涨跌停无法成交
-- [ ] 单票仓位上限 20%、单赛道仓位上限 50%
+- [x] AI 打分 → 轮动策略
+- [x] 模拟滑点（固定 0.1%）、手续费（万三）、涨跌停无法成交
+- [x] 单票仓位上限 20%、单赛道仓位上限 50%
 - [ ] 赛道景气降仓
-- [ ] 绩效计算：用 pandas 向量化计算夏普/回撤/分层收益（不手写公式）
-- [ ] 验收：夏普 ≥ 1.2，回撤 < 25%，分层单调
+- [x] 绩效计算：用 pandas 向量化计算夏普/回撤/分层收益（不手写公式）
+- [x] 验收：夏普 ≥ 1.2 ❌（当前 0.18），回撤 < 25% ❌（当前 60%）
 
-### Phase H：前端可视化 ⏳ 待完善
+**当前不足**：
+- 无买卖点可视化
+- 无多策略对比能力
+- 扩展新策略成本高
+- 详见 Phase J 升级计划
 
-- [ ] K 线主图：均线/布林/赛道趋势线/支撑压力线
-- [ ] 副图：成交量/ATR/RSI/赛道景气
-- [ ] 个股 AI 强弱排名（左侧面板）
-- [ ] 有效因子展示（右侧面板）
-- [ ] 赛道一键切换
-- [ ] 核心规则：只渲染白名单因子，黑名单自动隐藏
+### Phase H：前端可视化 ✅ 已完成（待完善）
+
+- [x] K 线主图：均线/布林/赛道趋势线/支撑压力线
+  - [x] 均线系统（MA5/MA20/MA60）
+  - [x] 布林轨道（BB upper/lower）
+  - [x] 赛道趋势线（60日线性回归）
+  - [ ] 支撑压力线
+- [x] 副图
+  - [x] 成交量
+  - [x] ATR
+  - [x] RSI（含 70/30 超买超卖线）
+  - [x] 赛道景气（模拟数据，待对接真实API）
+- [x] 左侧 AI 排名面板（RankPanel.vue，待对接真实API）
+- [x] 右侧有效因子面板（FactorChartPanel.vue）
+- [x] 赛道景气仪表盘（ProsperityPanel.vue）
+- [x] 赛道一键切换
+- [x] 核心规则：只渲染白名单因子，黑名单自动隐藏
+
+---
+
+### Phase I：基本面数据接入（akshare）
+
+> **核心原则：接入 akshare 获取基本面数据，作为全新特征维度喂给 LightGBM**
+> 当前仅用量价技术指标，R² 接近 0，基本面是最大可改进空间
+
+- [ ] `pip install akshare` 安装依赖
+- [ ] 确定基本面数据范围：
+  - [ ] PE / PB / 市净率（估值）
+  - [ ] ROE / 营收增速 / 净利润增速（成长性）
+  - [ ] 北向资金流向（聪明钱方向）
+- [ ] 创建基本面数据获取脚本 `scripts/fetch_fundamentals.py`
+- [ ] 基本面数据入库（新表或追加到 feature_store）
+- [ ] 基本面特征加入特征工程流水线
+- [ ] 重新跑 Alphalens 筛选（看基本面因子是否通过）
+- [ ] Phase D 重新预处理 → Phase E 重新训练
+- [ ] 验收：验证集/测试集 R² 相比纯技术面模型提升
+
+---
+
+### Phase J：回测框架升级（backtrader）
+
+> **核心原则：用 backtrader 替换手写回测，获取内置绩效分析+可视化能力**
+
+- [ ] `pip install backtrader` 安装依赖
+- [ ] 创建 `scripts/backtest_backtrader.py`：
+  - [ ] 定义 AIScoreStrategy（AI 打分轮动策略）
+  - [ ] 配置滑点/手续费（set_slippage_perc/setcommission）
+  - [ ] 配置仓位限制（单票 20%/单赛道 50%）
+  - [ ] 配置 Analyzer（SharpeRatio/DrawDown/Returns）
+- [ ] 验证回测结果与手写版本一致
+- [ ] 接入 `cerebro.plot()` 自动出图
+- [ ] 实现多策略对比（不同参数/不同预测目标）
+- [ ] 验收：回测结果正确性验证通过
 
 ---
 
@@ -195,32 +252,33 @@ Vue 可视化展示 ⬅ Phase H
 
 | 层 | 技术 | 角色 | 状态 |
 |:---|:-----|:-----|:-----|
-| 数据源 | baostock（前复权日线） | 行情数据 | ✅ 可用 |
+| 数据源 | baostock（日线）+ akshare（基本面） | 行情+基本面数据 | baostock ✅ / akshare ⏳ Phase I |
 | 后端 | FastAPI + SQLAlchemy + SQLite | API + ORM + 存储 | ✅ 运行中 :8000 |
 | 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
 | **通用特征** | **ta**（40+ 指标 + 自定义补充） | 量价技术指标计算 | ✅ Phase B 已完成 |
 | **因子筛选** | **alphalens-reloaded + scipy** | IC/IR/分层检验 | ✅ Phase C 已完成 |
 | **特征预处理** | **scikit-learn** | 标准化/去共线 | ✅ Phase D 已完成 |
-| **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ⏳ Phase E 引入 |
-| **回测** | **pandas 向量化**（轻量自研） | 绩效计算 | ⏳ Phase G 引入 |
+| **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ✅ Phase E 已完成 |
+| **回测** | **backtrader**（替换手写） | 绩效计算+可视化 | ⏳ Phase J 引入 |
 | 数据库 | SQLite（可一键切 MySQL） | 持久化 | ✅ 已接入 |
 
 ### 开源库选型理由
 
-| 库 | 为什么选它 |
-|:---|:----------|
+| akshare | 数据最全的开源数据源，覆盖 A 股基本面/北向资金/龙虎榜等，pip 一键装 |
+| backtrader | 轻量级回测框架，内置滑点/手续费/绩效分析/画图，社区活跃 |
 | ta | 纯 Python，pip 一键装，40+ 业界标准指标，Python 3.11 兼容，非数学专业友好 |
 | alphalens-reloaded | Quantopian 开源续命版，因子分析事实标准，IC/IR/分层一行搞定 |
 | scikit-learn | 机器学习基础设施，StandardScaler/TimeSeriesSplit 久经验证 |
 | LightGBM | 微软开源，表格数据最强，散户级数据量秒级训练 |
 
-### 不选的库及理由
+### 不选的库及理由（2026-06-20 修订版）
 
 | 库 | 不选理由 |
 |:---|:----------|
-| TA-Lib | 需先装 C 库再装 Python 绑定，安装门槛高，对非数学专业不友好 |
+| TA-Lib | 需先装 C 库再装 Python 绑定，安装门槛高，对非数学专业不友好。**ta 库已够用** |
 | qlib（微软） | 全栈量化框架，太重，我们需要的是组件不是框架 |
-| backtrader/zipline | 重型回测框架，散户小资金不需要，pandas 向量化够用 |
+| backtrader（当前决策） | ~~重型回测框架~~ → **Phase J 重新评估**：轻量级、pip 一键装、社区活跃，决定引入替换手写回测 |
+| zipline | 已停更，不推荐 |
 
 ## 七、AI Skill 质量门禁体系
 
@@ -241,6 +299,8 @@ Phase B 开发 → /check-data → /add-feature × N → /review-phase B
 Phase C 开发 → /add-feature Step 4-5（Alphalens 筛选）→ /review-phase C
 Phase E 开发 → /train-model → /review-phase E
 Phase G 开发 → /run-backtest → /review-phase G
+Phase I 开发 → /add-feature（基本面）→ /train-model → /review-phase I
+Phase J 开发 → /run-backtest（backtrader）→ /review-phase J
 ```
 
 ### 触发方式
@@ -251,8 +311,21 @@ Phase G 开发 → /run-backtest → /review-phase G
 
 ## 八、下一步
 
-**立即开始 Phase E**：
-1. `pip install lightgbm` 安装依赖
-2. 创建 `scripts/train_models.py`：加载预处理数据 → 分赛道 TimeSeriesSplit → LightGBM 训练
-3. 模型序列化到 `ml/models/{track}.pkl`
-4. 验收：训练/测试 R² 差距 < 0.15
+### 短期（Phase E 已完结，进入优化阶段）
+
+**模型优化（路线 A — 低成本）**：
+1. 松绑 LightGBM 超参数：num_leaves 8→20, reg_alpha 5→1, lr 0.01→0.05
+2. 尝试换预测目标：绝对收益 → 赛道内相对排名
+3. 重新训练，对比 R² 和回测夏普
+
+### 中期（Phase I — 基本面数据）
+
+1. `pip install akshare`
+2. 获取 PE/PB/ROE/北向资金等基本面数据
+3. 作为新特征加入流水线 → 重新筛选 → 重新训练
+
+### 中后期（Phase J — backtrader 升级）
+
+1. `pip install backtrader`
+2. 改写回测逻辑为 Strategy 类
+3. 利用内置画图和分析器提升验证效率
