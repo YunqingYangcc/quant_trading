@@ -2,7 +2,7 @@
 
 > 基于「个人散户·赛道型量化系统终版开发方案」
 > 更新日期：2026-06-19
-> 状态：**Phase A/B/C 完成，待 Phase D**
+> 状态：**Phase A/B/C/D 完成，待 Phase E**
 
 ---
 
@@ -36,7 +36,7 @@ baostock 取数
     ↓
 Alphalens 科学筛因子黑白名单 ⬅ Phase C ✅
     ↓
-特征标准化 / 中性化 / 去共线 ⬅ Phase D
+特征标准化 / 中性化 / 去共线 ⬅ Phase D ✅
     ↓
 分赛道 LightGBM 滚动 AI 训练 ⬅ Phase E
     ↓
@@ -56,7 +56,7 @@ Vue 可视化展示 ⬅ Phase H
 | Phase A | 数据流水线（拉数据→复权→落库→打标签） | ✅ 已完成 | 2026-06-19 |
 | Phase B | 特征工程（93 通用+18 赛道特征） | ✅ 已完成 | 2026-06-19 |
 | Phase C | Alphalens 双层筛选因子 | ✅ 已完成 | 2026-06-19 |
-| Phase D | 特征预处理（标准化/中性化/去共线） | ⏳ 未开始 | - |
+| Phase D | 特征预处理（标准化/去共线/时序分割） | ✅ 已完成 | 2026-06-19 |
 | Phase E | 赛道 LightGBM 训练 | ⏳ 未开始 | - |
 | Phase F | 个股+赛道打分 API | ⏳ 未开始 | - |
 | Phase G | 回测校验 | ⏳ 未开始 | - |
@@ -121,14 +121,25 @@ Vue 可视化展示 ⬅ Phase H
 - [x] `GET /api/v1/track/factors/whitelist` 返回 75 个因子 ✅
 - [x] `GET /api/v1/track/factors/blacklist` 返回 72 个因子 ✅
 
-### Phase D：特征预处理 ⏳ 待开发
+### Phase D：特征预处理 ✅ 已完成
 
-> **核心原则：用 scikit-learn 的 StandardScaler / VarianceThreshold，不手写标准化公式**
+> **核心原则：用 scikit-learn 的 StandardScaler，不手写标准化公式**
 
-- [ ] Z-score 标准化 — `sklearn.preprocessing.StandardScaler`
-- [ ] 市值/行业中性化（可选） — `sklearn.linear_model.LinearRegression` 残差法
-- [ ] 去共线（剔除相关性 > 0.95 对） — pandas `.corr()` + 自写筛选逻辑
-- [ ] 时间序列分割（训练/验证/测试） — 按时间切分，禁止 shuffle
+- [x] `pip install scikit-learn pyarrow` 安装依赖
+- [x] `scripts/preprocess_features.py` 预处理脚本
+  - [x] 加载白名单 75 个因子
+  - [x] NaN 中位数填充 (1,609,528 → 0)
+  - [x] 去共线: 75 → 54 个特征 (剔除 21 个高相关对, |corr|>0.95)
+  - [x] 时序分割: train≤2022 / val=2023 / test≥2024 (无 shuffle)
+  - [x] Z-score 标准化: 仅训练集 fit, transform all
+- [x] 输出 parquet 数据集: `ml/preprocessed/{train,val,test}.parquet`
+- [x] 输出配置: `feature_cols.json`, `scaler_params.json`, `meta.json`
+- [x] 验收:
+  - max|corr| = 0.9458 < 0.95 ✅
+  - 高相关对 = 0 ✅
+  - 标准化 max|mean| = 0.000000 ✅
+  - 标准化 std = 1.0000 ✅
+  - 训练集 54,162 行 / 验证集 5,566 行 / 测试集 13,182 行 ✅
 
 ### Phase E：赛道 LightGBM 训练 ⏳ 待开发
 
@@ -189,7 +200,7 @@ Vue 可视化展示 ⬅ Phase H
 | 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
 | **通用特征** | **ta**（40+ 指标 + 自定义补充） | 量价技术指标计算 | ✅ Phase B 已完成 |
 | **因子筛选** | **alphalens-reloaded + scipy** | IC/IR/分层检验 | ✅ Phase C 已完成 |
-| **特征预处理** | **scikit-learn** | 标准化/去共线 | ⏳ Phase D 引入 |
+| **特征预处理** | **scikit-learn** | 标准化/去共线 | ✅ Phase D 已完成 |
 | **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ⏳ Phase E 引入 |
 | **回测** | **pandas 向量化**（轻量自研） | 绩效计算 | ⏳ Phase G 引入 |
 | 数据库 | SQLite（可一键切 MySQL） | 持久化 | ✅ 已接入 |
@@ -240,8 +251,8 @@ Phase G 开发 → /run-backtest → /review-phase G
 
 ## 八、下一步
 
-**立即开始 Phase D**：
-1. `pip install scikit-learn` 安装依赖
-2. 创建 `scripts/preprocess_features.py`：从白名单加载 → Z-score 标准化 → 去共线 → 时序分割
-3. 输出预处理后的训练/验证/测试集
-4. 验收：无高相关对(>0.95)，时序无 shuffle
+**立即开始 Phase E**：
+1. `pip install lightgbm` 安装依赖
+2. 创建 `scripts/train_models.py`：加载预处理数据 → 分赛道 TimeSeriesSplit → LightGBM 训练
+3. 模型序列化到 `ml/models/{track}.pkl`
+4. 验收：训练/测试 R² 差距 < 0.15

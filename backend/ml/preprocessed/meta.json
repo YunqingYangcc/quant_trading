@@ -1,0 +1,11 @@
+{
+  "train_rows": 54162,
+  "val_rows": 5566,
+  "test_rows": 13182,
+  "total_rows": 72910,
+  "feature_count": 54,
+  "target_col": "target",
+  "train_end": "2022-12-31",
+  "val_end": "2023-12-31",
+  "corr_threshold": 0.95
+}
