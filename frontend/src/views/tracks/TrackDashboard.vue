@@ -46,12 +46,70 @@
     <div class="kline-main">
       <div class="kline-header">
         <span class="kline-title">{{ selectedStockName || '选择一只股票' }}</span>
-        <el-button size="small" @click="refreshData" :loading="loading" text>
-          <el-icon><Refresh /></el-icon> 刷新
-        </el-button>
+        <div class="kline-header-actions">
+          <el-button size="small" @click="showFactors = true" text>
+            <el-icon><DataAnalysis /></el-icon>
+            因子 <el-tag size="small" type="success" round>{{ whitelist.length }}</el-tag>
+          </el-button>
+          <el-button size="small" @click="refreshData" :loading="loading" text>
+            <el-icon><Refresh /></el-icon> 刷新
+          </el-button>
+        </div>
       </div>
       <div ref="klineRef" class="kline-chart"></div>
     </div>
+
+    <!-- 因子面板 (Drawer) -->
+    <el-drawer
+      v-model="showFactors"
+      title="因子筛选结果"
+      direction="rtl"
+      size="380px"
+      :append-to-body="true"
+    >
+      <template #header>
+        <div class="drawer-header">
+          <span>因子筛选结果</span>
+          <el-tag size="small">Phase C</el-tag>
+        </div>
+      </template>
+
+      <el-tabs v-model="factorTab">
+        <el-tab-pane name="whitelist">
+          <template #label>
+            白名单 <el-tag size="small" type="success" round>{{ whitelist.length }}</el-tag>
+          </template>
+          <div class="factor-list">
+            <div v-for="group in groupedWhitelist" :key="group.category" class="factor-group">
+              <div class="group-title">{{ group.label }} ({{ group.items.length }})</div>
+              <div v-for="f in group.items" :key="f.factor_name" class="factor-row">
+                <span class="factor-name">{{ f.factor_name }}</span>
+                <div class="factor-metrics">
+                  <el-tag size="small" :type="f.ic_mean >= 0 ? 'success' : 'danger'">
+                    IC {{ f.ic_mean >= 0 ? '+' : '' }}{{ f.ic_mean.toFixed(4) }}
+                  </el-tag>
+                  <span class="factor-ir">IR {{ f.ir.toFixed(2) }}</span>
+                </div>
+              </div>
+            </div>
+            <el-empty v-if="!whitelist.length" description="暂无白名单因子" />
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane name="blacklist">
+          <template #label>
+            黑名单 <el-tag size="small" type="danger" round>{{ blacklist.length }}</el-tag>
+          </template>
+          <div class="factor-list">
+            <div v-for="f in blacklist" :key="f.factor_name" class="factor-row blacklist-row">
+              <span class="factor-name">{{ f.factor_name }}</span>
+              <el-tag size="small" type="info">{{ f.reason }}</el-tag>
+            </div>
+            <el-empty v-if="!blacklist.length" description="暂无黑名单因子" />
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-drawer>
 
     <!-- 底部预留区（后续 Phase 填充：因子/回测等） -->
     <div class="bottom-reserved">
@@ -62,7 +120,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Refresh, Search } from '@element-plus/icons-vue'
+import { Refresh, Search, DataAnalysis } from '@element-plus/icons-vue'
 import * as echarts from 'echarts/core'
 import { CandlestickChart, LineChart, BarChart } from 'echarts/charts'
 import {
@@ -75,6 +133,8 @@ import { CanvasRenderer } from 'echarts/renderers'
 import {
   listTracks,
   getLabels,
+  getWhitelist,
+  getBlacklist,
   type Track,
   type TrackStock,
 } from '@/api/track'
@@ -97,6 +157,38 @@ const stocks = ref<TrackStock[]>([])
 const selectedStock = ref('')
 const searchQuery = ref('')
 const labels = ref<any[]>([])
+const showFactors = ref(false)
+const factorTab = ref('whitelist')
+const whitelist = ref<any[]>([])
+const blacklist = ref<any[]>([])
+
+const categoryLabels: Record<string, string> = {
+  momentum: '动量类',
+  trend: '趋势类',
+  volatility: '波动率类',
+  volume: '量能类',
+  statistical: '统计类',
+  track_specific: '赛道专属',
+}
+
+const groupedWhitelist = computed(() => {
+  const groups: Record<string, any[]> = {}
+  for (const f of whitelist.value) {
+    const cat = f.category || f.factor_type || 'other'
+    if (!groups[cat]) groups[cat] = []
+    groups[cat].push(f)
+  }
+  return Object.entries(groups)
+    .sort(([a], [b]) => {
+      const order = ['track_specific', 'momentum', 'trend', 'volatility', 'volume', 'statistical']
+      return order.indexOf(a) - order.indexOf(b)
+    })
+    .map(([cat, items]) => ({
+      category: cat,
+      label: categoryLabels[cat] || cat,
+      items: items.sort((a: any, b: any) => Math.abs(b.ic_mean) - Math.abs(a.ic_mean)),
+    }))
+})
 
 const filteredStocks = computed(() => {
   const q = searchQuery.value.trim().toLowerCase()
@@ -116,8 +208,10 @@ const selectedStockName = computed(() => {
 async function refreshData() {
   loading.value = true
   try {
-    const trackRes = await listTracks()
+    const [trackRes, wlRes, blRes] = await Promise.all([listTracks(), getWhitelist(), getBlacklist()])
     tracks.value = trackRes.items || []
+    whitelist.value = Array.isArray(wlRes) ? wlRes : []
+    blacklist.value = Array.isArray(blRes) ? blRes : []
 
     if (tracks.value.length && !activeTrack.value) {
       activeTrack.value = tracks.value[0].name
@@ -389,6 +483,12 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
+.kline-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .kline-title {
   font-size: 16px;
   font-weight: 600;
@@ -399,6 +499,74 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   padding: 0 8px 8px;
+}
+
+/* 因子面板 */
+.drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.factor-list {
+  padding: 0 4px;
+}
+
+.factor-group {
+  margin-bottom: 16px;
+}
+
+.group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #909399;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.factor-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.factor-row:hover {
+  background: #f5f7fa;
+}
+
+.factor-row .factor-name {
+  font-size: 13px;
+  color: #303133;
+  font-family: 'SF Mono', 'Menlo', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+
+.factor-metrics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.factor-ir {
+  font-size: 11px;
+  color: #909399;
+  white-space: nowrap;
+}
+
+.blacklist-row .factor-name {
+  color: #909399;
+  text-decoration: line-through;
 }
 
 /* 底部预留 */
