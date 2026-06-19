@@ -1,11 +1,53 @@
 {
   "version": 1,
   "skills": {
+    "code-review-and-quality": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/code-review-and-quality/SKILL.md",
+      "computedHash": "83931d7416bcff73c24d976c1e45f09f80259541d33e9fdfe3ee521d39b27428"
+    },
+    "git-commit": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "skillPath": "skills/git-commit/SKILL.md",
+      "computedHash": "2607fc60629b82b257136dd2a7a373f0a4466c0b49df7746d845d59313c99b21"
+    },
+    "incremental-implementation": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/incremental-implementation/SKILL.md",
+      "computedHash": "c9c35951841b2fb34cd7b64e1d318643ac6eebf74c419978280acc1bf690dd91"
+    },
+    "planning-and-task-breakdown": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/planning-and-task-breakdown/SKILL.md",
+      "computedHash": "6ee11641fc8d8f299a6acb3a10976e7e50719ad012290123e11ec34a525b4cc0"
+    },
+    "pr-description-writer": {
+      "source": "joyco-studio/skills",
+      "sourceType": "github",
+      "skillPath": "skills/pr-description-writer/SKILL.md",
+      "computedHash": "076248ee96521a2184f1400e6bbc2e357664ec6180f10b59fede571a4b4abec7"
+    },
     "pua": {
       "source": "tanweai/pua",
       "sourceType": "github",
       "skillPath": "skills/pua/SKILL.md",
       "computedHash": "5155c2c07a3cbf25f29e6cb0953650183d8f2018b7d8a49ef38fd750905e5ba6"
+    },
+    "security-audit": {
+      "source": "ruvnet/ruflo",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/security-audit/SKILL.md",
+      "computedHash": "5db1d0d8851b43a50228784963fc15b9086804fe20cea95b98141f6bfe5e97d7"
+    },
+    "spec-driven-development": {
+      "source": "addyosmani/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/spec-driven-development/SKILL.md",
+      "computedHash": "c29c9fe28235431984e1f8d5f5a578fc03184d6da17131574f16b240f7c93c3f"
     }
   }
 }

@@ -282,7 +282,9 @@ Vue 可视化展示
 
 ## 七、AI Skill 质量门禁体系
 
-为防止开发过程中 AI 行为漂移（无序加特征、无限调参、刷回测指标），创建了 5 个 Skill 固化流程纪律：
+为防止开发过程中 AI 行为漂移（无序加特征、无限调参、刷回测指标），已按 Phase 流水线内置 12 个 Skill（`.qoder/skills/`），分为量化业务和工程通用两层。
+
+### 7.1 量化业务 Skill（赛道专属）
 
 | Skill | 路径 | 解决什么问题 |
 |:------|:-----|:------------|
@@ -292,22 +294,53 @@ Vue 可视化展示
 | `/run-backtest` | `.qoder/skills/run-backtest/` | 锁定回测参数，防止刷指标 |
 | `/check-data` | `.qoder/skills/check-data/` | 数据质量自动化巡检 |
 
-### Skill 嵌入开发时序
+### 7.2 工程通用 Skill（跨项目可复用）
+
+| Skill | 源仓库 | 用途 |
+|:------|:-------|:-----|
+| `code-review-and-quality` | addyosmani/agent-skills | 多维度代码审查（Bug/安全/性能/风格/可维护性） |
+| `git-commit` | github/awesome-copilot | Conventional Commit 规范生成（feat/fix/refactor 自动识别） |
+| `security-audit` | ruvnet/ruflo | API 安全审计（SQL 注入/JWT/XSS/路径穿越/CVE） |
+| `spec-driven-development` | addyosmani/agent-skills | 先写 Spec 验收标准，再动手编码 |
+| `planning-and-task-breakdown` | addyosmani/agent-skills | 大任务拆解为有序子任务 |
+| `incremental-implementation` | addyosmani/agent-skills | 多文件改动时增量垂直交付 |
+| `pr-description-writer` | joyco-studio/skills | 生成结构化 PR 描述（含测试清单） |
+| `pua` | tanweai/pua | 连续失败时自动加压鞭策 |
+
+### 7.3 开发时序 Skill 调用流
 
 ```
-Phase B 开发 → /check-data → /add-feature × N → /review-phase B
-Phase C 开发 → /add-feature Step 4-5（Alphalens 筛选）→ /review-phase C
-Phase E 开发 → /train-model → /review-phase E
-Phase G 开发 → /run-backtest → /review-phase G
-Phase I 开发 → /add-feature（基本面）→ /train-model → /review-phase I
-Phase J 开发 → /run-backtest（backtrader）→ /review-phase J
+量化开发流程：
+  /check-data（数据检查）→ /add-feature × N（加特征）→ /train-model（训练）
+  → /run-backtest（回测）→ /review-phase（阶段验收）
+
+提交代码流程：
+  code-review-and-quality（自动代码审查）→ git-commit（规范提交）
+
+启动新功能流程：
+  spec-driven-development（写 Spec）→ planning-and-task-breakdown（拆任务）
+  → incremental-implementation（增量实现）→ pr-description-writer（PR 描述）
 ```
 
-### 触发方式
+### 7.4 触发方式
 
-1. **显式调用**：`/review-phase B`、`/check-data`
-2. **自动匹配**：说"加个特征" → AI 自动走 add-feature 流程
-3. **主动插入**：开发过程中 AI 主动调用 skill 约束流程
+1. **显式调用**：`/review-phase B`、`/check-data`、`/git-commit`
+2. **自动匹配**：说"加个特征"→ AI 自动走 add-feature 流程；说"审查代码"→ 自动调 code-review-and-quality
+3. **主动插入**：开发过程中 AI 遇到连续失败自动触发 pua 加压，切换方案
+4. **手动安装新 Skill**：`npx skills add <仓库> --skill <名称>`（国内加速：已预配 ghfast.top 代理）
+
+### 7.5 安装命令
+
+```bash
+# 国内网络已预配 ghfast.top 加速，npx skills add 可直接使用
+npx skills add addyosmani/agent-skills --skill code-review-and-quality -y
+npx skills add github/awesome-copilot --skill git-commit -y
+npx skills add ruvnet/ruflo --skill security-audit -y
+npx skills add addyosmani/agent-skills --skill spec-driven-development -y
+npx skills add addyosmani/agent-skills --skill planning-and-task-breakdown -y
+npx skills add addyosmani/agent-skills --skill incremental-implementation -y
+npx skills add joyco-studio/skills --skill pr-description-writer -y
+```
 
 ## 八、下一步
 

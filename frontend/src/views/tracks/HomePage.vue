@@ -209,9 +209,9 @@ onMounted(async () => {
     } catch {}
   } catch {
     // silent fail
-  } finally {
-    loading.value = false
-  })
+  }
+  loading.value = false
+})
 </script>
 
 <style scoped>

@@ -3,7 +3,7 @@
     <div class="fp-head">
       <div class="fp-head-left">
         <span class="fp-title">因子监控</span>
-        <span class="fp-count">{{ filteredFactors.length }}</span>
+        <span class="fp-count">{{ filtered?.length || 0 }}</span>
       </div>
       <el-tooltip content="IC=信息系数(预测力) IR=信息比率(稳定性)" placement="left">
         <el-icon class="fp-help"><QuestionFilled /></el-icon>
@@ -95,8 +95,9 @@ const filtered = computed(() => {
 })
 
 const groups = computed(() => {
+  const list = filtered.value || []
   const map: Record<string, any[]> = {}
-  for (const f of filtered.value) {
+  for (const f of list) {
     const k = f.category || f.factor_type || 'other'
     if (!map[k]) map[k] = []
     map[k].push(f)

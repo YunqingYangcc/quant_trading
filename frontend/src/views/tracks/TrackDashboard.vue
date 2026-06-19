@@ -145,12 +145,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Refresh, Search, DataAnalysis, ArrowLeft } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const route = useRoute()
 
 function goHome() {
   router.push('/')
@@ -167,7 +168,6 @@ import { CanvasRenderer } from 'echarts/renderers'
 import RankPanel from '@/components/tracks/RankPanel.vue'
 import ProsperityPanel from '@/components/tracks/ProsperityPanel.vue'
 import FactorChartPanel from '@/components/tracks/FactorChartPanel.vue'
-import { ArrowLeft } from '@element-plus/icons-vue'
 import {
   listTracks,
   getLabels,
@@ -560,8 +560,6 @@ onMounted(() => {
 })
 
 // 监听路由参数变化（从首页点击赛道进入）
-import { watch } from 'vue'
-const route = useRoute()
 watch(() => route.params.name, (name) => {
   if (name && tracks.value.length) {
     const match = tracks.value.find(t => t.name === name)
