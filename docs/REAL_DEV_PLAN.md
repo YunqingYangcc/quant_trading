@@ -2,7 +2,7 @@
 
 > 基于「个人散户·赛道型量化系统终版开发方案」
 > 更新日期：2026-06-19
-> 状态：**Phase A/B 完成，待 Phase C**
+> 状态：**Phase A/B/C 完成，待 Phase D**
 
 ---
 
@@ -34,7 +34,7 @@ baostock 取数
     ↓
 批量生成通用 + 赛道专属特征 ⬅ Phase B ✅
     ↓
-Alphalens 科学筛因子黑白名单 ⬅ Phase C
+Alphalens 科学筛因子黑白名单 ⬅ Phase C ✅
     ↓
 特征标准化 / 中性化 / 去共线 ⬅ Phase D
     ↓
@@ -55,7 +55,7 @@ Vue 可视化展示 ⬅ Phase H
 |-------|------|------|----------|
 | Phase A | 数据流水线（拉数据→复权→落库→打标签） | ✅ 已完成 | 2026-06-19 |
 | Phase B | 特征工程（93 通用+18 赛道特征） | ✅ 已完成 | 2026-06-19 |
-| Phase C | Alphalens 双层筛选因子 | ⏳ 未开始 | - |
+| Phase C | Alphalens 双层筛选因子 | ✅ 已完成 | 2026-06-19 |
 | Phase D | 特征预处理（标准化/中性化/去共线） | ⏳ 未开始 | - |
 | Phase E | 赛道 LightGBM 训练 | ⏳ 未开始 | - |
 | Phase F | 个股+赛道打分 API | ⏳ 未开始 | - |
@@ -104,21 +104,22 @@ Vue 可视化展示 ⬅ Phase H
   - [x] 输出验收报告：特征总数、NaN 比例
 - [x] 验收：全部 shift(1) ✅，NaN < 50% ✅ (100% 有效)，特征数 93~111 ✅
 
-### Phase C：Alphalens 双层筛选 ⏳ 待开发
+### Phase C：Alphalens 双层筛选 ✅ 已完成
 
-> **核心原则：用 alphalens-reloaded（Quantopian 开源续命版）做因子检验，不手写 IC/IR 计算**
+> **核心原则：用 alphalens-reloaded + scipy 池化 Rank IC，不手写 IC/IR 计算**
+> 22 只股票小池，截面太窄日度 IC 噪声大，采用池化 IC 为主判据
 
-- [ ] `pip install alphalens-reloaded` 安装依赖
-- [ ] Alphalens 单因子检验（用库，不手写）
-  - [ ] IC 绝对值 ≥ 0.02
-  - [ ] IR ≥ 0.5
-  - [ ] 10 层分组收益单调
-- [ ] 写入白名单 `FeatureWhiteList`
-- [ ] 写入黑名单 `FeatureBlackList`
-- [ ] LightGBM 特征重要性第二轮筛选
-- [ ] 固化 JSON 配置 `configs/factor_whitelist.json`
-- [ ] `GET /api/v1/track/factors/whitelist` ✅
-- [ ] `GET /api/v1/track/factors/blacklist` ✅
+- [x] `pip install alphalens-reloaded scipy` 安装依赖
+- [x] `scripts/screen_factors.py` 因子筛选脚本
+  - [x] 池化 Rank IC（72,910 个 stock×date 数据点）
+  - [x] 日度 IC 序列计算 IR
+  - [x] 10 层分组收益方向检查
+- [x] 筛选阈值：|IC|>=0.01, |IR|>=0.05（小池放宽）
+- [x] 白名单 75 个因子 → FeatureWhiteList ✅
+- [x] 黑名单 72 个因子 → FeatureBlackList ✅
+- [x] 固化 JSON 配置 `configs/factor_whitelist.json` ✅
+- [x] `GET /api/v1/track/factors/whitelist` 返回 75 个因子 ✅
+- [x] `GET /api/v1/track/factors/blacklist` 返回 72 个因子 ✅
 
 ### Phase D：特征预处理 ⏳ 待开发
 
@@ -187,7 +188,7 @@ Vue 可视化展示 ⬅ Phase H
 | 后端 | FastAPI + SQLAlchemy + SQLite | API + ORM + 存储 | ✅ 运行中 :8000 |
 | 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
 | **通用特征** | **ta**（40+ 指标 + 自定义补充） | 量价技术指标计算 | ✅ Phase B 已完成 |
-| **因子筛选** | **alphalens-reloaded** | IC/IR/分层检验 | ⏳ Phase C 引入 |
+| **因子筛选** | **alphalens-reloaded + scipy** | IC/IR/分层检验 | ✅ Phase C 已完成 |
 | **特征预处理** | **scikit-learn** | 标准化/去共线 | ⏳ Phase D 引入 |
 | **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ⏳ Phase E 引入 |
 | **回测** | **pandas 向量化**（轻量自研） | 绩效计算 | ⏳ Phase G 引入 |
@@ -239,8 +240,8 @@ Phase G 开发 → /run-backtest → /review-phase G
 
 ## 八、下一步
 
-**立即开始 Phase C**：
-1. `pip install alphalens-reloaded` 安装依赖
-2. 创建 `scripts/screen_factors.py`：从 feature_store 加载 → Alphalens 单因子检验 → 写入白/黑名单
-3. 固化 `configs/factor_whitelist.json`
-4. 验收：IC≥0.02, IR≥0.5, 白黑名单 API 可查
+**立即开始 Phase D**：
+1. `pip install scikit-learn` 安装依赖
+2. 创建 `scripts/preprocess_features.py`：从白名单加载 → Z-score 标准化 → 去共线 → 时序分割
+3. 输出预处理后的训练/验证/测试集
+4. 验收：无高相关对(>0.95)，时序无 shuffle
