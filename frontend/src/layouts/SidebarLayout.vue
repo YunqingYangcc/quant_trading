@@ -1,93 +1,64 @@
 <template>
   <el-container class="app-container">
-    <!-- 侧边栏 -->
     <el-aside width="200px" class="app-sidebar">
       <div class="sidebar-header">
-        <div class="logo-text">📈 Quant Trading</div>
+        <div class="logo">📈 Quant Trading</div>
         <div class="logo-sub">@杨布拉德</div>
       </div>
 
-      <!-- DATA LAYER -->
-      <div class="step-section">
-        <div class="step-label">DATA LAYER</div>
+      <div class="nav-group">
+        <div class="group-label">DATA</div>
         <el-menu :default-active="activeMenu" router>
           <el-menu-item index="/">
             <el-icon><Monitor /></el-icon>
-            <template #title>
-              <span>① Dashboard</span>
-              <span class="menu-phase">Overview</span>
-            </template>
+            <span>Dashboard</span>
           </el-menu-item>
           <el-menu-item index="/pipeline">
             <el-icon><Connection /></el-icon>
-            <template #title>
-              <span>② Data Pipeline</span>
-              <span class="menu-phase">Monitor</span>
-            </template>
+            <span>Data Pipeline</span>
           </el-menu-item>
           <el-menu-item index="/alpha">
             <el-icon><DataAnalysis /></el-icon>
-            <template #title>
-              <span>③ Alpha Research</span>
-              <span class="menu-phase">Factors</span>
-            </template>
+            <span>Alpha Research</span>
           </el-menu-item>
         </el-menu>
       </div>
 
-      <!-- STRATEGY LAYER -->
-      <div class="step-section">
-        <div class="step-label">STRATEGY LAYER</div>
+      <div class="nav-group">
+        <div class="group-label">STRATEGY</div>
         <el-menu :default-active="activeMenu" router>
           <el-menu-item index="/model-factory">
             <el-icon><Cpu /></el-icon>
-            <template #title>
-              <span>④ Model Factory</span>
-              <span class="menu-phase">Training</span>
-            </template>
+            <span>Model Factory</span>
           </el-menu-item>
           <el-menu-item :index="'/track/' + (currentTrack || 'semiconductor')">
             <el-icon><TrendCharts /></el-icon>
-            <template #title>
-              <span>⑤ Alpha Workstation</span>
-              <span class="menu-phase">Analysis</span>
-            </template>
+            <span>Alpha Workstation</span>
           </el-menu-item>
           <el-menu-item index="/backtest">
             <el-icon><Coin /></el-icon>
-            <template #title>
-              <span>⑥ Backtest Lab</span>
-              <span class="menu-phase">Results</span>
-            </template>
+            <span>Backtest Lab</span>
           </el-menu-item>
           <el-menu-item index="/portfolio">
             <el-icon><PieChart /></el-icon>
-            <template #title>
-              <span>⑦ Portfolio</span>
-              <span class="menu-phase">Risk</span>
-            </template>
+            <span>Portfolio</span>
           </el-menu-item>
         </el-menu>
       </div>
 
       <div class="sidebar-footer">
-        <div class="pipeline-dots">
-          <span class="dot done" title="数据完成">●</span>
-          <span class="dot done" title="因子完成">●</span>
-          <span class="dot active" title="赛道进行中">●</span>
-          <span class="dot" title="回测就绪">●</span>
+        <div class="dot-row">
+          <span class="d d-on" />
+          <span class="d d-on" />
+          <span class="d d-on" />
+          <span class="d" />
         </div>
       </div>
     </el-aside>
 
-    <!-- 主内容 -->
     <el-container class="main-container">
-      <el-header class="app-header" height="52px">
-        <div class="header-left">
-          <span class="header-title">{{ pageTitle }}</span>
-        </div>
-        <div class="header-right">
-        </div>
+      <el-header class="app-header" height="48px">
+        <div class="header-title">{{ pageTitle }}</div>
       </el-header>
       <el-main class="app-main">
         <router-view />
@@ -103,50 +74,22 @@ import { Monitor, Connection, DataAnalysis, Cpu, TrendCharts, Coin, PieChart } f
 
 const route = useRoute()
 const activeMenu = computed(() => {
-  const path = route.path
-  // /track/xxx → /track/xxx 保持高亮
-  if (path.startsWith('/track/')) return path
-  return path
+  if (route.path.startsWith('/track/')) return route.path
+  return route.path
 })
+const currentTrack = computed(() => (route.params.name as string) || 'semiconductor')
 
-const currentTrack = computed(() => {
-  return (route.params.name as string) || 'semiconductor'
-})
-
-// ── 页面标题映射 ──
 const pageTitles: Record<string, string> = {
-  '/': '① Dashboard · Quant Terminal',
-  '/pipeline': '② Data Pipeline · Data Source Monitor',
-  '/alpha': '③ Alpha Research · Factor Analysis',
-  '/model-factory': '④ Model Factory · Training & Versioning',
-  '/backtest': '⑥ Backtest Lab · Performance Attribution',
-  '/portfolio': '⑦ Portfolio · Risk & Exposure',
+  '/': 'Dashboard',
+  '/pipeline': 'Data Pipeline',
+  '/alpha': 'Alpha Research',
+  '/model-factory': 'Model Factory',
+  '/backtest': 'Backtest Lab',
+  '/portfolio': 'Portfolio',
 }
 const pageTitle = computed(() => {
-  if (route.path.startsWith('/track/')) return '⑤ Alpha Workstation · ' + (route.params.name as string || 'Analysis')
+  if (route.path.startsWith('/track/')) return 'Alpha Workstation · ' + (route.params.name as string || '')
   return pageTitles[route.path] || 'Quant Trading'
-})
-
-// ── 步骤标签映射 ──
-const steps: Record<string, { label: string; color: string; bg: string }> = {
-  '/': { label: 'Step 1/7 · Dashboard', color: '#3b82f6', bg: '#eff6ff' },
-  '/pipeline': { label: 'Step 2/7 · Data Pipeline', color: '#22c55e', bg: '#f0fdf4' },
-  '/alpha': { label: 'Step 3/7 · Alpha Research', color: '#f59e0b', bg: '#fefce8' },
-  '/model-factory': { label: 'Step 4/7 · Model Factory', color: '#ec4899', bg: '#fdf2f8' },
-  '/backtest': { label: 'Step 6/7 · Backtest Lab', color: '#8b5cf6', bg: '#f5f3ff' },
-  '/portfolio': { label: 'Step 7/7 · Portfolio Monitor', color: '#14b8a6', bg: '#f0fdfa' },
-}
-const stepLabel = computed(() => {
-  if (route.path.startsWith('/track/')) return 'Step 5/7 · Alpha Workstation'
-  return steps[route.path]?.label || 'Quant Trading'
-})
-const currentPhaseColor = computed(() => {
-  if (route.path.startsWith('/track/')) return '#f59e0b'
-  return steps[route.path]?.color || '#3b82f6'
-})
-const currentPhaseBg = computed(() => {
-  if (route.path.startsWith('/track/')) return '#fefce8'
-  return steps[route.path]?.bg || '#eff6ff'
 })
 </script>
 
@@ -156,129 +99,107 @@ const currentPhaseBg = computed(() => {
   overflow: hidden;
 }
 
-/* ── 侧边栏 ── */
+/* ── SIDEBAR ── */
 .app-sidebar {
-  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  width: 200px;
+  background: #0c0f15;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.12);
-  z-index: 10;
+  user-select: none;
 }
 
 .sidebar-header {
-  padding: 14px 16px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  text-align: center;
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
-.logo-text {
-  color: #f1f5f9;
-  font-size: 16px;
+.logo {
+  color: #e8edf5;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .logo-sub {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.25);
-  margin-top: 2px;
+  color: rgba(255,255,255,0.15);
+  margin-top: 1px;
 }
 
-/* ── 步骤分组 ── */
-.step-section {
-  padding: 4px 0;
+/* ── NAV GROUPS ── */
+.nav-group {
+  padding: 0;
 }
 
-.step-label {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.3);
-  padding: 6px 16px 2px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+.group-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.2);
+  padding: 16px 16px 6px;
+  letter-spacing: 1.2px;
 }
 
-/* ── 菜单 ── */
 .app-sidebar :deep(.el-menu) {
   border-right: none;
   background: transparent;
-  padding: 2px 8px;
+  padding: 0;
 }
 
 .app-sidebar :deep(.el-menu-item) {
-  height: 40px;
-  line-height: 40px;
-  border-radius: 6px;
-  margin-bottom: 2px;
-  color: rgba(255, 255, 255, 0.55);
+  height: 36px;
+  line-height: 36px;
+  margin: 0;
+  padding: 0 16px;
+  border-radius: 0;
+  color: rgba(255,255,255,0.45);
   font-size: 13px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
+  transition: all 0.12s;
 }
 
 .app-sidebar :deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.75);
 }
 
 .app-sidebar :deep(.el-menu-item.is-active) {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: #fff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
-}
-
-.app-sidebar :deep(.el-menu-item .menu-phase) {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.25);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 1px 6px;
-  border-radius: 6px;
-  letter-spacing: 0.3px;
-  flex-shrink: 0;
-}
-
-.app-sidebar :deep(.el-menu-item.is-active .menu-phase) {
-  color: rgba(255, 255, 255, 0.7);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(59,130,246,0.15);
+  color: #60a5fa;
 }
 
 .app-sidebar :deep(.el-menu-item .el-icon) {
-  font-size: 16px;
-  margin-right: 6px;
+  font-size: 15px;
+  margin: 0;
+  width: 18px;
+  text-align: center;
 }
 
-/* ── 底部进度点 ── */
+/* ── FOOTER DOTS ── */
 .sidebar-footer {
   margin-top: auto;
-  padding: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 16px;
+  border-top: 1px solid rgba(255,255,255,0.04);
 }
 
-.pipeline-dots {
+.dot-row {
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.dot {
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.15);
-  transition: all 0.3s;
+.d {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
 }
 
-.dot.done {
-  color: #67c23a;
+.d-on {
+  background: #3b82f6;
 }
 
-.dot.active {
-  color: #60a5fa;
-  font-size: 12px;
-}
-
-/* ── 主内容 ── */
+/* ── MAIN ── */
 .main-container {
   display: flex;
   flex-direction: column;
@@ -289,34 +210,20 @@ const currentPhaseBg = computed(() => {
   border-bottom: 1px solid #e8ecf0;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  height: 48px !important;
 }
 
 .header-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #475569;
 }
 
-.header-status {
-  font-size: 11px;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-weight: 500;
-}
-
 .app-main {
-  background: #f8fafc;
+  background: #f5f6f8;
   padding: 0;
   overflow: auto;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 48px);
 }
 </style>
