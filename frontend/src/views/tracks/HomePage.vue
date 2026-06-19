@@ -3,8 +3,8 @@
     <!-- 顶部标题 -->
     <div class="hero-section">
       <div class="hero-text">
-        <h1>Quant Terminal</h1>
-        <p>AI-Powered Track Analysis System</p>
+        <h1>量化交易跟踪系统</h1>
+        <p>Quantitative Trading & Tracking System</p>
       </div>
     </div>
 
