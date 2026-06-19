@@ -109,3 +109,16 @@ class FeatureBlackList(Base):
     factor_name = Column(String(100), unique=True, nullable=False)
     reason = Column(String(200), nullable=True)  # 淘汰原因: ic_too_low / ir_too_low / not_monotonic / lgb_importance_zero
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class FeatureStore(Base):
+    """特征存储 - 每只股票每日的特征 JSON"""
+
+    __tablename__ = "feature_store"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_code = Column(String(20), nullable=False, index=True)
+    trade_date = Column(String(10), nullable=False)
+    features = Column(JSON, nullable=False)  # {"mom_1d": 0.02, "ma_dev_5d": -0.01, ...}
+    feature_version = Column(String(20), default="v1")  # 特征版本
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

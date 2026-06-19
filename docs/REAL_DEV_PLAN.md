@@ -6,6 +6,15 @@
 
 ---
 
+## 〇、核心技术原则
+
+1. **开源优先，不重复造轮子**：所有能用成熟开源库实现的功能，绝不手写数学公式/算法
+2. **非数学专业友好**：依赖经过业界验证的稳定库，不自己推导统计公式
+3. **分层架构**：通用特征用开源库（pandas-ta），赛道专属特征自己写（开源库没有）
+4. **AI 辅助开发**：善用 AI 工具生成代码，但必须理解每一步逻辑
+
+---
+
 ## 一、系统核心定位
 
 1. **非机构全市场量化**：不做全市场海选、不做中性对冲、不做高频、不堆海量因子
@@ -73,46 +82,63 @@ Vue 可视化展示 ⬅ Phase H
 
 ### Phase B：特征工程 ⏳ 待开发
 
-- [ ] 通用量价特征 `features_generic.py`
-  - [ ] 动量类（momentum_1d/5d/10d/20d 等）
-  - [ ] 均线类（ma5/ma10/ma20/ma60 偏离度）
-  - [ ] 波动率类（ATR, volatility）
-  - [ ] RSI 震荡类
-  - [ ] 量能类（volume_ratio, obv 等）
-  - [ ] 相对强弱类
-- [ ] 赛道专属特征 `features_track.py`
-  - [ ] 赛道内相对强度
-  - [ ] 赛道拥挤度
+> **核心原则：通用特征用 pandas-ta（130+ 业界验证指标），赛道特征自己写**
+> pandas-ta 是纯 Python 库，pip install 一键安装，无需 C 依赖，对非数学专业最友好
+
+- [ ] `pip install pandas_ta` 安装依赖
+- [ ] **通用量价特征** — 用 pandas-ta 替代手写（`features_generic.py` 重构）
+  - [ ] 动量类：`ta.momentum()` — ROC, RSI, Stochastic, CCI, Williams %R, MACD
+  - [ ] 均线类：`ta.trend()` — SMA, EMA, DEMA, TEMA, MACD 信号
+  - [ ] 波动率类：`ta.volatility()` — ATR, Bollinger Bands, Keltner Channel, Donchian
+  - [ ] 量能类：`ta.volume()` — OBV, VWAP, A/D Line, Chaikin Money Flow
+  - [ ] 相对强弱：`ta.momentum()` — RSI, Stochastic RSI
+  - [ ] 自定义补充：收益偏度/峰度、价格位置特征（pandas-ta 没有的）
+- [ ] **赛道专属特征** — 保持自己写（`features_track.py`，开源库没有这些）
+  - [ ] 赛道内相对强度（个股 vs 赛道均值）
+  - [ ] 赛道拥挤度（内部相关性）
   - [ ] 赛道趋势一致性
-- [ ] 特征入库（可复用 TrackDataCache 扩列或新建特征表）
+  - [ ] 赛道间相对强弱
+- [ ] `scripts/compute_features.py` — 批量计算脚本
+  - [ ] 从 DB 加载 TrackDataCache → pandas-ta 算通用特征 → features_track 算赛道特征
+  - [ ] 全部特征统一 shift(1) 防未来泄露
+  - [ ] 特征写入新表 `stock_features`（stock_code, trade_date, feature_name, feature_value）
+  - [ ] 输出验收报告：特征总数、NaN 比例、描述统计
 - [ ] 验收：全部 shift(1)，NaN 比例 < 50%，特征数 60+
 
 ### Phase C：Alphalens 双层筛选 ⏳ 待开发
 
-- [ ] Alphalens 单因子检验
+> **核心原则：用 alphalens-reloaded（Quantopian 开源续命版）做因子检验，不手写 IC/IR 计算**
+
+- [ ] `pip install alphalens-reloaded` 安装依赖
+- [ ] Alphalens 单因子检验（用库，不手写）
   - [ ] IC 绝对值 ≥ 0.02
   - [ ] IR ≥ 0.5
   - [ ] 10 层分组收益单调
 - [ ] 写入白名单 `FeatureWhiteList`
 - [ ] 写入黑名单 `FeatureBlackList`
 - [ ] LightGBM 特征重要性第二轮筛选
-- [ ] 固化 JSON 配置
+- [ ] 固化 JSON 配置 `configs/factor_whitelist.json`
 - [ ] `GET /api/v1/track/factors/whitelist` ✅
 - [ ] `GET /api/v1/track/factors/blacklist` ✅
 
 ### Phase D：特征预处理 ⏳ 待开发
 
-- [ ] Z-score 标准化
-- [ ] 市值/行业中性化（可选）
-- [ ] 去共线（剔除相关性 > 0.95 对）
-- [ ] 时间序列分割（训练/验证/测试）
+> **核心原则：用 scikit-learn 的 StandardScaler / VarianceThreshold，不手写标准化公式**
+
+- [ ] Z-score 标准化 — `sklearn.preprocessing.StandardScaler`
+- [ ] 市值/行业中性化（可选） — `sklearn.linear_model.LinearRegression` 残差法
+- [ ] 去共线（剔除相关性 > 0.95 对） — pandas `.corr()` + 自写筛选逻辑
+- [ ] 时间序列分割（训练/验证/测试） — 按时间切分，禁止 shuffle
 
 ### Phase E：赛道 LightGBM 训练 ⏳ 待开发
 
+> **核心原则：用 lightgbm 官方库 + scikit-learn TimeSeriesSplit，不手写训练循环**
+
+- [ ] `pip install lightgbm scikit-learn` 安装依赖
 - [ ] 每个赛道独立模型（4 个模型）
-- [ ] 时间滚动训练（禁止 shuffle）
+- [ ] 时间滚动训练（用 `sklearn.model_selection.TimeSeriesSplit`，禁止 shuffle）
 - [ ] 预测目标：future_20d_excess_return
-- [ ] 模型序列化 `ml/models/{track}.pkl`
+- [ ] 模型序列化 `ml/models/{track}.pkl`（用 `joblib`）
 - [ ] 验收：训练/测试 R² 差距 < 0.15，无未来泄露
 
 ### Phase F：打分 API ⏳ 待开发
@@ -123,10 +149,13 @@ Vue 可视化展示 ⬅ Phase H
 
 ### Phase G：回测校验 ⏳ 待开发
 
+> **核心原则：用 pandas 向量化回测（简单可靠），不引入重型回测框架**
+
 - [ ] AI 打分 → 轮动策略
-- [ ] 模拟滑点、手续费、涨跌停
-- [ ] 单票/单赛道仓位上限
+- [ ] 模拟滑点（固定 0.1%）、手续费（万三）、涨跌停无法成交
+- [ ] 单票仓位上限 20%、单赛道仓位上限 50%
 - [ ] 赛道景气降仓
+- [ ] 绩效计算：用 pandas 向量化计算夏普/回撤/分层收益（不手写公式）
 - [ ] 验收：夏普 ≥ 1.2，回撤 < 25%，分层单调
 
 ### Phase H：前端可视化 ⏳ 待完善
@@ -153,16 +182,39 @@ Vue 可视化展示 ⬅ Phase H
 
 ## 六、当前技术栈
 
-| 层 | 技术 | 状态 |
-|:---|:-----|:-----|
-| 数据源 | baostock（前复权日线） | ✅ 可用 |
-| 后端 | FastAPI + SQLAlchemy + SQLite | ✅ 运行中 :8000 |
-| 前端 | Vue3 + Element Plus + ECharts | ✅ 运行中 :3000 |
-| 特征工程 | Python / pandas / numpy | ⏸️ 代码已写待运行 |
-| AI 模型 | LightGBM | ⏸️ 代码已写待运行 |
-| 回测引擎 | 自研轻量化（track_backtester） | ⏸️ 代码已写待运行 |
-| 数据库 | SQLite（可一键切 MySQL） | ✅ 已接入 |
+| 层 | 技术 | 角色 | 状态 |
+|:---|:-----|:-----|:-----|
+| 数据源 | baostock（前复权日线） | 行情数据 | ✅ 可用 |
+| 后端 | FastAPI + SQLAlchemy + SQLite | API + ORM + 存储 | ✅ 运行中 :8000 |
+| 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
+| **通用特征** | **pandas-ta**（130+ 指标） | 量价技术指标计算 | ⏳ Phase B 引入 |
+| **因子筛选** | **alphalens-reloaded** | IC/IR/分层检验 | ⏳ Phase C 引入 |
+| **特征预处理** | **scikit-learn** | 标准化/去共线 | ⏳ Phase D 引入 |
+| **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ⏳ Phase E 引入 |
+| **回测** | **pandas 向量化**（轻量自研） | 绩效计算 | ⏳ Phase G 引入 |
+| 数据库 | SQLite（可一键切 MySQL） | 持久化 | ✅ 已接入 |
+
+### 开源库选型理由
+
+| 库 | 为什么选它 |
+|:---|:----------|
+| pandas-ta | 纯 Python，pip 一键装，130+ 业界标准指标，API 友好，非数学专业最友好 |
+| alphalens-reloaded | Quantopian 开源续命版，因子分析事实标准，IC/IR/分层一行搞定 |
+| scikit-learn | 机器学习基础设施，StandardScaler/TimeSeriesSplit 久经验证 |
+| LightGBM | 微软开源，表格数据最强，散户级数据量秒级训练 |
+
+### 不选的库及理由
+
+| 库 | 不选理由 |
+|:---|:----------|
+| TA-Lib | 需先装 C 库再装 Python 绑定，安装门槛高，对非数学专业不友好 |
+| qlib（微软） | 全栈量化框架，太重，我们需要的是组件不是框架 |
+| backtrader/zipline | 重型回测框架，散户小资金不需要，pandas 向量化够用 |
 
 ## 七、下一步
 
-**立即开始 Phase B**：运行特征工程脚本，对 23 只股票批量计算 60+ 特征。
+**立即开始 Phase B**：
+1. `pip install pandas_ta` 安装依赖
+2. 重构 `features_generic.py`：用 pandas-ta 替换手写 numpy 公式
+3. 创建 `scripts/compute_features.py`：DB加载 → 计算 → 入库 → 验收报告
+4. 对 23 只股票批量计算 60+ 特征并入库

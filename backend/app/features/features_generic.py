@@ -1,240 +1,235 @@
 """
-通用量价特征工厂。
+通用量价特征 (Generic Quantitative Features) — 基于 ta 库.
 
-生成所有通用技术指标（动量/波动率/均线/量能/RSI/ATR等）。
-所有特征通过 shift(1) 防止未来泄露。
+覆盖 6 大类 60+ 特征：
+1. 动量类 (Momentum): RSI, Stochastic, Williams %R, ROC, Awesome Oscillator, PPO, TSI
+2. 趋势类 (Trend): SMA, EMA, MACD, ADX, Aroon, CCI, DPO, TRIX
+3. 波动率类 (Volatility): ATR, Bollinger Bands, Donchian, Keltner, Ulcer
+4. 量能类 (Volume): OBV, AD, CMF, EMV, Force Index, MFI, VPT, VWAP
+5. 衍生统计类: 偏离度, 偏度, 峰度, 分位, 连续涨跌
+6. 价格位置类: 高低点位置, 量价相关性
+
+所有特征统一 shift(1) 防未来泄露。
 """
 
 import numpy as np
 import pandas as pd
+import ta
 
 
-def compute_all_generic_features(df: pd.DataFrame) -> pd.DataFrame:
-    """计算全部通用量价特征，返回含特征列的 DataFrame。
+def compute_generic_features(df: pd.DataFrame) -> pd.DataFrame:
+    """计算通用量价特征。
 
     Args:
-        df: 必须包含 columns ['date','open','high','low','close','volume','amount']
-             已按 date 升序排列
+        df: 必须包含列 ['close', 'open', 'high', 'low', 'volume', 'amount']
+            且按日期升序排列。
 
     Returns:
-        原 df + 特征列（均已 shift(1) 对齐，无未来泄露）
+        原始 DataFrame 拼接所有特征列（已 shift(1)）。
     """
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError("df must be a pandas DataFrame")
+    c = df["close"].astype(float)
+    o = df["open"].astype(float)
+    h = df["high"].astype(float)
+    l = df["low"].astype(float)
+    v = df["volume"].astype(float)
+    amt = df["amount"].astype(float)
 
-    required = {"close", "open", "high", "low", "volume", "amount"}
-    missing = required - set(df.columns.str.lower())
-    if missing:
-        raise ValueError(f"Missing columns: {missing}")
+    out: dict[str, pd.Series] = {}
 
-    df = df.copy()
-    c = df["close"].values.astype(float)
-    o = df["open"].values.astype(float)
-    h = df["high"].values.astype(float)
-    l = df["low"].values.astype(float)
-    v = df["volume"].values.astype(float)
-    a = df["amount"].values.astype(float)
-    n = len(c)
+    # ══════════════════════════════════════════════
+    # 1. 动量类 (Momentum) — 16 features
+    # ══════════════════════════════════════════════
+    # RSI
+    for p in [6, 14, 24]:
+        out[f"rsi_{p}"] = ta.momentum.RSIIndicator(c, window=p).rsi()
 
-    out = {}
+    # Stochastic K/D
+    stoch = ta.momentum.StochasticOscillator(h, l, c, window=14, smooth_window=3)
+    out["stoch_k"] = stoch.stoch()
+    out["stoch_d"] = stoch.stoch_signal()
+    out["stoch_j"] = 3 * out["stoch_k"] - 2 * out["stoch_d"]
 
-    # ── 1. 动量特征 (Momentum) ─────────────────────
-    for period in [5, 10, 20, 60]:
-        out[f"mom_{period}d"] = _pct_change(c, period)
-        out[f"log_mom_{period}d"] = _log_return(c, period)
+    # Williams %R
+    for p in [14, 28]:
+        out[f"willr_{p}"] = ta.momentum.WilliamsRIndicator(h, l, c, lbp=p).williams_r()
 
-    # ── 2. 均线特征 (Moving Average) ─────────────────
-    for period in [5, 10, 20, 60]:
-        ma = _sma(c, period)
-        out[f"ma_{period}"] = ma
-        out[f"ma_{period}_pct"] = _safe_div(c - ma, ma)  # 偏离度
-        out[f"ma_{period}_cross"] = np.where(c > ma, 1.0, 0.0)  # 价格在均线上方
+    # ROC (Rate of Change)
+    for p in [1, 5, 10, 20, 60]:
+        out[f"roc_{p}"] = ta.momentum.ROCIndicator(c, window=p).roc()
 
-    # 均线金叉/死叉信号
-    ma5 = _sma(c, 5)
-    ma20 = _sma(c, 20)
-    ma5_prev = _shift(ma5, 1)
-    ma20_prev = _shift(ma20, 1)
-    out["ma_golden_cross"] = np.where((ma5 > ma20) & (ma5_prev <= ma20_prev), 1.0, 0.0)
-    out["ma_death_cross"] = np.where((ma5 < ma20) & (ma5_prev >= ma20_prev), 1.0, 0.0)
+    # Awesome Oscillator
+    out["ao"] = ta.momentum.AwesomeOscillatorIndicator(h, l).awesome_oscillator()
 
-    # ── 3. 波动率特征 (Volatility) ──────────────────
-    for period in [5, 10, 20]:
-        out[f"volatility_{period}d"] = _rolling_std(c, period)
-        out[f"volatility_{period}d_pct"] = _rolling_std(_pct_change(c, 1), period)
+    # PPO (Percentage Price Oscillator)
+    ppo = ta.momentum.PercentagePriceOscillator(c)
+    out["ppo"] = ppo.ppo()
+    out["ppo_signal"] = ppo.ppo_signal()
 
-    # ── 4. ATR (平均真实波幅) ────────────────────────
-    for period in [14, 20]:
-        out[f"atr_{period}"] = _atr(h, l, c, period)
-        out[f"atr_{period}_pct"] = _safe_div(_atr(h, l, c, period), c)
+    # ══════════════════════════════════════════════
+    # 2. 趋势类 (Trend) — 16 features
+    # ══════════════════════════════════════════════
+    # SMA & 偏离度
+    for p in [5, 10, 20, 60]:
+        sma = ta.trend.SMAIndicator(c, window=p).sma_indicator()
+        out[f"sma_{p}"] = sma
+        out[f"sma_dev_{p}"] = (c - sma) / sma.replace(0, np.nan)
 
-    # ── 5. RSI (相对强弱指标) ────────────────────────
-    for period in [6, 14, 20]:
-        out[f"rsi_{period}"] = _rsi(c, period)
+    # EMA & 偏离度
+    for p in [12, 26]:
+        ema = ta.trend.EMAIndicator(c, window=p).ema_indicator()
+        out[f"ema_{p}"] = ema
+        out[f"ema_dev_{p}"] = (c - ema) / ema.replace(0, np.nan)
 
-    # ── 6. 量能特征 (Volume) ────────────────────────
-    for period in [5, 10, 20]:
-        out[f"volume_{period}d_ma"] = _sma(v, period)
-        out[f"volume_ratio_{period}d"] = _safe_div(v, _sma(v, period))  # 量比
-        out[f"amount_{period}d_ma"] = _sma(a, period)
-        out[f"amount_ratio_{period}d"] = _safe_div(a, _sma(a, period))
+    # MACD
+    macd = ta.trend.MACD(c)
+    out["macd"] = macd.macd()
+    out["macd_signal"] = macd.macd_signal()
+    out["macd_hist"] = macd.macd_diff()
 
-    # 价量背离
-    out["volume_price_divergence"] = _safe_div(
-        _pct_change(c, 1) * _pct_change(v, 1),  # 同号为正（量价齐升/齐跌）
-        _rolling_std(c, 20) + 1e-8,
-    )
+    # ADX (Average Directional Index)
+    adx = ta.trend.ADXIndicator(h, l, c, window=14)
+    out["adx"] = adx.adx()
+    out["adx_pos"] = adx.adx_pos()
+    out["adx_neg"] = adx.adx_neg()
 
-    # ── 7. 布林带 (Bollinger Bands) ────────────────
-    for period in [20]:
-        ma_b = _sma(c, period)
-        std_b = _rolling_std(c, period)
-        out[f"bb_upper_{period}"] = ma_b + 2 * std_b
-        out[f"bb_lower_{period}"] = ma_b - 2 * std_b
-        out[f"bb_width_{period}"] = _safe_div(2 * std_b, ma_b)  # 带宽
-        out[f"bb_position_{period}"] = _safe_div(
-            c - ma_b + 2 * std_b, 4 * std_b
-        )  # 0-1 位置
+    # Aroon
+    aroon = ta.trend.AroonIndicator(h, l, window=25)
+    out["aroon_up"] = aroon.aroon_up()
+    out["aroon_down"] = aroon.aroon_down()
 
-    # ── 8. 相对强弱 (Relative Strength) ─────────────
-    up = np.where((c - _shift(c, 1)) > 0, c - _shift(c, 1), 0)
-    down = np.where((_shift(c, 1) - c) > 0, _shift(c, 1) - c, 0)
-    for period in [14, 20]:
-        avg_up = _sma(up, period)
-        avg_down = _sma(down, period)
-        out[f"rs_{period}"] = _safe_div(avg_up, avg_down + 1e-10)
+    # CCI
+    for p in [14, 20]:
+        out[f"cci_{p}"] = ta.trend.CCIIndicator(h, l, c, window=p).cci()
 
-    # ── 9. 价格位置特征 ────────────────────────────
-    for period in [20, 60]:
-        hh = _rolling_max(h, period)
-        ll = _rolling_min(l, period)
-        out[f"price_position_{period}d"] = _safe_div(c - ll, hh - ll + 1e-10)
-        out[f"high_pct_{period}d"] = _safe_div(c, hh)  # 距近期高点
-        out[f"low_pct_{period}d"] = _safe_div(c, ll)  # 距近期低点
+    # TRIX
+    out["trix"] = ta.trend.TRIXIndicator(c, window=15).trix()
 
-    # ── 10. 换手率特征 ────────────────────────────
-    out["turnover_rate"] = _safe_div(v, _sma(v, 60) + 1e-8)  # 相对 60 日量比
+    # ══════════════════════════════════════════════
+    # 3. 波动率类 (Volatility) — 12 features
+    # ══════════════════════════════════════════════
+    # ATR
+    for p in [5, 14, 20]:
+        out[f"atr_{p}"] = ta.volatility.AverageTrueRange(h, l, c, window=p).average_true_range()
 
-    # ── 11. 资金特征 ──────────────────────────────
-    out["avg_price"] = _safe_div(a, v + 1e-8)  # 均价
-    out["avg_price_ratio"] = _safe_div(_safe_div(a, v + 1e-8), c)  # 均价/收盘价
-    out["amount_change_1d"] = _pct_change(a, 1)  # 成交额变化
+    # Bollinger Bands
+    bb = ta.volatility.BollingerBands(c, window=20, window_dev=2)
+    out["bb_upper"] = bb.bollinger_hband()
+    out["bb_lower"] = bb.bollinger_lband()
+    out["bb_mid"] = bb.bollinger_mavg()
+    out["bb_width"] = (bb.bollinger_hband() - bb.bollinger_lband()) / bb.bollinger_mavg()
+    out["bb_pct"] = bb.bollinger_pband()  # 价格在布林带中的位置 (0~1)
 
-    # ── 12. 收益偏度/峰度 ──────────────────────────
-    ret_1d = _pct_change(c, 1)
-    for period in [20]:
-        out[f"return_skew_{period}d"] = _rolling_skew(ret_1d, period)
-        out[f"return_kurt_{period}d"] = _rolling_kurt(ret_1d, period)
+    # Donchian Channel
+    dc = ta.volatility.DonchianChannel(h, l, c, window=20)
+    out["dc_upper"] = dc.donchian_channel_hband()
+    out["dc_lower"] = dc.donchian_channel_lband()
+    out["dc_mid"] = dc.donchian_channel_mband()
 
-    # ── 全部 shift(1) 防未来泄露 ────────────────────
-    result = pd.DataFrame(out)
+    # Ulcer Index
+    out["ulcer_14"] = ta.volatility.UlcerIndex(c, window=14).ulcer_index()
+
+    # ══════════════════════════════════════════════
+    # 4. 量能类 (Volume) — 12 features
+    # ══════════════════════════════════════════════
+    # OBV
+    out["obv"] = ta.volume.OnBalanceVolumeIndicator(c, v).on_balance_volume()
+
+    # Accumulation/Distribution
+    out["ad"] = ta.volume.AccDistIndexIndicator(h, l, c, v).acc_dist_index()
+
+    # CMF (Chaikin Money Flow)
+    out["cmf"] = ta.volume.ChaikinMoneyFlowIndicator(h, l, c, v).chaikin_money_flow()
+
+    # Ease of Movement
+    out["emv"] = ta.volume.EaseOfMovementIndicator(h, l, v).ease_of_movement()
+
+    # Force Index
+    out["fi_13"] = ta.volume.ForceIndexIndicator(c, v, window=13).force_index()
+
+    # MFI (Money Flow Index)
+    out["mfi"] = ta.volume.MFIIndicator(h, l, c, v, window=14).money_flow_index()
+
+    # Volume Price Trend
+    out["vpt"] = ta.volume.VolumePriceTrendIndicator(c, v).volume_price_trend()
+
+    # VWAP
+    out["vwap"] = ta.volume.VolumeWeightedAveragePrice(h, l, c, v).volume_weighted_average_price()
+
+    # 量比
+    for p in [5, 20]:
+        out[f"vol_ratio_{p}"] = v / v.rolling(p).mean().replace(0, np.nan)
+
+    # 量能动量
+    out["vol_roc_5"] = ta.momentum.ROCIndicator(v, window=5).roc()
+    out["vol_roc_20"] = ta.momentum.ROCIndicator(v, window=20).roc()
+
+    # ══════════════════════════════════════════════
+    # 5. 衍生统计类 — 10 features
+    # ══════════════════════════════════════════════
+    daily_ret = c.pct_change()
+
+    # 收益率偏度
+    for p in [20, 60]:
+        out[f"ret_skew_{p}"] = daily_ret.rolling(p).skew()
+
+    # 收益率峰度
+    out["ret_kurt_20"] = daily_ret.rolling(20).kurt()
+
+    # 收益率分位 (当前值在过去 N 日中的分位 0~1)
+    for p in [20, 60]:
+        out[f"ret_pctile_{p}"] = _rolling_percentile(daily_ret, p)
+
+    # 连续上涨/下跌天数
+    out["consec_up"] = _consecutive_count(daily_ret > 0)
+    out["consec_down"] = _consecutive_count(daily_ret < 0)
+
+    # 收益波动比 (Sharpe-like)
+    out["sharpe_20"] = daily_ret.rolling(20).mean() / daily_ret.rolling(20).std().replace(0, np.nan)
+
+    # 量价相关性
+    vol_ret = v.pct_change()
+    for p in [10, 20]:
+        out[f"pv_corr_{p}"] = daily_ret.rolling(p).corr(vol_ret)
+
+    # ══════════════════════════════════════════════
+    # 6. 价格位置类 — 4 features
+    # ══════════════════════════════════════════════
+    for p in [20, 60]:
+        roll_high = h.rolling(p).max()
+        roll_low = l.rolling(p).min()
+        hl_range = (roll_high - roll_low).replace(0, np.nan)
+        out[f"price_pos_{p}"] = (c - roll_low) / hl_range
+
+    # ── 拼接 & shift(1) 防未来泄露 ──────────────
+    result = pd.DataFrame(out, index=df.index)
     result = result.shift(1)
-    result = pd.concat([df, result], axis=1)
 
-    return result
+    return pd.concat([df, result], axis=1)
 
 
 # ══════════════════════════════════════════════════════════
-# 内部工具函数
+# 内部工具函数 (ta 库不覆盖的自定义特征)
 # ══════════════════════════════════════════════════════════
 
 
-def _pct_change(arr: np.ndarray, period: int = 1) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    if period < len(arr):
-        result[period:] = (arr[period:] - arr[:-period]) / (arr[:-period] + 1e-10)
-    return result
+def _rolling_percentile(series: pd.Series, window: int) -> pd.Series:
+    """当前值在过去 N 日中的分位 (0~1)."""
+    def pctile_rank(x):
+        return np.sum(x[:-1] < x[-1]) / (len(x) - 1) if len(x) > 1 else np.nan
+    return series.rolling(window).apply(pctile_rank, raw=True)
 
 
-def _log_return(arr: np.ndarray, period: int = 1) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    if period < len(arr):
-        result[period:] = np.log(arr[period:] / (arr[:-period] + 1e-10))
-    return result
-
-
-def _sma(arr: np.ndarray, period: int) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    if len(arr) >= period:
-        cumsum = np.cumsum(arr)
-        result[period - 1:] = cumsum[period - 1:] / period
-        result[period - 1:] -= np.concatenate([[0], cumsum[:len(arr) - period]]) / period
-    return result
-
-
-def _rolling_std(arr: np.ndarray, period: int) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    for i in range(period - 1, len(arr)):
-        result[i] = np.std(arr[i - period + 1:i + 1])
-    return result
-
-
-def _rolling_max(arr: np.ndarray, period: int) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    for i in range(period - 1, len(arr)):
-        result[i] = np.max(arr[i - period + 1:i + 1])
-    return result
-
-
-def _rolling_min(arr: np.ndarray, period: int) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    for i in range(period - 1, len(arr)):
-        result[i] = np.min(arr[i - period + 1:i + 1])
-    return result
-
-
-def _rolling_skew(arr: np.ndarray, period: int) -> np.ndarray:
-    """滚动偏度"""
-    result = np.full_like(arr, np.nan, dtype=float)
-    for i in range(period - 1, len(arr)):
-        s = np.array(arr[i - period + 1:i + 1])
-        s = s[~np.isnan(s)]
-        if len(s) > 2:
-            result[i] = float(pd.Series(s).skew())
-    return result
-
-
-def _rolling_kurt(arr: np.ndarray, period: int) -> np.ndarray:
-    """滚动峰度"""
-    result = np.full_like(arr, np.nan, dtype=float)
-    for i in range(period - 1, len(arr)):
-        s = np.array(arr[i - period + 1:i + 1])
-        s = s[~np.isnan(s)]
-        if len(s) > 3:
-            result[i] = float(pd.Series(s).kurtosis())
-    return result
-
-
-def _atr(high: np.ndarray, low: np.ndarray, close: np.ndarray, period: int) -> np.ndarray:
-    """平均真实波幅"""
-    prev_close = _shift(close, 1)
-    tr = np.maximum(
-        high - low,
-        np.maximum(
-            np.abs(high - prev_close),
-            np.abs(low - prev_close),
-        ),
-    )
-    return _sma(tr, period)
-
-
-def _rsi(close: np.ndarray, period: int = 14) -> np.ndarray:
-    """相对强弱指标"""
-    delta = np.diff(close, prepend=close[0])
-    gain = np.where(delta > 0, delta, 0)
-    loss = np.where(delta < 0, -delta, 0)
-    avg_gain = _sma(gain, period)
-    avg_loss = _sma(loss, period)
-    rs = _safe_div(avg_gain, avg_loss + 1e-10)
-    return np.where(avg_loss == 0, 100.0, 100.0 - 100.0 / (1.0 + rs))
-
-
-def _shift(arr: np.ndarray, period: int = 1) -> np.ndarray:
-    result = np.full_like(arr, np.nan, dtype=float)
-    if period < len(arr):
-        result[period:] = arr[:-period]
-    return result
-
-
-def _safe_div(a: np.ndarray, b: np.ndarray) -> np.ndarray:
-    return np.where(np.abs(b) < 1e-10, 0.0, a / b)
+def _consecutive_count(mask: pd.Series) -> pd.Series:
+    """连续为 True 的天数 (负数表示连续为 False)."""
+    result = np.zeros(len(mask), dtype=float)
+    count = 0
+    for i in range(len(mask)):
+        val = mask.iloc[i]
+        if pd.isna(val):
+            count = 0
+        elif val:
+            count = max(count, 0) + 1
+        else:
+            count = min(count, 0) - 1
+        result[i] = count
+    return pd.Series(result, index=mask.index)

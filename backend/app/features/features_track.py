@@ -152,9 +152,8 @@ def _pct_change(arr: np.ndarray, period: int = 1) -> np.ndarray:
 def _sma(arr: np.ndarray, period: int) -> np.ndarray:
     result = np.full_like(arr, np.nan, dtype=float)
     if len(arr) >= period:
-        cumsum = np.cumsum(arr)
-        result[period - 1:] = cumsum[period - 1:] / period
-        result[period - 1:] -= np.concatenate([[0], cumsum[:len(arr) - period]]) / period
+        s = pd.Series(arr)
+        result[:] = s.rolling(period, min_periods=period).mean().values
     return result
 
 
