@@ -101,18 +101,95 @@
         </div>
       </div>
     </div>
+
+    <!-- 筛选标准 -->
+    <div class="content-row">
+      <div class="factor-col">
+        <div class="criteria-card">
+          <div class="criteria-title">🔬 因子筛选流程</div>
+          <div class="criteria-flow">
+            <div class="c-step">
+              <span class="c-num">1</span>
+              <div class="c-body">
+                <strong>Alphalens 池化 IC 检验</strong>
+                <span>计算每个因子与未来20日收益的 Spearman 秩相关系数，要求 |IC| ≥ 0.01</span>
+              </div>
+            </div>
+            <div class="c-step">
+              <span class="c-num">2</span>
+              <div class="c-body">
+                <strong>IR 稳定性检验</strong>
+                <span>计算 IC 时序均值/标准差的比率，要求 |IR| ≥ 0.05，确保因子表现稳定</span>
+              </div>
+            </div>
+            <div class="c-step">
+              <span class="c-num">3</span>
+              <div class="c-body">
+                <strong>10 层分组单调性</strong>
+                <span>按因子值分成10组，检查各组收益是否单调递增/递减</span>
+              </div>
+            </div>
+            <div class="c-step">
+              <span class="c-num">4</span>
+              <div class="c-body">
+                <strong>去共线 (|corr| &lt; 0.95)</strong>
+                <span>剔除相关性超过0.95的高相关特征对，75 → 54 个最终特征</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 黑名单 -->
+    <div class="content-row" v-if="blacklistFactors.length">
+      <div class="factor-col">
+        <div class="blacklist-card">
+          <div class="bl-header" @click="showBlacklist = !showBlacklist" style="cursor:pointer">
+            <span class="bl-title">❌ 黑名单因子（{{ blacklistFactors.length }} 个）</span>
+            <el-tag size="small" type="danger">未通过筛选</el-tag>
+            <el-icon :class="{ rot: showBlacklist }"><ArrowRight /></el-icon>
+          </div>
+          <div v-if="showBlacklist" class="bl-body">
+            <div v-for="f in blacklistFactors" :key="f.factor_name" class="bl-row">
+              <span class="bl-name">{{ f.factor_name }}</span>
+              <el-tag size="small" type="danger" effect="plain">{{ f.reason || '未通过筛选' }}</el-tag>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 最终特征 -->
+    <div class="content-row">
+      <div class="factor-col">
+        <div class="criteria-card">
+          <div class="criteria-title">📊 最终特征（54 个）</div>
+          <div class="criteria-desc">
+            <p>从 75 个白名单因子中剔除 21 对高度相关特征 (|corr| &gt; 0.95) 后保留。例如：</p>
+            <ul>
+              <li><code>sma_5</code> 与 <code>ema_5</code> 高度相关 → 仅保留 <code>sma_5</code></li>
+              <li><code>atr_5</code> 与 <code>atr_14</code> 高度相关 → 仅保留 <code>atr_14</code></li>
+              <li>同类趋势指标中保留 IC 最高者，去除冗余</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { Search } from '@element-plus/icons-vue'
+import { Search, ArrowRight } from '@element-plus/icons-vue'
 import { getWhitelist, getBlacklist, listTracks } from '@/api/track'
 
 const factors = ref<any[]>([])
+const blacklistFactors = ref<any[]>([])
 const searchQuery = ref('')
 const selectedCategory = ref('')
 const expanded = ref<Set<string>>(new Set())
+const showBlacklist = ref(false)
 const stats = ref({
   stocks: 23,
   whitelist: 75,
@@ -243,6 +320,14 @@ onMounted(async () => {
     factors.value = Array.isArray(res) ? res : []
   } catch {
     factors.value = []
+  }
+
+  // 加载黑名单
+  try {
+    const res = await getBlacklist()
+    blacklistFactors.value = Array.isArray(res) ? res : []
+  } catch {
+    blacklistFactors.value = []
   }
 
   // 加载统计
@@ -461,4 +546,111 @@ onMounted(async () => {
   border-radius: 3px;
   transition: width 0.3s;
 }
+
+
+/* ── 筛选流程 ── */
+.criteria-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
+}
+
+.criteria-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 14px;
+}
+
+.criteria-flow { display: flex; flex-direction: column; gap: 10px; }
+
+.c-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.c-num {
+  width: 24px; height: 24px;
+  background: #3b82f6; color: #fff;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+
+.c-body { flex: 1; }
+.c-body strong { font-size: 13px; color: #1e293b; display: block; margin-bottom: 2px; }
+.c-body span { font-size: 12px; color: #64748b; line-height: 1.5; }
+
+.criteria-desc {
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.criteria-desc p { margin: 0 0 8px; }
+.criteria-desc ul { margin: 0; padding-left: 20px; }
+.criteria-desc li { margin-bottom: 4px; }
+.criteria-desc code {
+  font-size: 11px;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-family: 'SF Mono', monospace;
+}
+
+/* ── 黑名单 ── */
+.blacklist-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+
+.bl-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.bl-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  flex: 1;
+}
+
+.bl-header .el-icon {
+  font-size: 14px;
+  color: #94a3b8;
+  transition: transform 0.2s;
+}
+
+.bl-header .rot { transform: rotate(90deg); }
+
+.bl-body {
+  padding: 8px 16px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.bl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.bl-name {
+  font-size: 12px;
+  font-family: 'SF Mono', monospace;
+  color: #475569;
+}
+
 </style>
