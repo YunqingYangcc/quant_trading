@@ -74,13 +74,13 @@ export function getBlacklist() {
 }
 
 export function getTrackScore(trackName: string) {
-  return request.get(`/api/ml/score/${trackName}`)
+  return request.get(`/ml/score/${trackName}`)
 }
 
 export function listTrackModels(trackName: string) {
-  return request.get(`/api/ml/models/${trackName}`)
+  return request.get(`/ml/models/${trackName}`)
 }
 
 export function trainTrackModel(trackName: string) {
-  return request.post(`/api/ml/train/${trackName}`)
+  return request.post(`/ml/train/${trackName}`)
 }

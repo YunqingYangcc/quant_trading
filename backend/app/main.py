@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="赛道量化系统 API",
+    title="Quant Trading API",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -47,7 +47,7 @@ app.include_router(ml_router, prefix="/api/v1", tags=["AI 模型"])
 
 @app.get("/", summary="根路由")
 async def root():
-    return {"service": "赛道量化系统", "version": "1.0.0", "status": "running"}
+    return {"service": "Quant Trading API", "version": "1.0.0", "status": "running"}
 
 
 @app.get("/health", summary="健康检查")

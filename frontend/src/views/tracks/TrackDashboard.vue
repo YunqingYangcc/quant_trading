@@ -1,152 +1,123 @@
 <template>
   <div class="track-dashboard">
-    <div class="page-header">
-      <h2>赛道量化终端</h2>
-      <el-button type="primary" size="small" @click="refreshData" :loading="loading">
-        刷新数据
-      </el-button>
-    </div>
-
     <!-- 赛道 Tab -->
-    <el-tabs v-model="activeTrack" @tab-change="onTrackChange">
-      <el-tab-pane
+    <div class="track-tabs-bar">
+      <div
         v-for="track in tracks"
         :key="track.id"
-        :label="`${track.display_name} (${track.stock_count})`"
-        :name="track.name"
+        class="track-tab"
+        :class="{ active: activeTrack === track.name }"
+        @click="onTrackChange(track.name)"
       >
-        <template #label>
-          <span class="track-tab-label">
-            {{ track.display_name }}
-            <el-tag size="small" type="info">{{ track.stock_count }}</el-tag>
-          </span>
-        </template>
-      </el-tab-pane>
-    </el-tabs>
+        <span class="tab-name">{{ track.display_name }}</span>
+        <el-tag size="small" type="info" round>{{ track.stock_count }}</el-tag>
+      </div>
+    </div>
 
-    <el-row :gutter="16" class="dashboard-content">
-      <!-- 左侧：个股排名 -->
-      <el-col :span="8">
-        <el-card shadow="never" class="stock-rank-card">
-          <template #header>
-            <span>个股 AI 强弱排名</span>
-          </template>
-          <div v-if="scoreResult?.scores?.length">
-            <div
-              v-for="(s, i) in scoreResult.scores"
-              :key="s.stock_code"
-              class="stock-rank-item"
-              :class="{ active: selectedStock === s.stock_code }"
-              @click="selectStock(s.stock_code)"
-            >
-              <span class="rank-num">#{{ s.rank }}</span>
-              <span class="stock-name">{{ getStockName(s.stock_code) || s.stock_code }}</span>
-              <el-tag
-                :type="s.score > 0 ? 'success' : 'danger'"
-                size="small"
-              >
-                {{ s.score.toFixed(3) }}
-              </el-tag>
-            </div>
-          </div>
-          <el-empty v-else description="暂无评分数据" />
-        </el-card>
-      </el-col>
+    <!-- 股票选择横栏 -->
+    <div class="stock-selector-bar">
+      <div class="stock-search">
+        <el-input
+          v-model="searchQuery"
+          placeholder="搜索股票"
+          size="small"
+          clearable
+          :prefix-icon="Search"
+        />
+      </div>
+      <div class="stock-chips">
+        <div
+          v-for="s in filteredStocks"
+          :key="s.code"
+          class="stock-chip"
+          :class="{ active: selectedStock === s.code }"
+          @click="selectStock(s.code)"
+        >
+          <span class="chip-name">{{ s.name }}</span>
+          <span class="chip-code">{{ s.code }}</span>
+        </div>
+        <div v-if="!filteredStocks.length" class="stock-empty">
+          {{ stocks.length ? '无匹配' : '暂无股票' }}
+        </div>
+      </div>
+    </div>
 
-      <!-- 中间：K 线 + 特征 -->
-      <el-col :span="10">
-        <el-card shadow="never" class="kline-card">
-          <template #header>
-            <span>{{ selectedStockName || '选择一只股票' }}</span>
-          </template>
-          <div ref="klineRef" class="kline-container"></div>
-          <el-empty v-if="!selectedStock" description="请在左侧选择股票" />
-        </el-card>
-      </el-col>
+    <!-- 主 K 线图区域 -->
+    <div class="kline-main">
+      <div class="kline-header">
+        <span class="kline-title">{{ selectedStockName || '选择一只股票' }}</span>
+        <el-button size="small" @click="refreshData" :loading="loading" text>
+          <el-icon><Refresh /></el-icon> 刷新
+        </el-button>
+      </div>
+      <div ref="klineRef" class="kline-chart"></div>
+    </div>
 
-      <!-- 右侧：赛道景气 + 因子 -->
-      <el-col :span="6">
-        <el-card shadow="never" class="sentiment-card">
-          <template #header>
-            <span>赛道景气度</span>
-          </template>
-          <div class="sentiment-gauge">
-            <div class="gauge-value" :style="{ color: sentimentColor }">
-              {{ scoreResult?.track_sentiment ?? '--' }}
-            </div>
-            <div class="gauge-label">分</div>
-            <el-progress
-              :percentage="scoreResult?.track_sentiment ?? 0"
-              :color="sentimentColor"
-              :stroke-width="12"
-            />
-          </div>
-        </el-card>
-
-        <el-card shadow="never" class="factors-card" style="margin-top: 16px">
-          <template #header>
-            <span>有效因子 ({{ whitelist.length }})</span>
-          </template>
-          <div v-for="f in whitelist.slice(0, 15)" :key="f.factor_name" class="factor-item">
-            <el-tooltip :content="`IC: ${f.ic_mean} | IR: ${f.ir}`" placement="left">
-              <span class="factor-name">{{ f.factor_name }}</span>
-            </el-tooltip>
-            <el-tag size="small" type="success">{{ f.category || f.factor_type }}</el-tag>
-          </div>
-          <el-empty v-if="!whitelist.length" description="暂无因子" />
-        </el-card>
-      </el-col>
-    </el-row>
+    <!-- 底部预留区（后续 Phase 填充：因子/回测等） -->
+    <div class="bottom-reserved">
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
-import * as echarts from 'echarts'
+import { Refresh, Search } from '@element-plus/icons-vue'
+import * as echarts from 'echarts/core'
+import { CandlestickChart, LineChart, BarChart } from 'echarts/charts'
+import {
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  DataZoomComponent,
+} from 'echarts/components'
+import { CanvasRenderer } from 'echarts/renderers'
 import {
   listTracks,
-  listStocks,
-  getTrackScore,
-  getWhitelist,
   getLabels,
   type Track,
   type TrackStock,
 } from '@/api/track'
+
+echarts.use([
+  CandlestickChart,
+  LineChart,
+  BarChart,
+  GridComponent,
+  TooltipComponent,
+  LegendComponent,
+  DataZoomComponent,
+  CanvasRenderer,
+])
 
 const loading = ref(false)
 const activeTrack = ref('')
 const tracks = ref<Track[]>([])
 const stocks = ref<TrackStock[]>([])
 const selectedStock = ref('')
-const scoreResult = ref<any>(null)
-const whitelist = ref<any[]>([])
+const searchQuery = ref('')
 const labels = ref<any[]>([])
+
+const filteredStocks = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return stocks.value
+  return stocks.value.filter(
+    s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q)
+  )
+})
 const klineRef = ref<HTMLElement | null>(null)
 let klineChart: echarts.ECharts | null = null
 
 const selectedStockName = computed(() => {
   const s = stocks.value.find(x => x.code === selectedStock.value)
-  return s ? `${s.name} (${s.code})` : selectedStock.value
+  return s ? `${s.name} (${s.code})` : ''
 })
-
-const sentimentColor = computed(() => {
-  const v = scoreResult.value?.track_sentiment ?? 0
-  if (v >= 70) return '#67c23a'
-  if (v >= 40) return '#e6a23c'
-  return '#f56c6c'
-})
-
-function getStockName(code: string): string | undefined {
-  return stocks.value.find(s => s.code === code)?.name
-}
 
 async function refreshData() {
   loading.value = true
   try {
-    const [trackRes, wlRes] = await Promise.all([listTracks(), getWhitelist()])
+    const trackRes = await listTracks()
     tracks.value = trackRes.items || []
-    whitelist.value = Array.isArray(wlRes) ? wlRes : []
 
     if (tracks.value.length && !activeTrack.value) {
       activeTrack.value = tracks.value[0].name
@@ -160,29 +131,18 @@ async function refreshData() {
 }
 
 async function onTrackChange(trackName: string) {
+  activeTrack.value = trackName
   const track = tracks.value.find(t => t.name === trackName)
   if (!track) return
 
-  try {
-    // 获取该赛道股票
-    const stockRes = await listTracks()
-    stocks.value = track.stocks || []
+  stocks.value = track.stocks || []
+  searchQuery.value = ''
 
-    // 获取 AI 评分
-    try {
-      const scoreRes = await getTrackScore(trackName)
-      scoreResult.value = scoreRes
-    } catch {
-      scoreResult.value = null
-    }
-
-    // 默认选中第一只
-    if (stocks.value.length) {
-      selectedStock.value = stocks.value[0].code
-      await loadKline(selectedStock.value)
-    }
-  } catch (e: any) {
-    ElMessage.error('赛道加载失败')
+  if (stocks.value.length) {
+    selectedStock.value = stocks.value[0].code
+    await loadKline(selectedStock.value)
+  } else {
+    selectedStock.value = ''
   }
 }
 
@@ -224,35 +184,39 @@ function renderKline() {
     tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
     legend: { data: ['K线', 'MA5', 'MA20'], top: 0 },
     grid: [
-      { left: '10%', right: '10%', top: 60, height: '55%' },
-      { left: '10%', right: '10%', top: '78%', height: '15%' },
+      { left: 60, right: 20, top: 36, bottom: '32%' },
+      { left: 60, right: 20, top: '73%', bottom: 36 },
     ],
     xAxis: [
-      { type: 'category', data: dates, gridIndex: 0, axisLabel: { rotate: 45 } },
+      { type: 'category', data: dates, gridIndex: 0, axisLabel: { rotate: 45, fontSize: 11 } },
       { type: 'category', data: dates, gridIndex: 1, axisLabel: { show: false } },
     ],
     yAxis: [
-      { type: 'value', gridIndex: 0, scale: true },
-      { type: 'value', gridIndex: 1, scale: true },
+      { type: 'value', gridIndex: 0, scale: true, splitLine: { lineStyle: { type: 'dashed' } } },
+      { type: 'value', gridIndex: 1, scale: true, splitLine: { show: false } },
     ],
-    dataZoom: [{ type: 'inside', xAxisIndex: [0, 1], start: 50, end: 100 }],
+    dataZoom: [
+      { type: 'inside', xAxisIndex: [0, 1], start: 70, end: 100 },
+      { type: 'slider', xAxisIndex: [0, 1], start: 70, end: 100, bottom: 6, height: 18, borderColor: 'transparent', backgroundColor: '#f5f7fa', fillerColor: 'rgba(59,130,246,0.08)', handleStyle: { color: '#3b82f6' } },
+    ],
     series: [
       {
         name: 'K线', type: 'candlestick', xAxisIndex: 0, yAxisIndex: 0,
         data: prices,
-        itemStyle: { color: '#f56c6c', color0: '#67c23a' },
+        itemStyle: { color: '#f56c6c', color0: '#67c23a', borderColor: '#f56c6c', borderColor0: '#67c23a' },
       },
       {
         name: 'MA5', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
-        data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1 },
+        data: ma5, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#e6a23c' },
       },
       {
         name: 'MA20', type: 'line', xAxisIndex: 0, yAxisIndex: 0,
-        data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1 },
+        data: ma20, smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#409eff' },
       },
       {
         name: '成交量', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
         data: volumes,
+        itemStyle: { color: '#c0c4cc' },
       },
     ],
   }
@@ -278,22 +242,167 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.track-dashboard { padding: 16px; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header h2 { margin: 0; font-size: 20px; }
-.track-tab-label { display: flex; align-items: center; gap: 6px; }
-.stock-rank-card .stock-rank-item {
-  display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-  cursor: pointer; border-radius: 4px; transition: background 0.2s;
+.track-dashboard {
+  height: calc(100vh - 52px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
 }
-.stock-rank-item:hover { background: #f5f7fa; }
-.stock-rank-item.active { background: #ecf5ff; }
-.rank-num { width: 28px; font-size: 12px; color: #909399; }
-.stock-name { flex: 1; font-size: 14px; }
-.kline-container { width: 100%; height: 420px; }
-.sentiment-gauge { text-align: center; padding: 16px 0; }
-.gauge-value { font-size: 48px; font-weight: bold; }
-.gauge-label { font-size: 14px; color: #909399; margin-bottom: 8px; }
-.factor-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; font-size: 12px; }
-.factor-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px; }
+
+/* 赛道 Tab 栏 */
+.track-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 12px;
+  background: #fafbfc;
+  border-bottom: 1px solid #ebedf0;
+  flex-shrink: 0;
+}
+
+.track-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  color: #606266;
+}
+
+.track-tab:hover {
+  background: #f0f2f5;
+}
+
+.track-tab.active {
+  background: #ecf5ff;
+  color: #409eff;
+  font-weight: 600;
+}
+
+.tab-name {
+  white-space: nowrap;
+}
+
+/* 股票选择横栏 */
+.stock-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 12px;
+  background: #fff;
+  border-bottom: 1px solid #ebedf0;
+  flex-shrink: 0;
+}
+
+.stock-search {
+  flex-shrink: 0;
+  width: 160px;
+}
+
+.stock-search :deep(.el-input__wrapper) {
+  border-radius: 6px;
+}
+
+.stock-chips {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  flex: 1;
+}
+
+.stock-chips::-webkit-scrollbar {
+  height: 3px;
+}
+
+.stock-chips::-webkit-scrollbar-thumb {
+  background: #dcdfe6;
+  border-radius: 2px;
+}
+
+.stock-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 14px;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  min-width: 80px;
+}
+
+.stock-chip:hover {
+  border-color: #409eff;
+  background: #f5f7fa;
+}
+
+.stock-chip.active {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.chip-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #303133;
+  white-space: nowrap;
+}
+
+.chip-code {
+  font-size: 11px;
+  color: #909399;
+  margin-top: 1px;
+}
+
+.stock-chip.active .chip-name {
+  color: #409eff;
+}
+
+.stock-empty {
+  color: #c0c4cc;
+  font-size: 13px;
+  padding: 8px;
+}
+
+/* K 线主区域 */
+.kline-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  background: #fff;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.kline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f2f5;
+  flex-shrink: 0;
+}
+
+.kline-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.kline-chart {
+  flex: 1;
+  min-height: 0;
+  padding: 0 8px 8px;
+}
+
+/* 底部预留 */
+.bottom-reserved {
+  flex-shrink: 0;
+}
 </style>

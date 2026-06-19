@@ -6,6 +6,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'tracks',
+      meta: { title: 'Track Dashboard' },
       component: () => import('@/views/tracks/TrackDashboard.vue'),
     },
   ],
