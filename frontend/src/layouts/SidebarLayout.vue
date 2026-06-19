@@ -87,9 +87,6 @@
           <span class="header-title">{{ pageTitle }}</span>
         </div>
         <div class="header-right">
-          <span class="header-status" :style="{ color: currentPhaseColor, background: currentPhaseBg }">
-            {{ stepLabel }}
-          </span>
         </div>
       </el-header>
       <el-main class="app-main">

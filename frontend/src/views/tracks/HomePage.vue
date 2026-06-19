@@ -3,18 +3,18 @@
     <!-- 顶部标题 -->
     <div class="hero-section">
       <div class="hero-text">
-        <h1>赛道量化终端</h1>
-        <p>AI 驱动的个人散户投资决策系统</p>
-      </div>
-      <div class="hero-badges">
-        <el-tag size="large" type="success" effect="dark" round>Phase A-D ✅</el-tag>
-        <el-tag size="large" type="warning" effect="dark" round>Phase E-F 🔄</el-tag>
-        <el-tag size="large" type="info" effect="dark" round>Phase G-H ⏳</el-tag>
+        <h1>Quant Terminal</h1>
+        <p>AI-Powered Track Analysis System</p>
       </div>
     </div>
 
+    <!-- 加载状态 -->
+    <div v-if="loading" class="loading-state">
+      <el-skeleton :rows="3" animated />
+    </div>
+
     <!-- 4 赛道卡片 -->
-    <div class="track-grid">
+    <div v-else class="track-grid">
       <div
         v-for="track in tracksWithProsperity"
         :key="track.name"
@@ -24,9 +24,9 @@
       >
         <div class="card-header">
           <span class="card-name">{{ track.displayName }}</span>
-          <div class="card-prosperity">
+          <div v-if="track.prosperity != null" class="card-prosperity">
             <div class="prosperity-ring" :style="{ borderColor: prosperityColor(track.prosperity) }">
-              {{ track.prosperity ?? '-' }}
+              {{ track.prosperity }}
             </div>
           </div>
         </div>
@@ -40,39 +40,45 @@
             <span class="stock-score">{{ (s.score * 100).toFixed(2) }}</span>
           </div>
           <div v-if="!track.topStocks?.length" class="stock-empty-row">
-            <span class="stock-empty-text">暂无数据，请先训练模型</span>
+            <span class="stock-empty-text">AI scores loading...</span>
           </div>
         </div>
 
         <div class="card-footer">
-          <span class="footer-count">{{ track.stockCount }} 只成分股</span>
-          <el-tag size="small" :type="track.prosperity && track.prosperity >= 40 ? 'success' : 'danger'" round effect="plain">
-            {{ track.prosperity && track.prosperity >= 40 ? '可持仓' : '谨慎观望' }}
+          <span class="footer-count">{{ track.stockCount }} stocks</span>
+          <el-tag v-if="track.prosperity != null" size="small"
+            :type="track.prosperity >= 60 ? 'success' : track.prosperity >= 40 ? 'warning' : 'danger'"
+            round effect="plain">
+            {{ track.prosperity >= 60 ? 'Favorable' : track.prosperity >= 40 ? 'Neutral' : 'Caution' }}
           </el-tag>
         </div>
       </div>
     </div>
 
-    <!-- 底部区域：流水线 + 排行榜 -->
+    <!-- 底部区域：流水线 -->
     <div class="bottom-section">
       <div class="pipeline-wrapper">
         <PipelineStatus />
       </div>
-      <div class="leaderboard-wrapper">
-        <div class="leaderboard-card">
-          <div class="lb-header">
-            <span class="lb-title">🏆 全市场 Top Picks</span>
-            <el-tag size="small" type="warning" round>AI 推荐</el-tag>
-          </div>
-          <div class="lb-list">
-            <div v-for="(item, i) in topPicks" :key="i" class="lb-row" @click="goToTrack(item.track)">
-              <span class="lb-rank">{{ ['🥇','🥈','🥉'][i] || i+1 }}</span>
-              <span class="lb-code">{{ item.code }}</span>
-              <span class="lb-track">{{ item.trackName }}</span>
-              <div class="lb-score-bar">
-                <div class="lb-score-fill" :style="{ width: item.scorePct + '%' }" />
-              </div>
-              <span class="lb-score">{{ item.score }}</span>
+      <div class="pipeline-wrapper">
+        <div class="quick-stats-card">
+          <div class="qs-title">⚡ Quick Stats</div>
+          <div class="qs-grid">
+            <div class="qs-item">
+              <span class="qs-value">{{ stats.stocks }}</span>
+              <span class="qs-label">Stocks</span>
+            </div>
+            <div class="qs-item">
+              <span class="qs-value">{{ stats.whitelist }}</span>
+              <span class="qs-label">Factors ✅</span>
+            </div>
+            <div class="qs-item">
+              <span class="qs-value">{{ stats.models }}</span>
+              <span class="qs-label">Models</span>
+            </div>
+            <div class="qs-item">
+              <span class="qs-value">{{ stats.backtestReturn }}</span>
+              <span class="qs-label">BT Return</span>
             </div>
           </div>
         </div>
@@ -89,8 +95,15 @@ import PipelineStatus from '@/components/tracks/PipelineStatus.vue'
 
 const router = useRouter()
 const tracks = ref<Track[]>([])
+const loading = ref(true)
 const prosperityMap = ref<Record<string, any>>({})
 const trackScores = ref<Record<string, any[]>>({})
+const stats = ref({
+  stocks: 0,
+  whitelist: 0,
+  models: 0,
+  backtestReturn: '-',
+})
 
 const trackColors: Record<string, string> = {
   semiconductor: '#3b82f6',
@@ -175,8 +188,30 @@ onMounted(async () => {
         } catch {}
       }
     }
-  } catch {}
-})
+
+    // 加载统计
+    try {
+      const [wl, tr] = await Promise.all([
+        getWhitelist(),
+        getBlacklist(),
+      ].catch(() => []))
+      const wlCount = Array.isArray(wl) ? wl.length : 0
+      const trackItems = tr?.items || trackRes?.items || []
+      stats.value.stocks = trackItems.reduce((s: number, t: any) => s + (t.stock_count || 0), 0)
+      stats.value.whitelist = wlCount
+      stats.value.models = tracks.value.length
+      // 回测收益
+      try {
+        const btResp = await fetch('http://localhost:8000/api/v1/backtest/report')
+        const bt = await btResp.json()
+        stats.value.backtestReturn = (bt.total_return || 0).toFixed(1) + '%'
+      } catch {}
+    } catch {}
+  } catch {
+    // silent fail
+  } finally {
+    loading.value = false
+  })
 </script>
 
 <style scoped>
@@ -333,22 +368,59 @@ onMounted(async () => {
   gap: 16px;
 }
 
-.pipeline-wrapper {
-  width: 280px;
-  flex-shrink: 0;
-}
 
-.leaderboard-wrapper {
-  flex: 1;
-}
 
-.leaderboard-card {
+.quick-stats-card {
   background: #fff;
   border-radius: 10px;
   padding: 16px 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   height: 100%;
 }
+
+.qs-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 12px;
+}
+
+.qs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.qs-item {
+  text-align: center;
+  padding: 8px;
+  background: #f8fafc;
+  border-radius: 6px;
+}
+
+.qs-value {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.qs-label {
+  font-size: 11px;
+  color: #909399;
+}
+
+.loading-state {
+  padding: 40px;
+  background: #fff;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.pipeline-wrapper {
+  width: 280px;
+  flex-shrink: 0;
+}
+
 
 .lb-header {
   display: flex;
