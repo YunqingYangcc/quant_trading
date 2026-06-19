@@ -7,42 +7,64 @@
         <div class="logo-sub">@杨布拉德</div>
       </div>
 
-      <!-- 步骤分隔 -->
+      <!-- DATA LAYER -->
       <div class="step-section">
-        <div class="step-label">数据层</div>
+        <div class="step-label">DATA LAYER</div>
         <el-menu :default-active="activeMenu" router>
           <el-menu-item index="/">
             <el-icon><Monitor /></el-icon>
             <template #title>
-              <span>① 总览</span>
-              <span class="menu-phase">起步</span>
+              <span>① Dashboard</span>
+              <span class="menu-phase">Overview</span>
             </template>
           </el-menu-item>
-          <el-menu-item index="/data">
+          <el-menu-item index="/pipeline">
+            <el-icon><Connection /></el-icon>
+            <template #title>
+              <span>② Data Pipeline</span>
+              <span class="menu-phase">Monitor</span>
+            </template>
+          </el-menu-item>
+          <el-menu-item index="/alpha">
             <el-icon><DataAnalysis /></el-icon>
             <template #title>
-              <span>② 因子</span>
-              <span class="menu-phase">研究</span>
+              <span>③ Alpha Research</span>
+              <span class="menu-phase">Factors</span>
             </template>
           </el-menu-item>
         </el-menu>
       </div>
 
+      <!-- STRATEGY LAYER -->
       <div class="step-section">
-        <div class="step-label">策略层</div>
+        <div class="step-label">STRATEGY LAYER</div>
         <el-menu :default-active="activeMenu" router>
+          <el-menu-item index="/model-factory">
+            <el-icon><Cpu /></el-icon>
+            <template #title>
+              <span>④ Model Factory</span>
+              <span class="menu-phase">Training</span>
+            </template>
+          </el-menu-item>
           <el-menu-item :index="'/track/' + (currentTrack || 'semiconductor')">
             <el-icon><TrendCharts /></el-icon>
             <template #title>
-              <span>③ 赛道</span>
-              <span class="menu-phase">选股</span>
+              <span>⑤ Alpha Workstation</span>
+              <span class="menu-phase">Analysis</span>
             </template>
           </el-menu-item>
           <el-menu-item index="/backtest">
             <el-icon><Coin /></el-icon>
             <template #title>
-              <span>④ 回测</span>
-              <span class="menu-phase">验证</span>
+              <span>⑥ Backtest Lab</span>
+              <span class="menu-phase">Results</span>
+            </template>
+          </el-menu-item>
+          <el-menu-item index="/portfolio">
+            <el-icon><PieChart /></el-icon>
+            <template #title>
+              <span>⑦ Portfolio</span>
+              <span class="menu-phase">Risk</span>
             </template>
           </el-menu-item>
         </el-menu>
@@ -80,7 +102,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, DataAnalysis, TrendCharts, Coin } from '@element-plus/icons-vue'
+import { Monitor, Connection, DataAnalysis, Cpu, TrendCharts, Coin, PieChart } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => {
@@ -96,23 +118,29 @@ const currentTrack = computed(() => {
 
 // ── 页面标题映射 ──
 const pageTitles: Record<string, string> = {
-  '/': '① 总览 · 赛道量化终端',
-  '/data': '② 因子 · 研究与分析',
-  '/backtest': '④ 回测 · 绩效验证',
+  '/': '① Dashboard · Quant Terminal',
+  '/pipeline': '② Data Pipeline · Data Source Monitor',
+  '/alpha': '③ Alpha Research · Factor Analysis',
+  '/model-factory': '④ Model Factory · Training & Versioning',
+  '/backtest': '⑥ Backtest Lab · Performance Attribution',
+  '/portfolio': '⑦ Portfolio · Risk & Exposure',
 }
 const pageTitle = computed(() => {
-  if (route.path.startsWith('/track/')) return '③ 赛道 · ' + (route.params.name as string || '分析')
+  if (route.path.startsWith('/track/')) return '⑤ Alpha Workstation · ' + (route.params.name as string || 'Analysis')
   return pageTitles[route.path] || 'Quant Trading'
 })
 
 // ── 步骤标签映射 ──
 const steps: Record<string, { label: string; color: string; bg: string }> = {
-  '/': { label: 'Step 1/4 · 总览', color: '#3b82f6', bg: '#eff6ff' },
-  '/data': { label: 'Step 2/4 · 因子研究', color: '#22c55e', bg: '#f0fdf4' },
-  '/backtest': { label: 'Step 4/4 · 回测验证', color: '#8b5cf6', bg: '#f5f3ff' },
+  '/': { label: 'Step 1/7 · Dashboard', color: '#3b82f6', bg: '#eff6ff' },
+  '/pipeline': { label: 'Step 2/7 · Data Pipeline', color: '#22c55e', bg: '#f0fdf4' },
+  '/alpha': { label: 'Step 3/7 · Alpha Research', color: '#f59e0b', bg: '#fefce8' },
+  '/model-factory': { label: 'Step 4/7 · Model Factory', color: '#ec4899', bg: '#fdf2f8' },
+  '/backtest': { label: 'Step 6/7 · Backtest Lab', color: '#8b5cf6', bg: '#f5f3ff' },
+  '/portfolio': { label: 'Step 7/7 · Portfolio Monitor', color: '#14b8a6', bg: '#f0fdfa' },
 }
 const stepLabel = computed(() => {
-  if (route.path.startsWith('/track/')) return 'Step 3/4 · 赛道选股'
+  if (route.path.startsWith('/track/')) return 'Step 5/7 · Alpha Workstation'
   return steps[route.path]?.label || 'Quant Trading'
 })
 const currentPhaseColor = computed(() => {
