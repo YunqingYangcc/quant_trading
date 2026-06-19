@@ -61,7 +61,7 @@
 ### 2.2 数据流水线（强制单向）
 
 ```
-baostock 拉数据 → 清洗复权落库 → 生成特征(pandas-ta) → Alphalens 筛因子
+baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 筛因子
     → 特征预处理 → LightGBM 训练 → AI 打分 → 回测校验 → 前端展示
 ```
 
@@ -112,25 +112,26 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(pandas-ta) → Alphal
 
 ### 模块 3：特征工程
 
-> 状态：⏳ Phase B 待开发
+> 状态：✅ Phase A/B 已完成，待 Phase C
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
-| 通用量价特征 | pandas-ta 计算 130+ 指标 | P0 | ⏳ |
-| 赛道专属特征 | 自写：相对强度/拥挤度/趋势一致性 | P0 | ⏳ |
-| 特征入库 | 写入 stock_features 表 | P0 | ⏳ |
-| shift(1) 防泄露 | 所有特征统一 shift(1) | P0 | ⏳ |
-| 验收报告 | 特征数 60+、NaN<50%、描述统计 | P0 | ⏳ |
+| 通用量价特征 | ta 库计算 93 个指标 | P0 | ✅ |
+| 赛道专属特征 | 自写：18 个赛道特征 | P0 | ✅ |
+| 特征入库 | 写入 feature_store 表 (JSON) | P0 | ✅ |
+| shift(1) 防泄露 | 所有特征统一 shift(1) | P0 | ✅ |
+| 验收报告 | 特征数 93~111、NaN=0% | P0 | ✅ |
 
-#### 3.1 通用特征清单（pandas-ta）
+#### 3.1 通用特征清单（ta 库）
 
 | 类别 | 指标 | 数量 |
 |:-----|:-----|:----:|
-| 动量 | ROC, RSI, Stochastic, CCI, Williams %R, MACD | ~15 |
-| 均线 | SMA, EMA, DEMA, TEMA, 偏离度, 金叉/死叉 | ~15 |
-| 波动率 | ATR, Bollinger Bands, Keltner, Donchian | ~12 |
-| 量能 | OBV, VWAP, A/D Line, CMF, 量比 | ~10 |
-| 形态 | 收益偏度/峰度, 价格位置 | ~8 |
+| 动量 | RSI, Stochastic, Williams %R, ROC, AO, PPO | 16 |
+| 趋势 | SMA, EMA, MACD, ADX, Aroon, CCI, TRIX | 16 |
+| 波动率 | ATR, Bollinger Bands, Donchian, Ulcer | 12 |
+| 量能 | OBV, AD, CMF, EMV, FI, MFI, VPT, VWAP | 12 |
+| 统计 | 偏度/峰度/分位/连续涨跌/Sharpe/量价相关 | 10 |
+| 价格位置 | 高低点位置 | 4 |
 
 #### 3.2 赛道专属特征清单（自写）
 
@@ -308,7 +309,7 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(pandas-ta) → Alphal
 
 | 表名 | 用途 | Phase |
 |:-----|:-----|:-----:|
-| `stock_features` | 特征值存储（长表：stock_code, date, feature_name, value） | B |
+| `feature_store` | 特征值存储（JSON 宽表：stock_code, date, features） | ✅ B |
 | `model_registry` | 模型版本管理（track_name, version, path, metrics） | E |
 | `score_history` | 历史打分记录（stock_code, date, stock_score, track_score） | F |
 | `backtest_results` | 回测结果存储 | G |
@@ -356,6 +357,7 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(pandas-ta) → Alphal
 | **可维护** | 一人维护，全程可自动化、可日志追溯 |
 | **技术栈** | Python 3.10+ / Vue 3 / SQLite，不引入重型框架 |
 | **过拟合控制** | 训练/测试 R² 差距 < 0.15，时间滚动训练禁止 shuffle |
+| **开发纪律** | 5 个 AI Skill 质量门禁，防止开发过程漂移 |
 
 ---
 
@@ -364,10 +366,10 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(pandas-ta) → Alphal
 ```
 Phase A 数据流水线 ──────── ✅ 2026-06-19 完成
   │
-Phase B 特征工程 ────────── ⏳ 当前重点
-  │  pandas-ta 通用特征 + 赛道专属特征 + 入库
+Phase B 特征工程 ────────── ✅ 2026-06-19 完成
+  │  ta 库通用特征 + 赛道专属特征 + 入库
   │
-Phase C Alphalens 筛选 ──── ⏳
+Phase C Alphalens 筛选 ──── ⏳ 当前重点
   │  双层因子筛选 → 白黑名单
   │
 Phase D 特征预处理 ──────── ⏳
@@ -388,7 +390,29 @@ Phase H 前端可视化 ──────── ⏳ 骨架已有
 
 ---
 
-## 八、开放问题 & 待决策项
+## 八、AI Skill 质量门禁
+
+> 防止 AI 辅助开发过程中的行为漂移，用 Skill 固化流程纪律
+
+| Skill | 场景 | 防什么 |
+|:------|:-----|:-------|
+| `/check-data` | 数据更新后/回测异常时 | 垃圾数据 → 垃圾结果 |
+| `/add-feature` | 新增任何特征时 | 无序加特征 → 过拟合 |
+| `/train-model` | 训练/重训模型时 | 无限调参 → 模型漂移 |
+| `/run-backtest` | 跑回测验证时 | 改参数刷夏普 → 虚假绩效 |
+| `/review-phase` | 阶段验收时 | 跳步 → 下游崩溃 |
+
+**开发嵌入时序**：
+```
+Phase B: /check-data → /add-feature ×N → /review-phase B
+Phase C: /add-feature Step 4-5 → /review-phase C
+Phase E: /train-model → /review-phase E
+Phase G: /run-backtest → /review-phase G
+```
+
+---
+
+## 九、开放问题 & 待决策项
 
 > 开发过程中遇到的需要讨论的问题，随时补充
 
@@ -402,8 +426,9 @@ Phase H 前端可视化 ──────── ⏳ 骨架已有
 
 ---
 
-## 九、变更记录
+## 十、变更记录
 
 | 日期 | 版本 | 变更内容 |
 |:-----|:-----|:---------|
 | 2026-06-19 | v0.1 | 初稿，覆盖 Phase A-H 全部需求 |
+| 2026-06-19 | v0.2 | 新增 AI Skill 质量门禁体系（5 个 skill）、开发纪律非功能需求 |

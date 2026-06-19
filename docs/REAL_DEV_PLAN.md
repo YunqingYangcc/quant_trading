@@ -2,7 +2,7 @@
 
 > 基于「个人散户·赛道型量化系统终版开发方案」
 > 更新日期：2026-06-19
-> 状态：**Phase A 完成，待 Phase B**
+> 状态：**Phase A/B 完成，待 Phase C**
 
 ---
 
@@ -10,7 +10,7 @@
 
 1. **开源优先，不重复造轮子**：所有能用成熟开源库实现的功能，绝不手写数学公式/算法
 2. **非数学专业友好**：依赖经过业界验证的稳定库，不自己推导统计公式
-3. **分层架构**：通用特征用开源库（pandas-ta），赛道专属特征自己写（开源库没有）
+3. **分层架构**：通用特征用开源库（ta），赛道专属特征自己写（开源库没有）
 4. **AI 辅助开发**：善用 AI 工具生成代码，但必须理解每一步逻辑
 
 ---
@@ -32,7 +32,7 @@ baostock 取数
     ↓
 数据清洗复权落库 ⬅ Phase A ✅
     ↓
-批量生成通用 + 赛道专属特征 ⬅ Phase B ⏳
+批量生成通用 + 赛道专属特征 ⬅ Phase B ✅
     ↓
 Alphalens 科学筛因子黑白名单 ⬅ Phase C
     ↓
@@ -54,7 +54,7 @@ Vue 可视化展示 ⬅ Phase H
 | Phase | 内容 | 状态 | 完成日期 |
 |-------|------|------|----------|
 | Phase A | 数据流水线（拉数据→复权→落库→打标签） | ✅ 已完成 | 2026-06-19 |
-| Phase B | 特征工程（60+ 通用+赛道特征） | ⏳ 未开始 | - |
+| Phase B | 特征工程（93 通用+18 赛道特征） | ✅ 已完成 | 2026-06-19 |
 | Phase C | Alphalens 双层筛选因子 | ⏳ 未开始 | - |
 | Phase D | 特征预处理（标准化/中性化/去共线） | ⏳ 未开始 | - |
 | Phase E | 赛道 LightGBM 训练 | ⏳ 未开始 | - |
@@ -80,30 +80,29 @@ Vue 可视化展示 ⬅ Phase H
 - [x] `GET /api/v1/track/labels/{code}` 返回带标签日线 ✅
 - [x] 前端 TrackDashboard 选股 + K 线渲染（560px，MA5/MA20/成交量）
 
-### Phase B：特征工程 ⏳ 待开发
+### Phase B：特征工程 ✅ 已完成
 
-> **核心原则：通用特征用 pandas-ta（130+ 业界验证指标），赛道特征自己写**
-> pandas-ta 是纯 Python 库，pip install 一键安装，无需 C 依赖，对非数学专业最友好
+> **核心原则：通用特征用 ta 库（Python 3.11 兼容，pip install 一键安装），赛道特征自己写**
+> ta 库提供 40+ 业界验证指标，配合 pandas 自定义统计特征，覆盖全部需求
 
-- [ ] `pip install pandas_ta` 安装依赖
-- [ ] **通用量价特征** — 用 pandas-ta 替代手写（`features_generic.py` 重构）
-  - [ ] 动量类：`ta.momentum()` — ROC, RSI, Stochastic, CCI, Williams %R, MACD
-  - [ ] 均线类：`ta.trend()` — SMA, EMA, DEMA, TEMA, MACD 信号
-  - [ ] 波动率类：`ta.volatility()` — ATR, Bollinger Bands, Keltner Channel, Donchian
-  - [ ] 量能类：`ta.volume()` — OBV, VWAP, A/D Line, Chaikin Money Flow
-  - [ ] 相对强弱：`ta.momentum()` — RSI, Stochastic RSI
-  - [ ] 自定义补充：收益偏度/峰度、价格位置特征（pandas-ta 没有的）
-- [ ] **赛道专属特征** — 保持自己写（`features_track.py`，开源库没有这些）
-  - [ ] 赛道内相对强度（个股 vs 赛道均值）
-  - [ ] 赛道拥挤度（内部相关性）
-  - [ ] 赛道趋势一致性
-  - [ ] 赛道间相对强弱
-- [ ] `scripts/compute_features.py` — 批量计算脚本
-  - [ ] 从 DB 加载 TrackDataCache → pandas-ta 算通用特征 → features_track 算赛道特征
-  - [ ] 全部特征统一 shift(1) 防未来泄露
-  - [ ] 特征写入新表 `stock_features`（stock_code, trade_date, feature_name, feature_value）
-  - [ ] 输出验收报告：特征总数、NaN 比例、描述统计
-- [ ] 验收：全部 shift(1)，NaN 比例 < 50%，特征数 60+
+- [x] `pip install ta` 安装依赖（pandas-ta 不兼容 Python 3.11，已切换）
+- [x] **通用量价特征** — 基于 ta 库（`features_generic.py`）
+  - [x] 动量类：RSI(3), Stochastic K/D/J, Williams %R(2), ROC(5), AO, PPO = 16 特征
+  - [x] 趋势类：SMA(4)+偏离度, EMA(2)+偏离度, MACD(3), ADX(3), Aroon(2), CCI(2), TRIX = 16 特征
+  - [x] 波动率类：ATR(3), Bollinger(5), Donchian(3), Ulcer = 12 特征
+  - [x] 量能类：OBV, AD, CMF, EMV, FI, MFI, VPT, VWAP, 量比(2), 量能动量(2) = 12 特征
+  - [x] 自定义补充：收益偏度/峰度/分位/连续涨跌/Sharpe/量价相关 = 10 特征
+  - [x] 价格位置：高低点位置(2) + 2 个其他 = 4 特征
+- [x] **赛道专属特征** — 自己写（`features_track.py`）
+  - [x] 赛道个体动量(3), 趋势强度(2), 波动率(1), 量比(1)
+  - [x] Amihud 非流动性(1), 资金流(4), 反转信号(6)
+  - [x] 赛道间相对强度、赛道拥挤度
+- [x] `scripts/compute_features.py` — 批量计算脚本
+  - [x] DB 加载 → ta 算通用特征 → features_track 算赛道特征
+  - [x] 全部特征统一 shift(1) 防未来泄露
+  - [x] 特征写入 `feature_store` 表（JSON 宽表，stock_code + trade_date + features）
+  - [x] 输出验收报告：特征总数、NaN 比例
+- [x] 验收：全部 shift(1) ✅，NaN < 50% ✅ (100% 有效)，特征数 93~111 ✅
 
 ### Phase C：Alphalens 双层筛选 ⏳ 待开发
 
@@ -187,7 +186,7 @@ Vue 可视化展示 ⬅ Phase H
 | 数据源 | baostock（前复权日线） | 行情数据 | ✅ 可用 |
 | 后端 | FastAPI + SQLAlchemy + SQLite | API + ORM + 存储 | ✅ 运行中 :8000 |
 | 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
-| **通用特征** | **pandas-ta**（130+ 指标） | 量价技术指标计算 | ⏳ Phase B 引入 |
+| **通用特征** | **ta**（40+ 指标 + 自定义补充） | 量价技术指标计算 | ✅ Phase B 已完成 |
 | **因子筛选** | **alphalens-reloaded** | IC/IR/分层检验 | ⏳ Phase C 引入 |
 | **特征预处理** | **scikit-learn** | 标准化/去共线 | ⏳ Phase D 引入 |
 | **AI 模型** | **LightGBM + scikit-learn** | 分赛道训练 | ⏳ Phase E 引入 |
@@ -198,7 +197,7 @@ Vue 可视化展示 ⬅ Phase H
 
 | 库 | 为什么选它 |
 |:---|:----------|
-| pandas-ta | 纯 Python，pip 一键装，130+ 业界标准指标，API 友好，非数学专业最友好 |
+| ta | 纯 Python，pip 一键装，40+ 业界标准指标，Python 3.11 兼容，非数学专业友好 |
 | alphalens-reloaded | Quantopian 开源续命版，因子分析事实标准，IC/IR/分层一行搞定 |
 | scikit-learn | 机器学习基础设施，StandardScaler/TimeSeriesSplit 久经验证 |
 | LightGBM | 微软开源，表格数据最强，散户级数据量秒级训练 |
@@ -211,10 +210,37 @@ Vue 可视化展示 ⬅ Phase H
 | qlib（微软） | 全栈量化框架，太重，我们需要的是组件不是框架 |
 | backtrader/zipline | 重型回测框架，散户小资金不需要，pandas 向量化够用 |
 
-## 七、下一步
+## 七、AI Skill 质量门禁体系
 
-**立即开始 Phase B**：
-1. `pip install pandas_ta` 安装依赖
-2. 重构 `features_generic.py`：用 pandas-ta 替换手写 numpy 公式
-3. 创建 `scripts/compute_features.py`：DB加载 → 计算 → 入库 → 验收报告
-4. 对 23 只股票批量计算 60+ 特征并入库
+为防止开发过程中 AI 行为漂移（无序加特征、无限调参、刷回测指标），创建了 5 个 Skill 固化流程纪律：
+
+| Skill | 路径 | 解决什么问题 |
+|:------|:-----|:------------|
+| `/review-phase` | `.qoder/skills/review-phase/` | 阶段验收，防止跳步 |
+| `/add-feature` | `.qoder/skills/add-feature/` | 新增特征必须走 6 步验证流程 |
+| `/train-model` | `.qoder/skills/train-model/` | 固定训练参数，防止无限调参 |
+| `/run-backtest` | `.qoder/skills/run-backtest/` | 锁定回测参数，防止刷指标 |
+| `/check-data` | `.qoder/skills/check-data/` | 数据质量自动化巡检 |
+
+### Skill 嵌入开发时序
+
+```
+Phase B 开发 → /check-data → /add-feature × N → /review-phase B
+Phase C 开发 → /add-feature Step 4-5（Alphalens 筛选）→ /review-phase C
+Phase E 开发 → /train-model → /review-phase E
+Phase G 开发 → /run-backtest → /review-phase G
+```
+
+### 触发方式
+
+1. **显式调用**：`/review-phase B`、`/check-data`
+2. **自动匹配**：说"加个特征" → AI 自动走 add-feature 流程
+3. **主动插入**：开发过程中 AI 主动调用 skill 约束流程
+
+## 八、下一步
+
+**立即开始 Phase C**：
+1. `pip install alphalens-reloaded` 安装依赖
+2. 创建 `scripts/screen_factors.py`：从 feature_store 加载 → Alphalens 单因子检验 → 写入白/黑名单
+3. 固化 `configs/factor_whitelist.json`
+4. 验收：IC≥0.02, IR≥0.5, 白黑名单 API 可查
