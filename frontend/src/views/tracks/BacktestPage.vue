@@ -61,6 +61,112 @@
       </table>
     </div>
 
+    <!-- 个股回测 -->
+    <div class="section-card" style="border-left:3px solid #3b82f6">
+      <div class="section-header">
+        <div class="sh-left">
+          <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">📈</div>
+          <div>
+            <div class="sh-title">个股回测</div>
+            <div class="sh-sub">选一只股票，调参数，看胜率</div>
+          </div>
+        </div>
+        <el-tag size="small" type="primary" effect="dark">NEW</el-tag>
+      </div>
+
+      <div class="single-bt-form">
+        <div class="sbf-row">
+          <div class="sbf-item">
+            <label class="form-label">股票</label>
+            <el-select v-model="singleStock" filterable placeholder="选股票" size="small" style="width:180px">
+              <el-option v-for="s in stockList" :key="s.code" :label="`${s.name} (${s.code})`" :value="s.code" />
+            </el-select>
+          </div>
+          <div class="sbf-item">
+            <label class="form-label">策略</label>
+            <el-select v-model="singleStrategy" size="small" style="width:160px">
+              <el-option label="20日趋势跟踪" value="momentum_20d" />
+              <el-option label="60日趋势跟踪" value="momentum_60d" />
+            </el-select>
+          </div>
+          <div class="sbf-item">
+            <label class="form-label">
+              动量周期
+              <el-tooltip content="趋势判断的回看天数，越长越稳定但反应越慢" placement="top">
+                <span class="label-help">?</span>
+              </el-tooltip>
+            </label>
+            <el-slider v-model="singleLookback" :min="10" :max="120" :step="10" show-input style="width:120px" />
+          </div>
+          <div class="sbf-item">
+            <label class="form-label">
+              止损%
+              <el-tooltip content="单笔亏损超过此比例强制卖出。0=不止损" placement="top">
+                <span class="label-help">?</span>
+              </el-tooltip>
+            </label>
+            <el-input-number v-model="singleStopLoss" :min="0" :max="30" :step="5" size="small" style="width:90px" />
+          </div>
+          <div class="sbf-item sbf-action">
+            <el-button type="primary" size="small" @click="runSingleBt" :loading="singleRunning">
+              {{ singleRunning ? '回测中...' : '▶ 跑回测' }}
+            </el-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 个股回测结果 -->
+      <div v-if="singleResult" class="single-result">
+        <div class="sr-header">
+          <span class="sr-stock">{{ singleResult.metrics?.stock_code }}</span>
+          <el-tag :type="winRateLevel(singleResult.metrics?.win_rate).type" size="small" effect="dark">
+            {{ winRateLevel(singleResult.metrics?.win_rate).icon }}
+            胜率 {{ singleResult.metrics?.win_rate?.toFixed(1) }}%
+            {{ winRateLevel(singleResult.metrics?.win_rate).label }}
+          </el-tag>
+        </div>
+        <div class="sr-metrics">
+          <div class="srm-card">
+            <div class="srm-value" :style="{color:winColor(singleResult.metrics?.win_rate)}">{{ singleResult.metrics?.win_rate?.toFixed(1) }}%</div>
+            <div class="srm-label">胜率</div>
+          </div>
+          <div class="srm-card">
+            <div class="srm-value" :style="{color:(singleResult.metrics?.total_return||0)>=0?'#16a34a':'#dc2626'}">{{ singleResult.metrics?.total_return?.toFixed(1) }}%</div>
+            <div class="srm-label">总收益</div>
+          </div>
+          <div class="srm-card">
+            <div class="srm-value">{{ singleResult.metrics?.sharpe?.toFixed(3) }}</div>
+            <div class="srm-label">夏普</div>
+          </div>
+          <div class="srm-card">
+            <div class="srm-value" style="color:#dc2626">{{ singleResult.metrics?.max_drawdown?.toFixed(1) }}%</div>
+            <div class="srm-label">最大回撤</div>
+          </div>
+          <div class="srm-card">
+            <div class="srm-value">{{ singleResult.metrics?.total_trades }}</div>
+            <div class="srm-label">交易次数</div>
+          </div>
+        </div>
+
+        <!-- 指导建议 -->
+        <div class="sr-guide">
+          <div class="srg-title">💡 优化建议</div>
+          <div class="srg-text">{{ getGuidance(singleResult.metrics) }}</div>
+        </div>
+
+        <!-- 最近交易 -->
+        <div v-if="singleResult.trades?.length" class="sr-trades">
+          <div class="srt-title">最近交易</div>
+          <div class="srt-row" v-for="(t,i) in singleResult.trades.slice(-10).reverse()" :key="i">
+            <span class="srt-date">{{ t.date }}</span>
+            <el-tag :type="t.type==='buy'?'success':'danger'" size="small" effect="plain">{{ t.type==='buy'?'买入':'卖出' }}</el-tag>
+            <span class="srt-price">¥{{ t.price }}</span>
+            <span v-if="t.profit" :class="t.profit>=0?'srt-profit':'srt-loss'">{{ t.profit>=0?'+':'' }}{{ t.profit.toFixed(0) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 回测参数配置 -->
     <div class="section-card">
       <div class="section-header">
@@ -251,7 +357,7 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { CaretRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getBacktestReport, runBacktest as runBacktestApi, listStrategies, runStrategyBacktest } from '@/api/track'
+import { getBacktestReport, runBacktest as runBacktestApi, listStrategies, runStrategyBacktest, runSingleStockBacktest, listTracks } from '@/api/track'
 
 const loadingReport = ref(false)
 const running = ref(false)
@@ -385,7 +491,77 @@ async function loadBacktest() {
   }
 }
 
-onMounted(() => { loadBacktest(); loadStrategies() })
+onMounted(() => { loadBacktest(); loadStrategies(); loadStockList() })
+
+// ── 个股回测 ──
+const singleStock = ref('002371.SZ')
+const singleStrategy = ref('momentum_20d')
+const singleLookback = ref(20)
+const singleStopLoss = ref(0)
+const singleRunning = ref(false)
+const singleResult = ref<any>(null)
+const stockList = ref<any[]>([])
+
+async function loadStockList() {
+  try {
+    const res: any = await listTracks()
+    const stocks: any[] = []
+    const seen = new Set<string>()
+    for (const track of res?.items || res || []) {
+      for (const s of track.stocks || []) {
+        if (!seen.has(s.code)) {
+          seen.add(s.code)
+          stocks.push(s)
+        }
+      }
+    }
+    stockList.value = stocks
+  } catch { /* ignore */ }
+}
+
+async function runSingleBt() {
+  singleRunning.value = true
+  try {
+    singleResult.value = await runSingleStockBacktest(singleStock.value, singleStrategy.value, singleLookback.value, singleStopLoss.value)
+    ElMessage.success(`${singleStock.value} 回测完成`)
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '回测失败')
+  } finally {
+    singleRunning.value = false
+  }
+}
+
+function winRateLevel(rate: number) {
+  if (rate == null || isNaN(rate)) return { icon: '❓', label: '', type: '' as any }
+  if (rate >= 60) return { icon: '🔥', label: '优秀', type: 'success' as any }
+  if (rate >= 55) return { icon: '✅', label: '良好', type: 'success' as any }
+  if (rate >= 50) return { icon: '⚠️', label: '接近随机', type: 'warning' as any }
+  return { icon: '❌', label: '不如抛硬币', type: 'danger' as any }
+}
+
+function winColor(rate: number) {
+  if (rate >= 60) return '#16a34a'
+  if (rate >= 55) return '#65a30d'
+  if (rate >= 50) return '#e6a23c'
+  return '#dc2626'
+}
+
+function getGuidance(metrics: any) {
+  if (!metrics) return '请先运行回测'
+  const wr = metrics.win_rate || 0
+  const dd = Math.abs(metrics.max_drawdown || 0)
+  const ret = metrics.total_return || 0
+  const trades = metrics.total_trades || 0
+  
+  // 决策树
+  if (trades < 10) return '交易次数太少（<10），加长回测周期或放宽入场条件（减小动量周期）'
+  if (wr < 50) return '胜率 < 50%，趋势跟踪对该股无效。建议：①换逆向策略；②换其他股票；③该股可能不适合趋势交易'
+  if (wr >= 50 && wr < 55) return '胜率勉强 > 50%，但接近随机。试试加止损（-10%~-15%）过滤掉大亏交易，看胜率是否改善'
+  if (wr >= 55 && dd > 30) return '胜率不错但回撤太大！加止损控制单笔亏损，建议 -10% 止损'
+  if (wr >= 55 && ret < 0) return '胜率高但总收益为负？盈亏比有问题——每次赢的少亏的多。试试加止盈（+20%）锁定利润'
+  if (wr >= 60) return '👏 胜率 > 60%，策略有效！下一步：①加仓（调大资金比例）；②在其他同类股票上验证是否通用'
+  return '调整参数后再看'
+}
 </script>
 
 <style scoped>
@@ -764,4 +940,31 @@ onMounted(() => { loadBacktest(); loadStrategies() })
 .score-bad {
   color: #dc2626;
 }
+
+/* ── 个股回测 ── */
+.single-bt-form { margin-bottom: 12px; }
+.sbf-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.sbf-item { display: flex; flex-direction: column; gap: 4px; }
+.sbf-action { padding-bottom: 2px; }
+
+.single-result { margin-top: 12px; }
+.sr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.sr-stock { font-weight: 700; font-size: 15px; color: #1e293b; }
+
+.sr-metrics { display: flex; gap: 12px; margin-bottom: 10px; }
+.srm-card { flex: 1; text-align: center; padding: 10px 8px; background: #f8fafc; border-radius: 8px; }
+.srm-value { font-size: 20px; font-weight: 700; }
+.srm-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+
+.sr-guide { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
+.srg-title { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 4px; }
+.srg-text { font-size: 12px; color: #78350f; line-height: 1.5; }
+
+.sr-trades { max-height: 200px; overflow-y: auto; }
+.srt-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
+.srt-row { display: flex; gap: 12px; align-items: center; padding: 3px 0; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
+.srt-date { color: #94a3b8; width: 80px; font-family: monospace; }
+.srt-price { color: #475569; }
+.srt-profit { color: #16a34a; font-weight: 600; }
+.srt-loss { color: #dc2626; font-weight: 600; }
 </style>

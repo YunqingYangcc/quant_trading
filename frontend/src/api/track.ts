@@ -137,8 +137,8 @@ export function runStrategyBacktest(strategyName: string) {
   return request.post(`/backtest/strategy/${strategyName}`)
 }
 
-export function runSingleStockBacktest(stockCode: string, strategy?: string) {
-  return request.post(`/backtest/single/${stockCode}`, null, { params: { strategy } })
+export function runSingleStockBacktest(stockCode: string, strategy?: string, lookback?: number, stopLoss?: number) {
+  return request.post(`/backtest/single/${stockCode}`, null, { params: { strategy, lookback, stop_loss: stopLoss } })
 }
 
 export function runBacktest(data: {

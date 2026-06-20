@@ -489,10 +489,19 @@ async def run_strategy_backtest(strategy_name: str):
 
 
 @router.post("/backtest/single/{stock_code}", summary="单只股票回测")
-async def run_single_stock_backtest(stock_code: str, strategy: str = "momentum_20d"):
-    """对单只股票运行技术指标策略回测，返回交易明细+绩效
+async def run_single_stock_backtest(
+    stock_code: str,
+    strategy: str = "momentum_20d",
+    lookback: int = 20,
+    stop_loss: float = 0,
+):
+    """对单只股票运行趋势跟踪回测，返回交易明细+绩效
     
-    支持策略: momentum_20d, momentum_60d (单标的趋势跟踪)
+    参数:
+      stock_code: 股票代码
+      strategy: 策略名 (momentum_20d/momentum_60d)
+      lookback: 动量周期 (天)
+      stop_loss: 止损比例 (%, 0=不止损)
     """
     import sqlite3
     import pandas as pd
@@ -513,10 +522,12 @@ async def run_single_stock_backtest(stock_code: str, strategy: str = "momentum_2
     df = df.set_index("trade_date").sort_index()
     close = df["close_px"]
 
-    # 简单策略: 20日动量 > 0 时买入，否则空仓
-    lookback = 20 if "20" in strategy else 60
+    # 趋势跟踪：动量 > 0 时买入
     mom = close.pct_change(lookback)
     signals = (mom > 0).astype(int)
+
+    # 止损线
+    stop_loss_ratio = -abs(stop_loss) / 100 if stop_loss else -999
 
     # 模拟交易
     params = {"initial_capital": 100000, "commission": 0.0003, "slippage": 0.001}
@@ -530,8 +541,14 @@ async def run_single_stock_backtest(stock_code: str, strategy: str = "momentum_2
         px = close.iloc[i]
         sig = signals.iloc[i-1]  # 用前一天信号
 
-        # 卖出
-        if sig == 0 and position > 0:
+        # 卖出（信号转空 + 止损）
+        should_sell = (sig == 0 and position > 0)
+        if position > 0 and entry_px:
+            current_ret = (px - entry_px) / entry_px
+            if current_ret <= stop_loss_ratio:
+                should_sell = True  # 止损触发
+
+        if should_sell:
             proceeds = position * px * (1 - params["commission"] - params["slippage"])
             profit = proceeds - position * entry_px if entry_px else 0
             trades.append({"date": str(date.date()), "type": "sell", "price": round(px, 3),
