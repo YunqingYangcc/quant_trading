@@ -239,12 +239,12 @@ onMounted(async () => {
 
     // 加载统计
     try {
-      const [wl, tr] = await Promise.all([
+      const [wl] = await Promise.all([
         getWhitelist(),
         getBlacklist(),
-      ].catch(() => []))
+      ]).catch(() => [] as any)
       const wlCount = Array.isArray(wl) ? wl.length : 0
-      const trackItems = tr?.items || trackRes?.items || []
+      const trackItems = trackRes?.items || []
       stats.value.stocks = trackItems.reduce((s: number, t: any) => s + (t.stock_count || 0), 0)
       stats.value.whitelist = wlCount
       stats.value.models = tracks.value.length
