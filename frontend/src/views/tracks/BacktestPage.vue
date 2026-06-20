@@ -96,7 +96,7 @@
                 <span class="label-help">?</span>
               </el-tooltip>
             </label>
-            <el-slider v-model="singleLookback" :min="10" :max="120" :step="10" show-input style="width:120px" />
+            <el-slider v-model="singleLookback" :min="10" :max="120" :step="10" show-input size="small" style="width:100%" />
           </div>
           <div class="sbf-item">
             <label class="form-label">
@@ -943,9 +943,21 @@ function getGuidance(metrics: any) {
 
 /* ── 个股回测 ── */
 .single-bt-form { margin-bottom: 12px; }
-.sbf-row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
-.sbf-item { display: flex; flex-direction: column; gap: 4px; }
-.sbf-action { padding-bottom: 2px; }
+.sbf-row {
+  display: grid;
+  grid-template-columns: 180px 150px 160px 100px auto;
+  gap: 12px;
+  align-items: end;
+}
+
+@media (max-width: 900px) {
+  .sbf-row { grid-template-columns: 1fr 1fr; }
+}
+
+.sbf-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.sbf-action { justify-content: flex-end; }
+.sbf-item :deep(.el-slider) { margin-bottom: 0; }
+.sbf-item :deep(.el-slider__input) { width: 48px !important; }
 
 .single-result { margin-top: 12px; }
 .sr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
