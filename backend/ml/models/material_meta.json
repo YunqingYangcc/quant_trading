@@ -1,0 +1,84 @@
+{
+  "track_name": "material",
+  "stock_codes": [
+    "002129.SZ",
+    "002409.SZ",
+    "300054.SZ",
+    "300236.SZ",
+    "300346.SZ",
+    "300567.SZ",
+    "605358.SH",
+    "688019.SH"
+  ],
+  "n_stocks": 8,
+  "train_rows": 18232,
+  "val_rows": 1928,
+  "test_rows": 4592,
+  "cv_mean_r2": 0.0002,
+  "cv_std_r2": 0.002,
+  "train_r2": 0.0026,
+  "val_r2": -0.0001,
+  "test_r2": -0.0002,
+  "r2_gap": 0.0026,
+  "overfitting": false,
+  "params": {
+    "objective": "regression",
+    "metric": "mse",
+    "boosting_type": "gbdt",
+    "num_leaves": 15,
+    "max_depth": 5,
+    "min_child_samples": 30,
+    "min_child_weight": 5,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.7,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 3,
+    "n_estimators": 500,
+    "reg_alpha": 2.0,
+    "reg_lambda": 5.0,
+    "verbose": -1,
+    "random_state": 42
+  },
+  "top_features": [
+    {
+      "name": "sma_5",
+      "importance": 2
+    },
+    {
+      "name": "atr_5",
+      "importance": 2
+    },
+    {
+      "name": "track_material_amihud_illiq",
+      "importance": 2
+    },
+    {
+      "name": "roc_60",
+      "importance": 1
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 1
+    },
+    {
+      "name": "sma_dev_20",
+      "importance": 1
+    },
+    {
+      "name": "adx",
+      "importance": 1
+    },
+    {
+      "name": "bb_width",
+      "importance": 1
+    },
+    {
+      "name": "pv_corr_10",
+      "importance": 1
+    },
+    {
+      "name": "track_material_money_flow_20d",
+      "importance": 1
+    }
+  ]
+}

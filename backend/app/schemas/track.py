@@ -131,3 +131,15 @@ class LabeledDataResponse(BaseModel):
     track_names: list[str]
     data_points: list[LabeledDataPoint]
     total: int
+
+
+# ── 回测参数 ──────────────────────────────────────
+
+
+class BacktestRunParams(BaseModel):
+    """人工回测可配置参数"""
+    initial_capital: int = Field(default=100000, description="初始资金", ge=10000)
+    top_n: int = Field(default=3, description="每赛道买入 Top-N 只", ge=1, le=10)
+    rebalance_freq: str = Field(default="W", description="调仓频率: W=周频, M=月频")
+    max_single_stock: float = Field(default=0.20, description="单票上限", ge=0.05, le=0.50)
+    max_single_track: float = Field(default=0.50, description="单赛道上限", ge=0.10, le=0.80)

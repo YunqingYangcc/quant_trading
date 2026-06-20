@@ -49,13 +49,6 @@
         <div class="left-panel-top">
           <RankPanel :selectedCode="selectedStock" :trackName="activeTrack" @select="selectStock" />
         </div>
-        <div class="left-panel-bottom">
-          <ProsperityPanel
-            :tracks="prosperityData"
-            :activeTrack="activeTrack"
-            @switch-track="onTrackChange"
-          />
-        </div>
       </div>
 
       <!-- 中间 K 线图区域 -->
@@ -81,7 +74,7 @@
       </div>
 
       <!-- 右侧有效因子曲线面板 -->
-      <div class="right-panel" v-if="showFactors">
+      <div class="right-panel">
         <FactorChartPanel :factors="whitelist" />
       </div>
     </div>
@@ -166,7 +159,6 @@ import {
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 import RankPanel from '@/components/tracks/RankPanel.vue'
-import ProsperityPanel from '@/components/tracks/ProsperityPanel.vue'
 import FactorChartPanel from '@/components/tracks/FactorChartPanel.vue'
 import {
   listTracks,
@@ -195,7 +187,7 @@ const stocks = ref<TrackStock[]>([])
 const selectedStock = ref('')
 const searchQuery = ref('')
 const labels = ref<any[]>([])
-const showFactors = ref(true)
+const showFactors = ref(false)
 const factorTab = ref('whitelist')
 const whitelist = ref<any[]>([])
 const blacklist = ref<any[]>([])
@@ -237,14 +229,6 @@ const filteredStocks = computed(() => {
 })
 const klineRef = ref<HTMLElement | null>(null)
 let klineChart: echarts.ECharts | null = null
-
-const prosperityData = computed(() =>
-  tracks.value.map(t => ({
-    name: t.name,
-    displayName: t.display_name,
-    prosperity: undefined, // Phase F 之后替换为真实数据
-  }))
-)
 
 const selectedStockName = computed(() => {
   const s = stocks.value.find(x => x.code === selectedStock.value)
@@ -364,16 +348,16 @@ function renderKline() {
       },
     },
     grid: [
-      // 0: K线主图（占40%高度）
-      { left: 50, right: 16, top: 32, height: '40%' },
-      // 1: 成交量（占10%）
-      { left: 50, right: 16, top: '44%', height: '10%' },
-      // 2: RSI（占13%）
-      { left: 50, right: 16, top: '56%', height: '13%' },
-      // 3: ATR（占13%）
-      { left: 50, right: 16, top: '71%', height: '13%' },
-      // 4: 赛道景气（占13% + 底部留白）
-      { left: 50, right: 16, top: '86%', height: '12%' },
+      // 0: K线主图（占30%高度）
+      { left: 50, right: 16, top: '4%', height: '30%' },
+      // 1: 成交量（占10%，留2%间距）
+      { left: 50, right: 16, top: '36%', height: '10%' },
+      // 2: RSI（占16%）
+      { left: 50, right: 16, top: '48%', height: '16%' },
+      // 3: ATR（占16%）
+      { left: 50, right: 16, top: '66%', height: '16%' },
+      // 4: 赛道景气（占16% + 底部留白）
+      { left: 50, right: 16, top: '84%', height: '16%' },
     ],
     xAxis: [
       { type: 'category', data: dates, gridIndex: 0, axisLabel: { show: false } },
@@ -572,7 +556,7 @@ watch(() => route.params.name, (name) => {
 
 <style scoped>
 .track-dashboard {
-  height: calc(100vh - 52px);
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -718,11 +702,6 @@ watch(() => route.params.name, (name) => {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-}
-
-.left-panel-bottom {
-  flex-shrink: 0;
-  border-top: 1px solid #ebedf0;
 }
 
 .kline-main {

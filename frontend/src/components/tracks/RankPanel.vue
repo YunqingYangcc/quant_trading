@@ -21,7 +21,8 @@
           <span v-else>{{ i + 1 }}</span>
         </div>
         <div class="rank-info">
-          <span class="rank-name">{{ s.stock_code }}</span>
+          <span class="rank-name">{{ s.stock_name || s.stock_code }}</span>
+          <span v-if="s.stock_name" class="rank-code">{{ s.stock_code }}</span>
         </div>
         <div class="rank-score">
           <div

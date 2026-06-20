@@ -19,13 +19,13 @@ const router = createRouter({
       path: '/alpha',
       name: 'alpha',
       meta: { title: 'Alpha Research' },
-      component: () => import('@/views/tracks/DataView.vue'),
+      component: () => import('@/views/tracks/AlphaResearchPage.vue'),
     },
     {
       path: '/model-factory',
       name: 'model-factory',
       meta: { title: 'Model Factory' },
-      component: () => import('@/views/tracks/DataView.vue'),
+      component: () => import('@/views/tracks/ModelFactoryPage.vue'),
     },
     {
       path: '/track/:name',
@@ -43,7 +43,7 @@ const router = createRouter({
       path: '/portfolio',
       name: 'portfolio',
       meta: { title: 'Portfolio Monitor' },
-      component: () => import('@/views/tracks/BacktestPage.vue'),
+      component: () => import('@/views/tracks/PortfolioPage.vue'),
     },
   ],
 })

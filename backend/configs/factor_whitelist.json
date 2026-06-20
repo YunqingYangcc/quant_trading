@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "screening_date": "2026-06-19",
+  "screening_date": "2026-06-20",
   "thresholds": {
     "ic_min": 0.01,
     "ir_min": 0.05,
@@ -8,750 +8,938 @@
   },
   "whitelist": [
     {
-      "name": "rsi_6",
-      "ic_mean": 0.013305,
-      "ir": -0.0888,
+      "name": "rsi_14",
+      "ic_mean": -0.014758,
+      "ir": -0.1167,
       "type": "generic"
     },
     {
       "name": "rsi_24",
-      "ic_mean": -0.014287,
-      "ir": -0.1063,
-      "type": "generic"
-    },
-    {
-      "name": "stoch_k",
-      "ic_mean": 0.019383,
-      "ir": -0.0901,
-      "type": "generic"
-    },
-    {
-      "name": "stoch_d",
-      "ic_mean": 0.015725,
-      "ir": -0.0915,
-      "type": "generic"
-    },
-    {
-      "name": "stoch_j",
-      "ic_mean": 0.020647,
-      "ir": -0.0665,
-      "type": "generic"
-    },
-    {
-      "name": "willr_14",
-      "ic_mean": 0.019383,
-      "ir": -0.0901,
-      "type": "generic"
-    },
-    {
-      "name": "roc_20",
-      "ic_mean": -0.018051,
-      "ir": -0.1714,
-      "type": "generic"
-    },
-    {
-      "name": "roc_60",
-      "ic_mean": -0.030075,
-      "ir": -0.0726,
-      "type": "generic"
-    },
-    {
-      "name": "ao",
-      "ic_mean": -0.021504,
-      "ir": -0.168,
-      "type": "generic"
-    },
-    {
-      "name": "ppo",
-      "ic_mean": -0.030564,
-      "ir": -0.1664,
-      "type": "generic"
-    },
-    {
-      "name": "ppo_signal",
-      "ic_mean": -0.042197,
-      "ir": -0.13,
-      "type": "generic"
-    },
-    {
-      "name": "sma_5",
-      "ic_mean": -0.018507,
-      "ir": -0.1235,
-      "type": "generic"
-    },
-    {
-      "name": "sma_dev_5",
-      "ic_mean": 0.01119,
-      "ir": -0.0786,
-      "type": "generic"
-    },
-    {
-      "name": "sma_10",
-      "ic_mean": -0.017139,
-      "ir": -0.122,
-      "type": "generic"
-    },
-    {
-      "name": "sma_dev_10",
-      "ic_mean": 0.010053,
-      "ir": -0.1254,
-      "type": "generic"
-    },
-    {
-      "name": "sma_20",
-      "ic_mean": -0.013802,
-      "ir": -0.1134,
-      "type": "generic"
-    },
-    {
-      "name": "sma_60",
-      "ic_mean": -0.010546,
-      "ir": -0.119,
-      "type": "generic"
-    },
-    {
-      "name": "sma_dev_60",
-      "ic_mean": -0.030751,
-      "ir": -0.1387,
-      "type": "generic"
-    },
-    {
-      "name": "ema_12",
-      "ic_mean": -0.01628,
-      "ir": -0.1199,
-      "type": "generic"
-    },
-    {
-      "name": "ema_26",
-      "ic_mean": -0.012727,
-      "ir": -0.1127,
-      "type": "generic"
-    },
-    {
-      "name": "ema_dev_26",
-      "ic_mean": -0.012636,
-      "ir": -0.1945,
-      "type": "generic"
-    },
-    {
-      "name": "macd",
-      "ic_mean": -0.030386,
-      "ir": -0.15,
-      "type": "generic"
-    },
-    {
-      "name": "macd_signal",
-      "ic_mean": -0.046027,
-      "ir": -0.1184,
-      "type": "generic"
-    },
-    {
-      "name": "macd_hist",
-      "ic_mean": 0.025407,
-      "ir": -0.1222,
-      "type": "generic"
-    },
-    {
-      "name": "adx",
-      "ic_mean": 0.032336,
-      "ir": 0.1507,
-      "type": "generic"
-    },
-    {
-      "name": "adx_neg",
-      "ic_mean": 0.013436,
-      "ir": 0.1093,
-      "type": "generic"
-    },
-    {
-      "name": "aroon_down",
-      "ic_mean": 0.039527,
-      "ir": 0.0927,
-      "type": "generic"
-    },
-    {
-      "name": "cci_14",
-      "ic_mean": 0.014907,
-      "ir": -0.1145,
-      "type": "generic"
-    },
-    {
-      "name": "cci_20",
-      "ic_mean": 0.010102,
-      "ir": -0.156,
-      "type": "generic"
-    },
-    {
-      "name": "trix",
-      "ic_mean": -0.044447,
-      "ir": -0.129,
-      "type": "generic"
-    },
-    {
-      "name": "atr_5",
-      "ic_mean": -0.012702,
-      "ir": -0.0997,
-      "type": "generic"
-    },
-    {
-      "name": "atr_14",
-      "ic_mean": -0.016259,
-      "ir": -0.1028,
-      "type": "generic"
-    },
-    {
-      "name": "atr_20",
-      "ic_mean": -0.014137,
-      "ir": -0.0936,
-      "type": "generic"
-    },
-    {
-      "name": "bb_upper",
-      "ic_mean": -0.013135,
-      "ir": -0.1091,
-      "type": "generic"
-    },
-    {
-      "name": "bb_lower",
-      "ic_mean": -0.014292,
-      "ir": -0.113,
-      "type": "generic"
-    },
-    {
-      "name": "bb_mid",
-      "ic_mean": -0.013802,
-      "ir": -0.1134,
-      "type": "generic"
-    },
-    {
-      "name": "bb_pct",
-      "ic_mean": 0.010161,
-      "ir": -0.1467,
-      "type": "generic"
-    },
-    {
-      "name": "dc_upper",
-      "ic_mean": -0.013764,
-      "ir": -0.1131,
-      "type": "generic"
-    },
-    {
-      "name": "dc_lower",
-      "ic_mean": -0.013879,
-      "ir": -0.1177,
-      "type": "generic"
-    },
-    {
-      "name": "dc_mid",
-      "ic_mean": -0.013931,
-      "ir": -0.1109,
-      "type": "generic"
-    },
-    {
-      "name": "cmf",
-      "ic_mean": -0.014255,
-      "ir": -0.1105,
-      "type": "generic"
-    },
-    {
-      "name": "vwap",
-      "ic_mean": -0.014777,
+      "ic_mean": -0.026263,
       "ir": -0.1072,
       "type": "generic"
     },
     {
+      "name": "stoch_k",
+      "ic_mean": 0.011803,
+      "ir": -0.0803,
+      "type": "generic"
+    },
+    {
+      "name": "stoch_j",
+      "ic_mean": 0.014477,
+      "ir": -0.068,
+      "type": "generic"
+    },
+    {
+      "name": "willr_14",
+      "ic_mean": 0.011803,
+      "ir": -0.0803,
+      "type": "generic"
+    },
+    {
+      "name": "roc_20",
+      "ic_mean": -0.028821,
+      "ir": -0.1597,
+      "type": "generic"
+    },
+    {
+      "name": "roc_60",
+      "ic_mean": -0.048324,
+      "ir": -0.155,
+      "type": "generic"
+    },
+    {
+      "name": "ao",
+      "ic_mean": -0.033426,
+      "ir": -0.1341,
+      "type": "generic"
+    },
+    {
+      "name": "ppo",
+      "ic_mean": -0.044191,
+      "ir": -0.1559,
+      "type": "generic"
+    },
+    {
+      "name": "ppo_signal",
+      "ic_mean": -0.055806,
+      "ir": -0.149,
+      "type": "generic"
+    },
+    {
+      "name": "sma_5",
+      "ic_mean": -0.035362,
+      "ir": -0.1994,
+      "type": "generic"
+    },
+    {
+      "name": "sma_10",
+      "ic_mean": -0.034061,
+      "ir": -0.1935,
+      "type": "generic"
+    },
+    {
+      "name": "sma_20",
+      "ic_mean": -0.031242,
+      "ir": -0.1855,
+      "type": "generic"
+    },
+    {
+      "name": "sma_dev_20",
+      "ic_mean": -0.01111,
+      "ir": -0.1508,
+      "type": "generic"
+    },
+    {
+      "name": "sma_60",
+      "ic_mean": -0.027082,
+      "ir": -0.166,
+      "type": "generic"
+    },
+    {
+      "name": "sma_dev_60",
+      "ic_mean": -0.047215,
+      "ir": -0.177,
+      "type": "generic"
+    },
+    {
+      "name": "ema_12",
+      "ic_mean": -0.033268,
+      "ir": -0.1942,
+      "type": "generic"
+    },
+    {
+      "name": "ema_26",
+      "ic_mean": -0.030112,
+      "ir": -0.184,
+      "type": "generic"
+    },
+    {
+      "name": "ema_dev_26",
+      "ic_mean": -0.024365,
+      "ir": -0.1662,
+      "type": "generic"
+    },
+    {
+      "name": "macd",
+      "ic_mean": -0.041285,
+      "ir": -0.1406,
+      "type": "generic"
+    },
+    {
+      "name": "macd_signal",
+      "ic_mean": -0.053472,
+      "ir": -0.1347,
+      "type": "generic"
+    },
+    {
+      "name": "macd_hist",
+      "ic_mean": 0.023339,
+      "ir": -0.0875,
+      "type": "generic"
+    },
+    {
+      "name": "adx",
+      "ic_mean": 0.030398,
+      "ir": 0.0824,
+      "type": "generic"
+    },
+    {
+      "name": "adx_pos",
+      "ic_mean": -0.013752,
+      "ir": -0.0986,
+      "type": "generic"
+    },
+    {
+      "name": "adx_neg",
+      "ic_mean": 0.019253,
+      "ir": 0.1149,
+      "type": "generic"
+    },
+    {
+      "name": "aroon_down",
+      "ic_mean": 0.04469,
+      "ir": 0.127,
+      "type": "generic"
+    },
+    {
+      "name": "trix",
+      "ic_mean": -0.057848,
+      "ir": -0.1463,
+      "type": "generic"
+    },
+    {
+      "name": "atr_5",
+      "ic_mean": -0.02657,
+      "ir": -0.1519,
+      "type": "generic"
+    },
+    {
+      "name": "atr_14",
+      "ic_mean": -0.031597,
+      "ir": -0.1598,
+      "type": "generic"
+    },
+    {
+      "name": "atr_20",
+      "ic_mean": -0.031147,
+      "ir": -0.1596,
+      "type": "generic"
+    },
+    {
+      "name": "bb_upper",
+      "ic_mean": -0.029289,
+      "ir": -0.1719,
+      "type": "generic"
+    },
+    {
+      "name": "bb_lower",
+      "ic_mean": -0.033758,
+      "ir": -0.1912,
+      "type": "generic"
+    },
+    {
+      "name": "bb_mid",
+      "ic_mean": -0.031242,
+      "ir": -0.1855,
+      "type": "generic"
+    },
+    {
+      "name": "bb_width",
+      "ic_mean": 0.035215,
+      "ir": 0.0533,
+      "type": "generic"
+    },
+    {
+      "name": "dc_upper",
+      "ic_mean": -0.030244,
+      "ir": -0.1807,
+      "type": "generic"
+    },
+    {
+      "name": "dc_lower",
+      "ic_mean": -0.032727,
+      "ir": -0.1903,
+      "type": "generic"
+    },
+    {
+      "name": "dc_mid",
+      "ic_mean": -0.031374,
+      "ir": -0.1889,
+      "type": "generic"
+    },
+    {
+      "name": "ulcer_14",
+      "ic_mean": 0.018771,
+      "ir": 0.055,
+      "type": "generic"
+    },
+    {
+      "name": "fi_13",
+      "ic_mean": -0.012062,
+      "ir": -0.2173,
+      "type": "generic"
+    },
+    {
+      "name": "vwap",
+      "ic_mean": -0.031973,
+      "ir": -0.1776,
+      "type": "generic"
+    },
+    {
       "name": "vol_roc_20",
-      "ic_mean": 0.039748,
-      "ir": -0.0538,
+      "ic_mean": 0.044051,
+      "ir": -0.0578,
       "type": "generic"
     },
     {
       "name": "ret_skew_20",
-      "ic_mean": 0.012362,
-      "ir": -0.0594,
+      "ic_mean": -0.010111,
+      "ir": -0.1482,
       "type": "generic"
     },
     {
-      "name": "price_pos_20",
-      "ic_mean": 0.011854,
-      "ir": -0.1116,
+      "name": "ret_skew_60",
+      "ic_mean": -0.040382,
+      "ir": -0.1177,
+      "type": "generic"
+    },
+    {
+      "name": "sharpe_20",
+      "ic_mean": -0.016024,
+      "ir": -0.1082,
+      "type": "generic"
+    },
+    {
+      "name": "pv_corr_10",
+      "ic_mean": -0.010364,
+      "ir": -0.1552,
+      "type": "generic"
+    },
+    {
+      "name": "pv_corr_20",
+      "ic_mean": -0.020881,
+      "ir": -0.1594,
       "type": "generic"
     },
     {
       "name": "price_pos_60",
-      "ic_mean": -0.017257,
-      "ir": -0.1049,
+      "ic_mean": -0.026527,
+      "ir": -0.0881,
       "type": "generic"
     },
     {
       "name": "track_semiconductor_mom_20d",
-      "ic_mean": -0.014082,
-      "ir": -0.0718,
+      "ic_mean": -0.01711,
+      "ir": -0.0975,
       "type": "track_specific"
     },
     {
-      "name": "track_semiconductor_volatility_20d",
-      "ic_mean": 0.039479,
-      "ir": 0.0631,
+      "name": "track_semiconductor_mom_60d",
+      "ic_mean": -0.049277,
+      "ir": -0.0934,
       "type": "track_specific"
     },
     {
-      "name": "track_semiconductor_money_flow_5d",
-      "ic_mean": 0.010921,
-      "ir": -0.0948,
+      "name": "track_semiconductor_trend_20d",
+      "ic_mean": -0.013916,
+      "ir": -0.0973,
       "type": "track_specific"
     },
     {
       "name": "track_semiconductor_money_flow_ratio_5d",
-      "ic_mean": 0.023866,
-      "ir": -0.0699,
+      "ic_mean": 0.016023,
+      "ir": -0.0722,
       "type": "track_specific"
     },
     {
-      "name": "track_semiconductor_min_ret_20d",
-      "ic_mean": -0.040603,
-      "ir": -0.0693,
+      "name": "track_semiconductor_money_flow_20d",
+      "ic_mean": -0.028765,
+      "ir": -0.1205,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_semiconductor_max_ret_5d",
+      "ic_mean": 0.024478,
+      "ir": -0.0559,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_semiconductor_avg_ret_5d",
+      "ic_mean": 0.010254,
+      "ir": -0.0566,
       "type": "track_specific"
     },
     {
       "name": "track_semiconductor_avg_ret_20d",
-      "ic_mean": -0.013228,
-      "ir": -0.0701,
+      "ic_mean": -0.017211,
+      "ir": -0.0969,
       "type": "track_specific"
     },
     {
-      "name": "track_storage_mom_20d",
-      "ic_mean": -0.042185,
-      "ir": -0.1387,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_trend_20d",
-      "ic_mean": -0.026771,
-      "ir": -0.0705,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_amihud_illiq",
-      "ic_mean": 0.012637,
-      "ir": 0.0913,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_money_flow_ratio_5d",
-      "ic_mean": 0.012774,
-      "ir": -0.1034,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_money_flow_20d",
-      "ic_mean": -0.032211,
-      "ir": -0.0882,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_money_flow_ratio_20d",
-      "ic_mean": -0.021167,
-      "ir": -0.0952,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_max_ret_5d",
-      "ic_mean": 0.025883,
-      "ir": -0.0883,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_storage_avg_ret_20d",
-      "ic_mean": -0.042778,
-      "ir": -0.1431,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_trend_20d",
-      "ic_mean": 0.019647,
-      "ir": 0.1322,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_trend_60d",
-      "ic_mean": -0.014716,
-      "ir": 0.1142,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_volatility_20d",
-      "ic_mean": -0.040394,
-      "ir": 0.1949,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_amihud_illiq",
-      "ic_mean": -0.03371,
-      "ir": -0.1011,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_money_flow_ratio_5d",
-      "ic_mean": 0.014086,
-      "ir": 0.0856,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_max_ret_5d",
-      "ic_mean": 0.014578,
-      "ir": 0.0817,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_max_ret_20d",
-      "ic_mean": -0.029301,
-      "ir": 0.2503,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_ai_min_ret_20d",
-      "ic_mean": 0.071997,
-      "ir": 0.1177,
+      "name": "track_robot_mom_20d",
+      "ic_mean": -0.04464,
+      "ir": -0.0822,
       "type": "track_specific"
     },
     {
       "name": "track_robot_mom_60d",
-      "ic_mean": -0.058284,
-      "ir": -0.097,
+      "ic_mean": -0.065856,
+      "ir": -0.0867,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_robot_trend_20d",
+      "ic_mean": -0.030004,
+      "ir": -0.0713,
       "type": "track_specific"
     },
     {
       "name": "track_robot_trend_60d",
-      "ic_mean": -0.093956,
-      "ir": -0.2479,
+      "ic_mean": -0.093335,
+      "ir": -0.0919,
       "type": "track_specific"
     },
     {
-      "name": "track_robot_volatility_20d",
-      "ic_mean": -0.021102,
-      "ir": -0.0579,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_robot_volume_ratio_20d",
-      "ic_mean": 0.054924,
-      "ir": 0.0704,
-      "type": "track_specific"
-    },
-    {
-      "name": "track_robot_amihud_illiq",
-      "ic_mean": -0.025441,
-      "ir": -0.112,
+      "name": "track_robot_money_flow_5d",
+      "ic_mean": -0.012709,
+      "ir": -0.0587,
       "type": "track_specific"
     },
     {
       "name": "track_robot_money_flow_20d",
-      "ic_mean": -0.021726,
-      "ir": -0.1144,
+      "ic_mean": -0.044735,
+      "ir": -0.1547,
       "type": "track_specific"
     },
     {
       "name": "track_robot_max_ret_5d",
-      "ic_mean": 0.01397,
-      "ir": -0.0646,
+      "ic_mean": 0.01602,
+      "ir": -0.0655,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_robot_min_ret_5d",
+      "ic_mean": -0.011378,
+      "ir": 0.0777,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_robot_avg_ret_20d",
+      "ic_mean": -0.046008,
+      "ir": -0.0922,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_mom_20d",
+      "ic_mean": -0.022489,
+      "ir": -0.1206,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_trend_60d",
+      "ic_mean": -0.029603,
+      "ir": -0.0628,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_volume_ratio_20d",
+      "ic_mean": 0.041655,
+      "ir": -0.0943,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_amihud_illiq",
+      "ic_mean": -0.044395,
+      "ir": -0.0549,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_money_flow_ratio_5d",
+      "ic_mean": 0.010268,
+      "ir": -0.0681,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_money_flow_20d",
+      "ic_mean": -0.014459,
+      "ir": -0.164,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_money_flow_ratio_20d",
+      "ic_mean": -0.016133,
+      "ir": -0.1171,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_max_ret_5d",
+      "ic_mean": 0.024341,
+      "ir": -0.066,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_max_ret_20d",
+      "ic_mean": -0.01198,
+      "ir": -0.0622,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai_avg_ret_20d",
+      "ic_mean": -0.023798,
+      "ir": -0.1191,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_mom_20d",
+      "ic_mean": -0.04072,
+      "ir": -0.1829,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_mom_60d",
+      "ic_mean": -0.049184,
+      "ir": -0.0889,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_trend_20d",
+      "ic_mean": -0.046369,
+      "ir": -0.1401,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_money_flow_20d",
+      "ic_mean": -0.020556,
+      "ir": -0.0864,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_max_ret_5d",
+      "ic_mean": 0.027943,
+      "ir": -0.0763,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_max_ret_20d",
+      "ic_mean": 0.01362,
+      "ir": -0.0876,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_storage_avg_ret_20d",
+      "ic_mean": -0.039562,
+      "ir": -0.1866,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_mom_5d",
+      "ic_mean": 0.01751,
+      "ir": -0.1257,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_mom_20d",
+      "ic_mean": -0.023264,
+      "ir": -0.2022,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_mom_60d",
+      "ic_mean": -0.105674,
+      "ir": -0.218,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_trend_60d",
+      "ic_mean": -0.113803,
+      "ir": -0.1669,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_volatility_20d",
+      "ic_mean": -0.032452,
+      "ir": -0.1091,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_amihud_illiq",
+      "ic_mean": 0.015851,
+      "ir": 0.0949,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_money_flow_5d",
+      "ic_mean": 0.015721,
+      "ir": -0.1343,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_money_flow_ratio_5d",
+      "ic_mean": 0.021316,
+      "ir": -0.1399,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_money_flow_20d",
+      "ic_mean": -0.037046,
+      "ir": -0.1612,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_money_flow_ratio_20d",
+      "ic_mean": -0.025193,
+      "ir": -0.1589,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_max_ret_5d",
+      "ic_mean": 0.02506,
+      "ir": -0.0757,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_avg_ret_5d",
+      "ic_mean": 0.017949,
+      "ir": -0.1248,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_max_ret_20d",
+      "ic_mean": -0.043448,
+      "ir": -0.1662,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_material_avg_ret_20d",
+      "ic_mean": -0.02565,
+      "ir": -0.2088,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai-power_amihud_illiq",
+      "ic_mean": 0.029642,
+      "ir": 0.0869,
+      "type": "track_specific"
+    },
+    {
+      "name": "track_ai-power_max_ret_5d",
+      "ic_mean": 0.026314,
+      "ir": 0.0556,
       "type": "track_specific"
     }
   ],
   "blacklist": [
     {
-      "name": "rsi_14",
-      "reason": "ic_too_low(-0.0046)"
+      "name": "rsi_6",
+      "reason": "ic_too_low(0.0055)"
+    },
+    {
+      "name": "stoch_d",
+      "reason": "ic_too_low(0.0083)"
     },
     {
       "name": "willr_28",
-      "reason": "ic_too_low(-0.0018)"
+      "reason": "ic_too_low(-0.0093)"
     },
     {
       "name": "roc_1",
-      "reason": "ic_too_low(0.0040), ir_too_low(-0.0489)"
+      "reason": "ic_too_low(0.0048), ir_too_low(-0.0353)"
     },
     {
       "name": "roc_5",
-      "reason": "ic_too_low(0.0084)"
+      "reason": "ic_too_low(0.0058)"
     },
     {
       "name": "roc_10",
-      "reason": "ic_too_low(0.0030)"
-    },
-    {
-      "name": "sma_dev_20",
       "reason": "ic_too_low(-0.0030)"
     },
     {
-      "name": "ema_dev_12",
-      "reason": "ic_too_low(0.0028)"
+      "name": "sma_dev_5",
+      "reason": "ic_too_low(0.0075)"
     },
     {
-      "name": "adx_pos",
-      "reason": "ic_too_low(-0.0088)"
+      "name": "sma_dev_10",
+      "reason": "ic_too_low(0.0058)"
+    },
+    {
+      "name": "ema_dev_12",
+      "reason": "ic_too_low(-0.0038)"
     },
     {
       "name": "aroon_up",
-      "reason": "ic_too_low(-0.0043)"
+      "reason": "ic_too_low(-0.0074)"
     },
     {
-      "name": "bb_width",
-      "reason": "ir_too_low(0.0389)"
+      "name": "cci_14",
+      "reason": "ic_too_low(0.0062)"
     },
     {
-      "name": "ulcer_14",
-      "reason": "ic_too_low(0.0067)"
+      "name": "cci_20",
+      "reason": "ic_too_low(0.0002)"
+    },
+    {
+      "name": "bb_pct",
+      "reason": "ic_too_low(0.0010)"
     },
     {
       "name": "obv",
-      "reason": "ir_too_low(-0.0105)"
+      "reason": "ic_too_low(0.0056), ir_too_low(-0.0000)"
     },
     {
       "name": "ad",
-      "reason": "ic_too_low(-0.0045), ir_too_low(-0.0252)"
+      "reason": "ic_too_low(-0.0080)"
+    },
+    {
+      "name": "cmf",
+      "reason": "ir_too_low(-0.0488)"
     },
     {
       "name": "emv",
-      "reason": "ir_too_low(-0.0174)"
-    },
-    {
-      "name": "fi_13",
       "reason": "ic_too_low(0.0051)"
     },
     {
       "name": "mfi",
-      "reason": "ic_too_low(0.0092)"
+      "reason": "ic_too_low(0.0027)"
     },
     {
       "name": "vpt",
-      "reason": "ir_too_low(0.0140)"
+      "reason": "ic_too_low(0.0057), ir_too_low(-0.0342)"
     },
     {
       "name": "vol_ratio_5",
-      "reason": "ir_too_low(-0.0052)"
+      "reason": "ir_too_low(-0.0010)"
     },
     {
       "name": "vol_ratio_20",
-      "reason": "ir_too_low(-0.0224)"
+      "reason": "ir_too_low(-0.0231)"
     },
     {
       "name": "vol_roc_5",
-      "reason": "ir_too_low(-0.0040)"
-    },
-    {
-      "name": "ret_skew_60",
-      "reason": "ir_too_low(-0.0388)"
+      "reason": "ir_too_low(-0.0074)"
     },
     {
       "name": "ret_kurt_20",
-      "reason": "ir_too_low(-0.0202)"
+      "reason": "ic_too_low(0.0035), ir_too_low(-0.0158)"
     },
     {
       "name": "ret_pctile_20",
-      "reason": "ic_too_low(0.0033)"
+      "reason": "ic_too_low(0.0052), ir_too_low(-0.0328)"
     },
     {
       "name": "ret_pctile_60",
-      "reason": "ic_too_low(0.0032)"
+      "reason": "ic_too_low(0.0050), ir_too_low(-0.0382)"
     },
     {
       "name": "consec_up",
-      "reason": "ic_too_low(0.0044)"
+      "reason": "ic_too_low(0.0058), ir_too_low(-0.0305)"
     },
     {
       "name": "consec_down",
-      "reason": "ir_too_low(0.0279)"
+      "reason": "ic_too_low(-0.0063)"
     },
     {
-      "name": "sharpe_20",
-      "reason": "ic_too_low(-0.0066)"
-    },
-    {
-      "name": "pv_corr_10",
-      "reason": "ic_too_low(0.0029)"
-    },
-    {
-      "name": "pv_corr_20",
-      "reason": "ic_too_low(-0.0074)"
+      "name": "price_pos_20",
+      "reason": "ic_too_low(0.0038)"
     },
     {
       "name": "track_semiconductor_mom_5d",
-      "reason": "ir_too_low(-0.0465)"
-    },
-    {
-      "name": "track_semiconductor_mom_60d",
-      "reason": "ir_too_low(-0.0415)"
-    },
-    {
-      "name": "track_semiconductor_trend_20d",
-      "reason": "ic_too_low(-0.0074)"
+      "reason": "ic_too_low(0.0099)"
     },
     {
       "name": "track_semiconductor_trend_60d",
-      "reason": "ir_too_low(0.0190)"
+      "reason": "ir_too_low(-0.0452)"
+    },
+    {
+      "name": "track_semiconductor_volatility_20d",
+      "reason": "ir_too_low(-0.0357)"
     },
     {
       "name": "track_semiconductor_volume_ratio_20d",
-      "reason": "ir_too_low(-0.0101)"
+      "reason": "ir_too_low(-0.0288)"
     },
     {
       "name": "track_semiconductor_amihud_illiq",
-      "reason": "ir_too_low(-0.0234)"
+      "reason": "ic_too_low(0.0086), ir_too_low(0.0430)"
     },
     {
-      "name": "track_semiconductor_money_flow_20d",
-      "reason": "ic_too_low(-0.0067)"
-    },
-    {
-      "name": "track_semiconductor_money_flow_ratio_20d",
-      "reason": "ic_too_low(-0.0004), ir_too_low(-0.0494)"
-    },
-    {
-      "name": "track_semiconductor_max_ret_5d",
-      "reason": "ir_too_low(-0.0099)"
-    },
-    {
-      "name": "track_semiconductor_min_ret_5d",
-      "reason": "ic_too_low(-0.0034)"
-    },
-    {
-      "name": "track_semiconductor_avg_ret_5d",
-      "reason": "ir_too_low(-0.0476)"
-    },
-    {
-      "name": "track_semiconductor_max_ret_20d",
-      "reason": "ir_too_low(-0.0060)"
-    },
-    {
-      "name": "track_storage_mom_5d",
-      "reason": "ic_too_low(0.0040)"
-    },
-    {
-      "name": "track_storage_mom_60d",
-      "reason": "ir_too_low(-0.0332)"
-    },
-    {
-      "name": "track_storage_trend_60d",
-      "reason": "ir_too_low(0.0192)"
-    },
-    {
-      "name": "track_storage_volatility_20d",
-      "reason": "ir_too_low(-0.0487)"
-    },
-    {
-      "name": "track_storage_volume_ratio_20d",
-      "reason": "ir_too_low(-0.0246)"
-    },
-    {
-      "name": "track_storage_money_flow_5d",
+      "name": "track_semiconductor_money_flow_5d",
       "reason": "ic_too_low(0.0034)"
     },
     {
-      "name": "track_storage_min_ret_5d",
-      "reason": "ic_too_low(-0.0083), ir_too_low(0.0249)"
+      "name": "track_semiconductor_money_flow_ratio_20d",
+      "reason": "ic_too_low(-0.0064)"
     },
     {
-      "name": "track_storage_avg_ret_5d",
-      "reason": "ic_too_low(0.0044)"
+      "name": "track_semiconductor_min_ret_5d",
+      "reason": "ic_too_low(-0.0054), ir_too_low(0.0062)"
     },
     {
-      "name": "track_storage_max_ret_20d",
-      "reason": "ic_too_low(-0.0086)"
+      "name": "track_semiconductor_max_ret_20d",
+      "reason": "ic_too_low(0.0014)"
     },
     {
-      "name": "track_storage_min_ret_20d",
-      "reason": "ir_too_low(0.0241)"
-    },
-    {
-      "name": "track_ai_mom_5d",
-      "reason": "ic_too_low(0.0092), ir_too_low(0.0294)"
-    },
-    {
-      "name": "track_ai_mom_20d",
-      "reason": "ic_too_low(-0.0005)"
-    },
-    {
-      "name": "track_ai_mom_60d",
-      "reason": "ic_too_low(-0.0001)"
-    },
-    {
-      "name": "track_ai_volume_ratio_20d",
-      "reason": "ir_too_low(0.0140)"
-    },
-    {
-      "name": "track_ai_money_flow_5d",
-      "reason": "ir_too_low(0.0189)"
-    },
-    {
-      "name": "track_ai_money_flow_20d",
-      "reason": "ic_too_low(0.0080)"
-    },
-    {
-      "name": "track_ai_money_flow_ratio_20d",
-      "reason": "ic_too_low(-0.0087)"
-    },
-    {
-      "name": "track_ai_min_ret_5d",
-      "reason": "ir_too_low(0.0082)"
-    },
-    {
-      "name": "track_ai_avg_ret_5d",
-      "reason": "ic_too_low(0.0086), ir_too_low(0.0357)"
-    },
-    {
-      "name": "track_ai_avg_ret_20d",
-      "reason": "ic_too_low(-0.0037)"
+      "name": "track_semiconductor_min_ret_20d",
+      "reason": "ir_too_low(-0.0014)"
     },
     {
       "name": "track_robot_mom_5d",
-      "reason": "ir_too_low(0.0179)"
+      "reason": "ic_too_low(0.0022), ir_too_low(-0.0007)"
     },
     {
-      "name": "track_robot_mom_20d",
-      "reason": "ic_too_low(0.0084)"
+      "name": "track_robot_volatility_20d",
+      "reason": "ic_too_low(-0.0053)"
     },
     {
-      "name": "track_robot_trend_20d",
-      "reason": "ir_too_low(-0.0117)"
+      "name": "track_robot_volume_ratio_20d",
+      "reason": "ir_too_low(0.0475)"
     },
     {
-      "name": "track_robot_money_flow_5d",
-      "reason": "ic_too_low(-0.0032), ir_too_low(-0.0322)"
+      "name": "track_robot_amihud_illiq",
+      "reason": "ic_too_low(0.0048), ir_too_low(0.0046)"
     },
     {
       "name": "track_robot_money_flow_ratio_5d",
-      "reason": "ir_too_low(-0.0064)"
+      "reason": "ic_too_low(0.0039), ir_too_low(-0.0290)"
     },
     {
       "name": "track_robot_money_flow_ratio_20d",
-      "reason": "ir_too_low(0.0221)"
-    },
-    {
-      "name": "track_robot_min_ret_5d",
-      "reason": "ir_too_low(0.0265)"
+      "reason": "ir_too_low(-0.0351)"
     },
     {
       "name": "track_robot_avg_ret_5d",
-      "reason": "ir_too_low(0.0181)"
+      "reason": "ic_too_low(0.0027), ir_too_low(-0.0001)"
     },
     {
       "name": "track_robot_max_ret_20d",
-      "reason": "ic_too_low(0.0005)"
+      "reason": "ic_too_low(-0.0018)"
     },
     {
       "name": "track_robot_min_ret_20d",
-      "reason": "ir_too_low(0.0336)"
+      "reason": "ic_too_low(-0.0048)"
     },
     {
-      "name": "track_robot_avg_ret_20d",
-      "reason": "ic_too_low(0.0045)"
+      "name": "track_ai_mom_5d",
+      "reason": "ic_too_low(0.0023)"
+    },
+    {
+      "name": "track_ai_mom_60d",
+      "reason": "ir_too_low(0.0030)"
+    },
+    {
+      "name": "track_ai_trend_20d",
+      "reason": "ic_too_low(-0.0053)"
+    },
+    {
+      "name": "track_ai_volatility_20d",
+      "reason": "ic_too_low(-0.0013), ir_too_low(-0.0413)"
+    },
+    {
+      "name": "track_ai_money_flow_5d",
+      "reason": "ic_too_low(0.0002)"
+    },
+    {
+      "name": "track_ai_min_ret_5d",
+      "reason": "ic_too_low(-0.0048), ir_too_low(-0.0290)"
+    },
+    {
+      "name": "track_ai_avg_ret_5d",
+      "reason": "ic_too_low(0.0028)"
+    },
+    {
+      "name": "track_ai_min_ret_20d",
+      "reason": "ic_too_low(0.0016), ir_too_low(-0.0126)"
+    },
+    {
+      "name": "track_storage_mom_5d",
+      "reason": "ic_too_low(0.0023)"
+    },
+    {
+      "name": "track_storage_trend_60d",
+      "reason": "ir_too_low(-0.0434)"
+    },
+    {
+      "name": "track_storage_volatility_20d",
+      "reason": "ir_too_low(-0.0218)"
+    },
+    {
+      "name": "track_storage_volume_ratio_20d",
+      "reason": "ir_too_low(-0.0471)"
+    },
+    {
+      "name": "track_storage_amihud_illiq",
+      "reason": "ir_too_low(0.0381)"
+    },
+    {
+      "name": "track_storage_money_flow_5d",
+      "reason": "ic_too_low(-0.0026)"
+    },
+    {
+      "name": "track_storage_money_flow_ratio_5d",
+      "reason": "ic_too_low(0.0063)"
+    },
+    {
+      "name": "track_storage_money_flow_ratio_20d",
+      "reason": "ic_too_low(-0.0089)"
+    },
+    {
+      "name": "track_storage_min_ret_5d",
+      "reason": "ir_too_low(0.0085)"
+    },
+    {
+      "name": "track_storage_avg_ret_5d",
+      "reason": "ic_too_low(0.0031)"
+    },
+    {
+      "name": "track_storage_min_ret_20d",
+      "reason": "ir_too_low(-0.0012)"
+    },
+    {
+      "name": "track_material_trend_20d",
+      "reason": "ic_too_low(-0.0021)"
+    },
+    {
+      "name": "track_material_volume_ratio_20d",
+      "reason": "ir_too_low(-0.0309)"
+    },
+    {
+      "name": "track_material_min_ret_5d",
+      "reason": "ic_too_low(0.0065), ir_too_low(-0.0003)"
+    },
+    {
+      "name": "track_material_min_ret_20d",
+      "reason": "ir_too_low(0.0145)"
+    },
+    {
+      "name": "track_ai-power_mom_5d",
+      "reason": "ic_too_low(0.0053), ir_too_low(0.0189)"
+    },
+    {
+      "name": "track_ai-power_mom_20d",
+      "reason": "ir_too_low(0.0047)"
+    },
+    {
+      "name": "track_ai-power_mom_60d",
+      "reason": "ic_too_low(0.0016), ir_too_low(0.0141)"
+    },
+    {
+      "name": "track_ai-power_trend_20d",
+      "reason": "ic_too_low(-0.0056), ir_too_low(0.0248)"
+    },
+    {
+      "name": "track_ai-power_trend_60d",
+      "reason": "ic_too_low(-0.0062), ir_too_low(-0.0020)"
+    },
+    {
+      "name": "track_ai-power_volatility_20d",
+      "reason": "ir_too_low(0.0398)"
+    },
+    {
+      "name": "track_ai-power_volume_ratio_20d",
+      "reason": "ir_too_low(0.0364)"
+    },
+    {
+      "name": "track_ai-power_money_flow_5d",
+      "reason": "ic_too_low(0.0016), ir_too_low(0.0052)"
+    },
+    {
+      "name": "track_ai-power_money_flow_ratio_5d",
+      "reason": "ir_too_low(0.0315)"
+    },
+    {
+      "name": "track_ai-power_money_flow_20d",
+      "reason": "ir_too_low(-0.0040)"
+    },
+    {
+      "name": "track_ai-power_money_flow_ratio_20d",
+      "reason": "ic_too_low(-0.0012)"
+    },
+    {
+      "name": "track_ai-power_min_ret_5d",
+      "reason": "ir_too_low(-0.0094)"
+    },
+    {
+      "name": "track_ai-power_avg_ret_5d",
+      "reason": "ic_too_low(0.0058), ir_too_low(0.0203)"
+    },
+    {
+      "name": "track_ai-power_max_ret_20d",
+      "reason": "ir_too_low(0.0474)"
+    },
+    {
+      "name": "track_ai-power_min_ret_20d",
+      "reason": "ir_too_low(-0.0400)"
+    },
+    {
+      "name": "track_ai-power_avg_ret_20d",
+      "reason": "ir_too_low(0.0110)"
     }
   ],
   "summary": {
-    "total_screened": 147,
-    "passed": 75,
-    "failed": 72,
-    "pass_rate": "51.0%"
+    "total_screened": 183,
+    "passed": 97,
+    "failed": 86,
+    "pass_rate": "53.0%"
   }
 }

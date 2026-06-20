@@ -2,83 +2,92 @@
   "track_name": "semiconductor",
   "stock_codes": [
     "000636.SZ",
+    "002049.SZ",
     "002371.SZ",
+    "300604.SZ",
+    "300661.SZ",
+    "300782.SZ",
     "600183.SH",
+    "600584.SH",
     "600703.SH",
+    "600745.SH",
+    "603501.SH",
     "603986.SH",
     "688012.SH",
-    "688256.SH",
+    "688126.SH",
+    "688396.SH",
+    "688728.SH",
     "688981.SH"
   ],
-  "n_stocks": 8,
-  "train_rows": 24970,
-  "val_rows": 2178,
-  "test_rows": 5171,
-  "cv_mean_r2": 0.0017,
-  "cv_std_r2": 0.0081,
-  "train_r2": 0.0512,
-  "val_r2": 0.0008,
-  "test_r2": -0.0744,
-  "r2_gap": 0.0504,
+  "n_stocks": 17,
+  "train_rows": 50420,
+  "val_rows": 4598,
+  "test_rows": 10898,
+  "cv_mean_r2": -0.0029,
+  "cv_std_r2": 0.0014,
+  "train_r2": 0.0014,
+  "val_r2": -0.0001,
+  "test_r2": -0.0001,
+  "r2_gap": 0.0015,
   "overfitting": false,
   "params": {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 8,
-    "max_depth": 4,
-    "min_child_samples": 50,
-    "min_child_weight": 10,
-    "learning_rate": 0.01,
-    "feature_fraction": 0.6,
-    "bagging_fraction": 0.7,
+    "num_leaves": 15,
+    "max_depth": 5,
+    "min_child_samples": 30,
+    "min_child_weight": 5,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.7,
+    "bagging_fraction": 0.8,
     "bagging_freq": 3,
-    "n_estimators": 100,
-    "reg_alpha": 5.0,
-    "reg_lambda": 10.0,
+    "n_estimators": 500,
+    "reg_alpha": 2.0,
+    "reg_lambda": 5.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "track_semiconductor_min_ret_20d",
-      "importance": 109
-    },
-    {
-      "name": "atr_5",
-      "importance": 87
+      "name": "fi_13",
+      "importance": 3
     },
     {
       "name": "sma_5",
-      "importance": 67
+      "importance": 2
     },
     {
-      "name": "ppo_signal",
-      "importance": 58
+      "name": "atr_5",
+      "importance": 2
     },
     {
-      "name": "ppo",
-      "importance": 45
+      "name": "bb_width",
+      "importance": 2
     },
     {
-      "name": "adx",
-      "importance": 44
+      "name": "adx_pos",
+      "importance": 1
     },
     {
-      "name": "track_storage_max_ret_5d",
-      "importance": 43
+      "name": "ulcer_14",
+      "importance": 1
     },
     {
-      "name": "rsi_6",
-      "importance": 34
+      "name": "pv_corr_20",
+      "importance": 1
     },
     {
-      "name": "track_semiconductor_volatility_20d",
-      "importance": 33
+      "name": "track_semiconductor_max_ret_5d",
+      "importance": 1
     },
     {
-      "name": "macd_hist",
-      "importance": 22
+      "name": "track_storage_mom_20d",
+      "importance": 1
+    },
+    {
+      "name": "rsi_14",
+      "importance": 0
     }
   ]
 }

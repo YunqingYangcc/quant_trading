@@ -78,7 +78,7 @@ export function getTrackScore(trackName: string) {
 }
 
 export function getAllTrackScores() {
-  return request.get('/ml/score/all')
+  return request.get('/ml/scores')
 }
 
 export function trainTrackModel(trackName: string) {
@@ -91,4 +91,34 @@ export function trainAllModels() {
 
 export function listTrackModels(trackName: string) {
   return request.get(`/ml/models/${trackName}`)
+}
+
+export function getAllModels() {
+  return request.get('/ml/models/all')
+}
+
+export function getFactorData(params?: { track_name?: string; stock_code?: string; max_rows?: number }) {
+  return request.get('/ml/factors/data', { params })
+}
+
+export function getPortfolioSummary() {
+  return request.get('/portfolio/summary')
+}
+
+export function getBacktestReport() {
+  return request.get('/backtest/report')
+}
+
+export function getBacktestEquity() {
+  return request.get('/backtest/equity')
+}
+
+export function runBacktest(data: {
+  initial_capital: number
+  top_n: number
+  rebalance_freq: string
+  max_single_stock: number
+  max_single_track: number
+}) {
+  return request.post('/backtest/run', data)
 }

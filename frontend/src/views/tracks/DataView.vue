@@ -357,8 +357,7 @@ onMounted(async () => {
 <style scoped>
 .data-view {
   padding: 16px;
-  height: calc(100vh - 52px);
-  overflow-y: auto;
+  min-height: 100%;
   background: #f5f7fa;
 }
 

@@ -33,7 +33,10 @@
 
         <div class="card-stocks">
           <div class="stock-row" v-for="s in track.topStocks?.slice(0, 3)" :key="s.stock_code">
-            <span class="stock-code">{{ s.stock_code }}</span>
+            <div class="stock-info">
+              <span class="stock-name">{{ s.stock_name || s.stock_code }}</span>
+              <span v-if="s.stock_name" class="stock-code-sm">{{ s.stock_code }}</span>
+            </div>
             <div class="stock-score-bar">
               <div class="score-fill" :style="{ width: scorePct(s.score) + '%', background: s.score > 0 ? '#67c23a' : '#f56c6c' }" />
             </div>
@@ -55,30 +58,67 @@
       </div>
     </div>
 
-    <!-- 底部区域：流水线 -->
+    <!-- 底部区域：数据流水线 + Quick Stats -->
     <div class="bottom-section">
-      <div class="pipeline-wrapper">
+      <div class="bs-left">
         <PipelineStatus />
       </div>
-      <div class="pipeline-wrapper">
+      <div class="bs-right">
         <div class="quick-stats-card">
-          <div class="qs-title">⚡ Quick Stats</div>
+          <div class="qs-header">
+            <div class="qs-header-left">
+              <div class="qs-icon-box">⚡</div>
+              <div>
+                <div class="qs-title">Quick Stats</div>
+                <div class="qs-subtitle">全系统关键指标速览</div>
+              </div>
+            </div>
+            <div class="qs-live-dot">
+              <span class="live-indicator" />
+              <span class="live-text">Live</span>
+            </div>
+          </div>
+          <div class="qs-divider" />
           <div class="qs-grid">
             <div class="qs-item">
-              <span class="qs-value">{{ stats.stocks }}</span>
-              <span class="qs-label">Stocks</span>
+              <div class="qs-item-top">
+                <span class="qs-item-icon">📈</span>
+                <span class="qs-value">{{ stats.stocks }}</span>
+              </div>
+              <span class="qs-label">跟踪标的</span>
+              <div class="qs-bar">
+                <div class="qs-bar-fill" style="width:45%;background:#3b82f6" />
+              </div>
             </div>
             <div class="qs-item">
-              <span class="qs-value">{{ stats.whitelist }}</span>
-              <span class="qs-label">Factors ✅</span>
+              <div class="qs-item-top">
+                <span class="qs-item-icon">🧪</span>
+                <span class="qs-value">{{ stats.whitelist }}</span>
+              </div>
+              <span class="qs-label">有效因子</span>
+              <div class="qs-bar">
+                <div class="qs-bar-fill" style="width:72%;background:#10b981" />
+              </div>
             </div>
             <div class="qs-item">
-              <span class="qs-value">{{ stats.models }}</span>
-              <span class="qs-label">Models</span>
+              <div class="qs-item-top">
+                <span class="qs-item-icon">🤖</span>
+                <span class="qs-value">{{ stats.models }}</span>
+              </div>
+              <span class="qs-label">赛道模型</span>
+              <div class="qs-bar">
+                <div class="qs-bar-fill" style="width:60%;background:#8b5cf6" />
+              </div>
             </div>
             <div class="qs-item">
-              <span class="qs-value">{{ stats.backtestReturn }}</span>
-              <span class="qs-label">BT Return</span>
+              <div class="qs-item-top">
+                <span class="qs-item-icon">💰</span>
+                <span class="qs-value">{{ stats.backtestReturn }}</span>
+              </div>
+              <span class="qs-label">回测收益</span>
+              <div class="qs-bar">
+                <div class="qs-bar-fill" :style="{ width:'80%', background: backtestReturnColor }" />
+              </div>
             </div>
           </div>
         </div>
@@ -90,7 +130,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listTracks, getTrackScore, getAllTrackScores, type Track } from '@/api/track'
+import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, type Track } from '@/api/track'
 import PipelineStatus from '@/components/tracks/PipelineStatus.vue'
 
 const router = useRouter()
@@ -156,6 +196,14 @@ function goToTrack(name: string) {
   router.push(`/track/${name}`)
 }
 
+const backtestReturnColor = computed(() => {
+  const val = stats.value.backtestReturn
+  if (val === '-' || !val) return '#909399'
+  const num = parseFloat(val)
+  if (isNaN(num)) return '#909399'
+  return num >= 0 ? '#f59e0b' : '#f56c6c'
+})
+
 function scorePct(score: number): number {
   return Math.min(95, Math.max(5, (score + 0.02) * 2000))
 }
@@ -202,9 +250,9 @@ onMounted(async () => {
       stats.value.models = tracks.value.length
       // 回测收益
       try {
-        const btResp = await fetch('http://localhost:8000/api/v1/backtest/report')
-        const bt = await btResp.json()
-        stats.value.backtestReturn = (bt.total_return || 0).toFixed(1) + '%'
+        const bt = await getBacktestReport()
+        const m = bt?.metrics || (Array.isArray(bt) ? bt[0] : bt) || {}
+        stats.value.backtestReturn = (m.total_return || 0).toFixed(1) + '%'
       } catch {}
     } catch {}
   } catch {
@@ -216,8 +264,7 @@ onMounted(async () => {
 
 <style scoped>
 .home-page {
-  height: calc(100vh - 52px);
-  overflow-y: auto;
+  min-height: 100%;
   padding: 24px 32px;
   background: linear-gradient(135deg, #f0f4ff 0%, #f5f7fa 100%);
 }
@@ -319,12 +366,35 @@ onMounted(async () => {
   min-width: 80px;
 }
 
+.stock-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.stock-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: #303133;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stock-code-sm {
+  font-size: 10px;
+  color: #c0c4cc;
+  font-family: 'SF Mono', monospace;
+}
+
 .stock-score-bar {
   flex: 1;
   height: 4px;
   background: #f0f2f5;
   border-radius: 2px;
   overflow: hidden;
+  max-width: 80px;
 }
 
 .score-fill {
@@ -365,49 +435,168 @@ onMounted(async () => {
 /* ── 底部 ── */
 .bottom-section {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  margin-top: 4px;
 }
 
+.bs-left {
+  flex: 1;
+  min-width: 0;
+  max-width: 420px;
+}
 
+.bs-right {
+  flex: 1;
+  min-width: 0;
+}
 
+/* ── Quick Stats 高级卡片 ── */
 .quick-stats-card {
   background: #fff;
-  border-radius: 10px;
-  padding: 16px 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
   height: 100%;
+  transition: box-shadow 0.2s;
+}
+
+.quick-stats-card:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.qs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0;
+}
+
+.qs-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.qs-icon-box {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 2px 6px rgba(245,158,11,0.25);
 }
 
 .qs-title {
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.3;
+}
+
+.qs-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+.qs-live-dot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 20px;
+}
+
+.live-indicator {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.5); }
+  50% { opacity: 0.7; box-shadow: 0 0 0 4px rgba(34,197,94,0); }
+}
+
+.live-text {
+  font-size: 11px;
   font-weight: 600;
-  color: #303133;
-  margin-bottom: 12px;
+  color: #16a34a;
+}
+
+.qs-divider {
+  height: 1px;
+  background: linear-gradient(90deg, #e2e8f0 0%, #e2e8f0 60%, transparent 100%);
+  margin: 14px 0 16px;
 }
 
 .qs-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 12px;
 }
 
 .qs-item {
-  text-align: center;
-  padding: 8px;
+  padding: 14px 16px;
   background: #f8fafc;
-  border-radius: 6px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  transition: all 0.2s;
+}
+
+.qs-item:hover {
+  background: #fff;
+  border-color: #e2e8f0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.qs-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.qs-item-icon {
+  font-size: 16px;
+  opacity: 0.8;
 }
 
 .qs-value {
-  display: block;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  color: #303133;
+  color: #1e293b;
+  letter-spacing: -0.3px;
+  line-height: 1;
 }
 
 .qs-label {
+  display: block;
   font-size: 11px;
-  color: #909399;
+  color: #94a3b8;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.qs-bar {
+  height: 3px;
+  background: #f0f2f5;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.qs-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.6s ease;
 }
 
 .loading-state {
@@ -415,10 +604,6 @@ onMounted(async () => {
   background: #fff;
   border-radius: 10px;
   margin-bottom: 20px;
-}
-.pipeline-wrapper {
-  width: 280px;
-  flex-shrink: 0;
 }
 
 

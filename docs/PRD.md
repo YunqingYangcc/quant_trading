@@ -1,7 +1,8 @@
 # TrackQuant 赛道量化系统 — 产品需求文档 (PRD)
 
-> 版本：v0.5
+> 版本：v0.6
 > 更新日期：2026-06-20
+> 状态：**Phase A-H+K 完成，Phase I/J 待开发**
 ---
 
 ## 一、产品概述
@@ -294,25 +295,43 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 ### 模块 9：前端可视化终端
 
 
-#### 9.1 已完成
+#### 9.1 侧边栏与路由（7 页面机构工作流）
+
+```
+📈 Quant Trading @杨布拉德
+
+DATA
+├── Dashboard        (/)      HomePage.vue      4 赛道卡片+流水线+Quick Stats
+├── Data Pipeline    (/pipeline)  DataView.vue   因子筛选流程+黑名单+因子手册
+├── Alpha Research   (/alpha)     AlphaResearchPage.vue  因子IC时序/热力图/分位数收益
+
+STRATEGY
+├── Model Factory    (/model-factory)  ModelFactoryPage.vue  模型卡片/特征重要性/重训
+├── Alpha Workstation (/track/:name)   TrackDashboard.vue  K线+排名+因子面板
+├── Backtest Lab     (/backtest)       BacktestPage.vue   可配置回测+绩效指标
+└── Portfolio        (/portfolio)      PortfolioPage.vue  权重分配/持仓/风险/净值曲线
+```
+
+#### 9.2 已完成
 
 | 功能点 | 描述 | 状态 |
 |:-------|:-----|:----:|
-| 侧边栏导航 | 3 个页面入口：总览/因子手册/回测 | ✅ |
-| 总览首页 | 4 赛道卡片（景气环+Top3 评分）+ 全市场 TopPicks + 流水线状态 | ✅ |
+| 侧边栏导航 | 7 项英文（DATA 3 + STRATEGY 4），Musk 极简暗色 | ✅ |
+| 总览首页 | 4 赛道卡片（景气环+Top3 评分）+ 流水线状态 + Quick Stats | ✅ |
 | 赛道 Tab 栏 | TrackDashboard 顶部切换赛道 | ✅ |
 | 股票选择横栏 | 搜索+芯片选择 | ✅ |
 | K 线主图 | ECharts 蜡烛图 + MA5/MA20/MA60 + 布林 + 趋势线 | ✅ |
 | 成交量副图 | 柱状图 | ✅ |
 | 底部缩放 | DataZoom 控件 | ✅ |
 | 个股 AI 排名面板 | 左侧面板，按强弱分排序（对接真实 API） | ✅ |
-| 有效因子面板 | 右侧面板，展示白名单因子（对接真实 API） | ✅ FactorChartPanel |
-| 赛道景气仪表盘 | 4 条赛道景气度对比（对接真实 API） | ✅ ProsperityPanel |
+| 有效因子面板 | 右侧分类面板，中文名+IC+IR+解读（FactorChartPanel） | ✅ |
+| 赛道景气仪表盘 | 4 条赛道景气度对比（对接真实 API） | ✅ |
 | ATR/RSI/景气副图 | 波动率/震荡/景气度独立副图 | ✅ |
-| 因子手册页面 | DataView：因子搜索 + 分类筛选 + 展开释义（公式/解读/IC 表现） | ✅ |
-| 回测绩效页面 | BacktestPage：9 项指标卡片 + 达标判断 + 参数展示 | ✅ |
+| Data Pipeline 页面 | 统计卡片 + 🔬因子筛选流程 + ❌黑名单 + 📊最终特征 + 📖因子手册 | ✅ |
+| 回测绩效页面 | 9 项指标卡片 + 达标判断 + 可配置参数（预设方案/资金/选股/风控） | ✅ |
+| 品牌标识 | 量化交易跟踪系统 / Quantitative Trading & Tracking System | ✅ |
 
-#### 9.2 待完善
+#### 9.3 待完善
 
 | 功能点 | 描述 | 优先级 | 状态 |
 |:-------|:-----|:------:|:----:|
@@ -329,41 +348,51 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  📈 Quant Trading @杨布拉德         ← 侧边栏    │
-│  ├ 🏠 总览     (/)                             │
-│  ├ 📖 因子手册 (/data)                         │
-│  └ 📊 回测     (/backtest)                     │
+│  📈 Quant Trading @杨布拉德                      │
+│  DATA                                           │
+│  ├── Dashboard        (/)                       │
+│  ├── Data Pipeline    (/pipeline)               │
+│  ├── Alpha Research   (/alpha)               │
+│  STRATEGY                                       │
+│  ├── Model Factory    (/model-factory)           │
+│  ├── Alpha Workstation (/track/:name)           │
+│  ├── Backtest Lab     (/backtest)               │
+│  └── Portfolio        (/portfolio)               │
 ├─────────────────────────────────────────────────┤
 │                                                  │
-│  首页 (/):                                       │
+│  Dashboard (/):                                  │
 │  ┌──────┬──────┬──────┬──────┐                   │
 │  │半导体 │  AI  │机器人 │ 存储  │  ← 4赛道卡片   │
 │  │景气62 │景气45 │景气58 │景气38 │   +景气环      │
 │  │Top3.. │Top3..│Top3..│Top3..│   +评分条       │
 │  └──────┴──────┴──────┴──────┘                   │
-│  ┌─────────────┬──────────────────┐              │
-│  │ 流水线状态   │ 🏆 Top Picks     │              │
-│  └─────────────┴──────────────────┘              │
+│  ┌───────────────┐                              │
+│  │ 流水线状态     │   Quick Stats                │
+│  │ (Pipeline)     │   (股票/因子/模型/回测)      │
+│  └───────────────┘                              │
 │                                                  │
-│  TrackDashboard (/track/:name):                  │
+│  Alpha Workstation (/track/:name):               │
 │  ┌──────┬──────────────────┬────────┐            │
 │  │ AI   │ K线主图+均线/布林 │ 有效   │            │
-│  │ 排名  │ 成交量副图        │ 因子   │            │
-│  │ 面板  │ ATR/RSI/景气副图  │ 面板   │            │
+│  │ 排名  │ +趋势线           │ 因子   │            │
+│  │ 面板  │ 成交量/RSI/ATR/   │ 面板   │            │
+│  │       │ 景气副图          │ 分类IC │            │
 │  └──────┴──────────────────┴────────┘            │
 │                                                  │
-│  因子手册 (/data):                                │
+│  Data Pipeline (/pipeline):                      │
 │  ┌──────────────────────────────────────┐         │
-│  │ 统计卡片(自选股/原始特征/白/黑名单..) │         │
-│  │ 搜索框 + 分类筛选                    │         │
-│  │ 因子卡片列表(点击展开公式+解读+IC)   │         │
+│  │ 统计卡片(股票/特征/白/黑/最终/模型)    │         │
+│  │ 🔬 因子筛选流程(4步)                 │         │
+│  │ ❌ 黑名单(展开+淘汰原因)              │         │
+│  │ 📊 最终特征说明                      │         │
+│  │ 📖 因子完全手册(搜索+分类+展开释义)    │         │
 │  └──────────────────────────────────────┘         │
 │                                                  │
-│  回测 (/backtest):                                │
+│  Backtest Lab (/backtest):                       │
 │  ┌──────────────────────────────────────┐         │
-│  │ 9 项指标卡片（夏普/回撤/收益..）     │         │
-│  │ 达标/未达标 标记                    │         │
-│  │ 回测参数（锁定）                   │         │
+│  │ 夏普/回撤/年化/胜率/交易次数/换手率.. │         │
+│  │ ✅达标 / ❌未达标 标记                │         │
+│  │ 锁定参数一览                        │         │
 │  └──────────────────────────────────────┘         │
 └─────────────────────────────────────────────────┘
 ```
@@ -417,17 +446,15 @@ baostock 拉数据 → 清洗复权落库 → 生成特征(ta库) → Alphalens 
 | GET | `/api/v1/ml/scores` | 所有赛道打分 | ✅ F |
 | GET | `/api/v1/ml/score/stock/{code}` | 个股打分详情 | ✅ F |
 | GET | `/api/v1/backtest/report` | 回测报告（BacktestPage 调用） | ✅ G |
-| POST | `/api/v1/ml/train/{track_name}` | 触发模型训练 | E |
-| POST | `/api/v1/backtest/run` | 触发回测 | G |
-| GET | `/api/v1/backtest/results` | 回测结果 | G |
+| POST | `/api/v1/ml/train/{track_name}` | 触发模型训练 | ✅ E |
+| POST | `/api/v1/backtest/run` | 触发可配置回测 | ✅ G |
+| GET | `/api/v1/ml/models/all` | 所有模型元信息 | ✅ K |
+| GET | `/api/v1/ml/factors/data` | 因子值数据（IC/相关性计算） | ✅ K |
+| GET | `/api/v1/portfolio/summary` | 组合配置建议 | ✅ K |
 
 ### 5.2 待开发接口
 
-| 方法 | 路径 | 描述 | Phase |
-|:-----|:-----|:-----|:-----:|
-| POST | `/api/v1/ml/train/{track_name}` | 触发模型训练 | E |
-| POST | `/api/v1/backtest/run` | 触发回测 | G |
-| GET | `/api/v1/backtest/results` | 回测结果 | G |
+暂无可预见的待开发接口
 
 ---
 
@@ -493,4 +520,4 @@ Phase J: /run-backtest → /review-phase J
 | 2026-06-19 | v0.1 | 初稿，覆盖 Phase A-H 全部需求 |
 | 2026-06-19 | v0.2 | 新增 AI Skill 质量门禁体系（5 个 skill）、开发纪律非功能需求 |
 | 2026-06-19 | v0.3 | 更新 Phase C/D 完成状态、池化IC方案、数据模型、验收结果 |
-| 2026-06-20 | v0.5 | 同步前端 FE 改造：新增侧边栏导航/因子手册页面/回测页面/总览页对接真实API |
+| 2026-06-20 | v0.7 | Phase K 交付：3 个独立页面（AlphaResearch/ModelFactory/Portfolio）+ 可配置回测 API + 前端 UI 全面打磨（全局字号/流水线重构/Quick Stats 升级） |

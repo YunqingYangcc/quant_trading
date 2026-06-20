@@ -1,81 +1,89 @@
 {
   "track_name": "ai",
   "stock_codes": [
+    "000977.SZ",
+    "000988.SZ",
+    "002230.SZ",
     "002281.SZ",
     "300308.SZ",
+    "300394.SZ",
     "300502.SZ",
     "601138.SH",
-    "688041.SH"
+    "603019.SH",
+    "603083.SH",
+    "688041.SH",
+    "688256.SH",
+    "688498.SZ"
   ],
-  "n_stocks": 5,
-  "train_rows": 8731,
-  "val_rows": 1210,
-  "test_rows": 2860,
+  "n_stocks": 13,
+  "train_rows": 29001,
+  "val_rows": 2904,
+  "test_rows": 6868,
   "cv_mean_r2": 0.0016,
-  "cv_std_r2": 0.0027,
-  "train_r2": 0.0879,
-  "val_r2": -0.1029,
-  "test_r2": -0.2538,
-  "r2_gap": 0.1908,
-  "overfitting": true,
+  "cv_std_r2": 0.0034,
+  "train_r2": 0.0315,
+  "val_r2": 0.0031,
+  "test_r2": -0.0341,
+  "r2_gap": 0.0284,
+  "overfitting": false,
   "params": {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 8,
-    "max_depth": 4,
-    "min_child_samples": 50,
-    "min_child_weight": 10,
-    "learning_rate": 0.01,
-    "feature_fraction": 0.6,
-    "bagging_fraction": 0.7,
+    "num_leaves": 15,
+    "max_depth": 5,
+    "min_child_samples": 30,
+    "min_child_weight": 5,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.7,
+    "bagging_fraction": 0.8,
     "bagging_freq": 3,
-    "n_estimators": 100,
-    "reg_alpha": 5.0,
-    "reg_lambda": 10.0,
+    "n_estimators": 500,
+    "reg_alpha": 2.0,
+    "reg_lambda": 5.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "track_ai_min_ret_20d",
-      "importance": 114
+      "name": "track_ai_max_ret_20d",
+      "importance": 55
     },
     {
       "name": "sma_5",
-      "importance": 83
-    },
-    {
-      "name": "atr_5",
-      "importance": 80
-    },
-    {
-      "name": "roc_60",
-      "importance": 45
-    },
-    {
-      "name": "adx",
-      "importance": 41
-    },
-    {
-      "name": "track_ai_max_ret_20d",
-      "importance": 33
-    },
-    {
-      "name": "aroon_down",
-      "importance": 32
-    },
-    {
-      "name": "track_ai_trend_20d",
       "importance": 31
     },
     {
-      "name": "track_ai_amihud_illiq",
-      "importance": 29
+      "name": "ret_skew_60",
+      "importance": 23
+    },
+    {
+      "name": "atr_5",
+      "importance": 21
+    },
+    {
+      "name": "track_ai_trend_60d",
+      "importance": 18
+    },
+    {
+      "name": "roc_60",
+      "importance": 17
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 14
+    },
+    {
+      "name": "adx",
+      "importance": 14
     },
     {
       "name": "ret_skew_20",
-      "importance": 27
+      "importance": 12
+    },
+    {
+      "name": "ao",
+      "importance": 10
     }
   ]
 }

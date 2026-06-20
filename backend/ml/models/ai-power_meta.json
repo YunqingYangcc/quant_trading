@@ -1,0 +1,84 @@
+{
+  "track_name": "ai-power",
+  "stock_codes": [
+    "002335.SZ",
+    "002837.SZ",
+    "300274.SZ",
+    "300737.SZ",
+    "600406.SH",
+    "600900.SH",
+    "601985.SH",
+    "688676.SH"
+  ],
+  "n_stocks": 8,
+  "train_rows": 20123,
+  "val_rows": 1936,
+  "test_rows": 4592,
+  "cv_mean_r2": -0.0027,
+  "cv_std_r2": 0.0019,
+  "train_r2": 0.0028,
+  "val_r2": -0.001,
+  "test_r2": 0.0006,
+  "r2_gap": 0.0038,
+  "overfitting": false,
+  "params": {
+    "objective": "regression",
+    "metric": "mse",
+    "boosting_type": "gbdt",
+    "num_leaves": 15,
+    "max_depth": 5,
+    "min_child_samples": 30,
+    "min_child_weight": 5,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.7,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 3,
+    "n_estimators": 500,
+    "reg_alpha": 2.0,
+    "reg_lambda": 5.0,
+    "verbose": -1,
+    "random_state": 42
+  },
+  "top_features": [
+    {
+      "name": "sma_5",
+      "importance": 3
+    },
+    {
+      "name": "roc_60",
+      "importance": 2
+    },
+    {
+      "name": "bb_width",
+      "importance": 2
+    },
+    {
+      "name": "ao",
+      "importance": 1
+    },
+    {
+      "name": "adx",
+      "importance": 1
+    },
+    {
+      "name": "adx_neg",
+      "importance": 1
+    },
+    {
+      "name": "atr_5",
+      "importance": 1
+    },
+    {
+      "name": "ret_skew_20",
+      "importance": 1
+    },
+    {
+      "name": "price_pos_60",
+      "importance": 1
+    },
+    {
+      "name": "track_ai-power_amihud_illiq",
+      "importance": 1
+    }
+  ]
+}

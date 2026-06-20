@@ -41,17 +41,17 @@ LGB_PARAMS = {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 8,           # 减小树复杂度 31→8
-    "max_depth": 4,            # 限制深度
-    "min_child_samples": 50,   # 增加样本数下限 20→50
-    "min_child_weight": 10,    # 最小叶子权重
-    "learning_rate": 0.01,     # 降低学习率 0.05→0.01
-    "feature_fraction": 0.6,   # 降低特征采样 0.8→0.6
-    "bagging_fraction": 0.7,   # 降低数据采样 0.8→0.7
-    "bagging_freq": 3,         # 每3轮bag一次
-    "n_estimators": 100,       # 减少迭代次数 200→100
-    "reg_alpha": 5.0,          # L1正则大幅增强 0→5
-    "reg_lambda": 10.0,        # L2正则大幅增强 0→10
+    "num_leaves": 15,           # 20→15: 控制复杂度
+    "max_depth": 5,            # 6→5: 限制深度
+    "min_child_samples": 30,
+    "min_child_weight": 5,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.7,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 3,
+    "n_estimators": 500,       # 200→500: 提高上限，交给早停决定终止点
+    "reg_alpha": 2.0,          # 1→2: 加强 L1
+    "reg_lambda": 5.0,         # 3→5: 加强 L2
     "verbose": -1,
     "random_state": 42,
 }
@@ -114,6 +114,21 @@ def train_track_model(
         logger.warning(f"  {track_name}: 训练数据不足 ({len(train_track)} 行), 跳过")
         return {"status": "skipped", "reason": "insufficient_data"}
 
+    # ── 转换目标：绝对收益 → 赛道内相对排名 ─────
+    # 对每个日期，将 target 转换为赛道内 z-score（相对强弱）
+    for df_tmp in [train_track, val_track, test_track]:
+        if len(df_tmp) == 0:
+            continue
+        # 按 date 分组，计算赛道内标准化
+        means = df_tmp.groupby("date")["target"].transform("mean")
+        stds = df_tmp.groupby("date")["target"].transform("std")
+        # 如果 std 为 0（该日期只有 1 只票或无波动），设为 0
+        df_tmp["target"] = np.where(
+            stds > 1e-10,
+            (df_tmp["target"] - means) / stds,
+            0.0
+        )
+
     X_train = train_track[feature_cols].values
     y_train = train_track["target"].values
     X_val = val_track[feature_cols].values
@@ -135,9 +150,10 @@ def train_track_model(
         model_cv.fit(
             X_fold_train, y_fold_train,
             eval_set=[(X_fold_val, y_fold_val)],
+            callbacks=[lgb.early_stopping(20)],
         )
 
-        y_pred = model_cv.predict(X_fold_val)
+        y_pred = model_cv.predict(X_fold_val, num_iteration=model_cv.best_iteration_)
         r2 = r2_score(y_fold_val, y_pred)
         cv_scores.append(r2)
 
@@ -150,15 +166,19 @@ def train_track_model(
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
+        callbacks=[lgb.early_stopping(20)],
     )
 
+    best_iter = model.best_iteration_
+    logger.info(f"  最佳迭代轮数: {best_iter}/{LGB_PARAMS['n_estimators']}")
+
     # ── 评估 ─────────────────
-    y_train_pred = model.predict(X_train)
-    y_val_pred = model.predict(X_val)
+    y_train_pred = model.predict(X_train, num_iteration=best_iter)
+    y_val_pred = model.predict(X_val, num_iteration=best_iter)
 
     train_r2 = r2_score(y_train, y_train_pred)
     val_r2 = r2_score(y_val, y_val_pred)
-    test_r2 = r2_score(y_test, model.predict(X_test)) if len(y_test) > 0 else 0.0
+    test_r2 = r2_score(y_test, model.predict(X_test, num_iteration=best_iter)) if len(y_test) > 0 else 0.0
 
     r2_gap = train_r2 - val_r2
     overfitting = r2_gap > R2_GAP_THRESHOLD

@@ -50,18 +50,19 @@ Vue 可视化展示
 
 ## 三、进度总览
 
-| Phase | 内容 |
-|-------|------|
-| Phase A | 数据流水线（拉数据→复权→落库→打标签） |
-| Phase B | 特征工程（93 通用+18 赛道特征） |
-| Phase C | Alphalens 双层筛选因子 |
-| Phase D | 特征预处理（标准化/去共线/时序分割） |
-| Phase E | 赛道 LightGBM 训练 |
-| Phase F | 个股+赛道打分 API |
-| Phase G | 回测校验（pandas 手写 → backtrader 升级） |
-| Phase H | 前端可视化（K线+特征+评分） |
-| Phase I | 基本面数据接入（akshare） |
-| Phase J | 回测框架升级（backtrader） |
+| Phase | 内容 | 状态 |
+|-------|------|:----:|
+| Phase A | 数据流水线（拉数据→复权→落库→打标签） | ✅ |
+| Phase B | 特征工程（93 通用+18 赛道特征） | ✅ |
+| Phase C | Alphalens 双层筛选因子 | ✅ |
+| Phase D | 特征预处理（标准化/去共线/时序分割） | ✅ |
+| Phase E | 赛道 LightGBM 训练 | ✅ |
+| Phase F | 个股+赛道打分 API | ✅ |
+| Phase G | 回测校验（pandas 手写 → backtrader 升级） | ✅ 手写 |
+| Phase H | 前端可视化（7 页面机构工作流） | ✅ |
+| Phase I | 基本面数据接入（akshare） | ⏳ |
+| Phase J | 回测框架升级（backtrader） | ⏳ |
+| Phase K | 前端占位页面填充（Alpha Research / Model Factory / Portfolio） | ✅ |
 
 ---
 
@@ -181,23 +182,35 @@ Vue 可视化展示
 - 扩展新策略成本高
 - 详见 Phase J 升级计划
 
-### Phase H：前端可视化 ✅ 已完成（待完善）
+### Phase H：前端可视化 ✅ 已完成（7 页面机构工作流）
 
-- [x] K 线主图：均线/布林/赛道趋势线/支撑压力线
+> **架构**：Musk 极简暗色侧边栏，7 步机构量化工作流（DATA 3 + STRATEGY 4）
+> **命名**：全英文，侧边栏零编号零间隙，Step 标签已移除
+
+#### H.1 页面与路由
+
+| 路由 | 页面名 | Vue 组件 | 内容 |
+|:-----|:-------|:---------|:-----|
+| `/` | Dashboard | HomePage.vue | 4 赛道卡片（景气环+Top3评分）+ 流水线状态 + Quick Stats |
+| `/pipeline` | Data Pipeline | DataView.vue | 统计卡片 + 因子筛选流程 + 黑名单 + 最终特征 + 因子完全手册 |
+| `/alpha` | Alpha Research | AlphaResearchPage.vue | 因子 IC 时序 + 相关性热力图 + 分位数组合收益 |
+| `/model-factory` | Model Factory | ModelFactoryPage.vue | 模型卡片(R²)+ 特征重要性 Top10 + 一键重训 + 比对表 |
+| `/track/:name` | Alpha Workstation | TrackDashboard.vue | K线主图+均线/布林/趋势线 + RSI/ATR/景气副图 + 左侧AI排名 + 右侧因子面板 |
+| `/backtest` | Backtest Lab | BacktestPage.vue | 可配置回测（预设方案/资金/选股/风控）+ 9 项绩效指标 + 赛道元数据 |
+| `/portfolio` | Portfolio | PortfolioPage.vue | 赛道权重环形图 + 个股持仓比例 + 风险监控 + 净值曲线 |
+
+- [x] K 线主图：均线/布林/赛道趋势线
   - [x] 均线系统（MA5/MA20/MA60）
   - [x] 布林轨道（BB upper/lower）
   - [x] 赛道趋势线（60日线性回归）
-  - [ ] 支撑压力线
-- [x] 副图
-  - [x] 成交量
-  - [x] ATR
-  - [x] RSI（含 70/30 超买超卖线）
-  - [x] 赛道景气（模拟数据，待对接真实API）
-- [x] 左侧 AI 排名面板（RankPanel.vue，待对接真实API）
-- [x] 右侧有效因子面板（FactorChartPanel.vue）
-- [x] 赛道景气仪表盘（ProsperityPanel.vue）
+  - [ ] 支撑压力线（P2）
+- [x] 副图：成交量 + ATR + RSI（含 70/30 超买超卖线）+ 赛道景气
+- [x] 左侧 AI 排名面板（RankPanel.vue，对接真实API `/ml/score/{track}`）
+- [x] 右侧有效因子面板（FactorChartPanel.vue，分类图标+IC可视化）
+- [x] 赛道景气仪表盘（ProsperityPanel.vue，对接真实API `/ml/scores`）
 - [x] 赛道一键切换
 - [x] 核心规则：只渲染白名单因子，黑名单自动隐藏
+- [x] 品牌标识：量化交易跟踪系统 / Quantitative Trading & Tracking System
 
 ---
 
@@ -254,7 +267,7 @@ Vue 可视化展示
 |:---|:-----|:-----|:-----|
 | 数据源 | baostock（日线）+ akshare（基本面） | 行情+基本面数据 | baostock ✅ / akshare ⏳ Phase I |
 | 后端 | FastAPI + SQLAlchemy + SQLite | API + ORM + 存储 | ✅ 运行中 :8000 |
-| 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :3000 |
+| 前端 | Vue3 + Element Plus + ECharts | 可视化终端 | ✅ 运行中 :5173 |
 | **通用特征** | **ta**（40+ 指标 + 自定义补充） | 量价技术指标计算 | ✅ Phase B 已完成 |
 | **因子筛选** | **alphalens-reloaded + scipy** | IC/IR/分层检验 | ✅ Phase C 已完成 |
 | **特征预处理** | **scikit-learn** | 标准化/去共线 | ✅ Phase D 已完成 |
@@ -342,23 +355,54 @@ npx skills add addyosmani/agent-skills --skill incremental-implementation -y
 npx skills add joyco-studio/skills --skill pr-description-writer -y
 ```
 
-## 八、下一步
+## 八、下一步（量化研究员视角）
 
-### 短期（Phase E 已完结，进入优化阶段）
+> Phase K 已完成，当前 R² 接近 0 是最大瓶颈。以下优先级按**对交易决策的实际帮助**排序。
 
-**模型优化（路线 A — 低成本）**：
-1. 松绑 LightGBM 超参数：num_leaves 8→20, reg_alpha 5→1, lr 0.01→0.05
-2. 尝试换预测目标：绝对收益 → 赛道内相对排名
-3. 重新训练，对比 R² 和回测夏普
+### P0（紧急）：模型能学到信号吗？
 
-### 中期（Phase I — 基本面数据）
+**现状诊断**：4 个模型 Train R² 0.05~0.09，Test R² 接近 0。意味着 AI 打分基本无效，后续回测、组合、持仓全是建立在随机噪声上。
 
-1. `pip install akshare`
-2. 获取 PE/PB/ROE/北向资金等基本面数据
-3. 作为新特征加入流水线 → 重新筛选 → 重新训练
+```
+核心问题链：R²≈0 → 打分无效 → 轮动策略 ≈ 随机选股 → 回测无意义 → 组合不可信
+```
 
-### 中后期（Phase J — backtrader 升级）
+1. **松绑超参数**：num_leaves 8→20, reg_alpha 5→1, lr 0.01→0.05（当前正则过强，模型欠拟合）
+2. **换预测目标**：绝对收益 → 赛道内相对排名（排名比精确值更容易预测）
+3. **加基本面特征**：PE/PB/ROE/北向资金（全新信息维度，akshare，Phase I）
+4. 验证：重新训练后 Test R² 是否 > 0，夏普是否 > 0.5
 
-1. `pip install backtrader`
-2. 改写回测逻辑为 Strategy 类
-3. 利用内置画图和分析器提升验证效率
+**验收标准**：至少 3/4 赛道 Test R² > 0，回测夏普 > 0.5
+
+### P1（高优）：前端对交易有用吗？
+
+当前前端已完整但缺少**交易决策直接支撑**的功能：
+
+1. **Alpha Research 深度化** — IC 分析能用了，但缺少手持计算视角：
+   - 因子择时：哪些因子当前处于历史高位/低位（分位数）
+   - 因子组合：选最好几个因子等权合成，看历史净值
+   - 个股因子暴露：选中某只股票，告诉我是哪些因子在驱动它的打分
+
+2. **打分回溯** — 历史打分 vs 实际表现，回答"AI 上次说它强，后来真强了吗？"
+   - 当前已打分但没有历史记录
+   - 每次打分存到 score_history 表
+   - 前端展示回溯精度曲线
+
+3. **回测买卖点可视化** — 回测报告里加入买卖标记
+   - 在 equity_curve 上标出入场/出场点
+   - 直观看到哪些交易赚钱、哪些亏钱
+
+### P2（中优）：模型诊断与监控
+
+研究员需要知道模型什么时候可能失效：
+
+1. **特征重要性漂移监控** — 每次重训记录 Top10 特征，前后对比
+2. **打分分布监控** — 赛道内打分是否过度集中（所有票都一样 = 模型退化）
+3. **IC 衰减监控** — 上线后 IC 是否持续衰减（过拟合信号）
+
+### P3（低优但顺手）
+
+1. **回测框架升级 backtrader**（Phase J）— 手写版够用，不阻塞
+2. **支撑压力线** — K 线主图叠加
+3. **多策略对比** — 不同参数/预测目标的回测结果并列对比
+4. **暗色模式** — 用户体验优化
