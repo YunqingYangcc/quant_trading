@@ -40,6 +40,12 @@ const router = createRouter({
       component: () => import('@/views/tracks/BacktestPage.vue'),
     },
     {
+      path: '/runner',
+      name: 'runner',
+      meta: { title: 'Pipeline Runner' },
+      component: () => import('@/views/tracks/PipelineRunnerPage.vue'),
+    },
+    {
       path: '/portfolio',
       name: 'portfolio',
       meta: { title: 'Portfolio Monitor' },

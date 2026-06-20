@@ -24,28 +24,51 @@
               <el-icon><Connection /></el-icon>
               <span>Data Pipeline</span>
             </el-menu-item>
-            <el-menu-item index="/alpha">
-              <el-icon><DataAnalysis /></el-icon>
-              <span>Alpha Research</span>
+          </el-menu>
+        </div>
+
+        <div class="nav-section">
+          <div class="section-label">TRACKS</div>
+          <div class="section-divider" />
+          <el-menu :default-active="activeMenu" router>
+            <el-menu-item index="/track/semiconductor">
+              <el-icon><TrendCharts /></el-icon>
+              <span>半导体</span>
+            </el-menu-item>
+            <el-menu-item index="/track/ai">
+              <el-icon><TrendCharts /></el-icon>
+              <span>AI</span>
+            </el-menu-item>
+            <el-menu-item index="/track/robot">
+              <el-icon><TrendCharts /></el-icon>
+              <span>机器人</span>
+            </el-menu-item>
+            <el-menu-item index="/track/storage">
+              <el-icon><TrendCharts /></el-icon>
+              <span>存储</span>
+            </el-menu-item>
+            <el-menu-item index="/track/material">
+              <el-icon><TrendCharts /></el-icon>
+              <span>上游材料</span>
+            </el-menu-item>
+            <el-menu-item index="/track/ai-power">
+              <el-icon><TrendCharts /></el-icon>
+              <span>电力AI</span>
             </el-menu-item>
           </el-menu>
         </div>
 
         <div class="nav-section">
-          <div class="section-label">STRATEGY</div>
+          <div class="section-label">TOOLS</div>
           <div class="section-divider" />
           <el-menu :default-active="activeMenu" router>
-            <el-menu-item index="/model-factory">
-              <el-icon><Cpu /></el-icon>
-              <span>Model Factory</span>
-            </el-menu-item>
-            <el-menu-item :index="'/track/' + (currentTrack || 'semiconductor')">
-              <el-icon><TrendCharts /></el-icon>
-              <span>Alpha Workstation</span>
-            </el-menu-item>
             <el-menu-item index="/backtest">
               <el-icon><Coin /></el-icon>
               <span>Backtest Lab</span>
+            </el-menu-item>
+            <el-menu-item index="/runner">
+              <el-icon><Operation /></el-icon>
+              <span>Pipeline Runner</span>
             </el-menu-item>
             <el-menu-item index="/portfolio">
               <el-icon><PieChart /></el-icon>
@@ -80,14 +103,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, Connection, DataAnalysis, Cpu, TrendCharts, Coin, PieChart } from '@element-plus/icons-vue'
+import { Monitor, Connection, TrendCharts, Coin, Operation, PieChart } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => {
   if (route.path.startsWith('/track/')) return route.path
   return route.path
 })
-const currentTrack = computed(() => (route.params.name as string) || 'semiconductor')
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
@@ -95,6 +117,7 @@ const pageTitles: Record<string, string> = {
   '/alpha': 'Alpha Research',
   '/model-factory': 'Model Factory',
   '/backtest': 'Backtest Lab',
+  '/runner': 'Pipeline Runner',
   '/portfolio': 'Portfolio',
 }
 const pageTitle = computed(() => {

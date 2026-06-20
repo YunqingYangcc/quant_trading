@@ -24,12 +24,12 @@
   "val_rows": 4598,
   "test_rows": 10898,
   "objective": "binary",
-  "cv_mean_acc": 0.5453,
-  "cv_std_acc": 0.0132,
-  "train_acc": 0.5397,
-  "val_acc": 0.5309,
-  "test_acc": 0.5295,
-  "acc_gap": 0.0088,
+  "cv_mean_acc": 0.5433,
+  "cv_std_acc": 0.0131,
+  "train_acc": 0.5582,
+  "val_acc": 0.535,
+  "test_acc": 0.5329,
+  "acc_gap": 0.0232,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -52,43 +52,43 @@
   "top_features": [
     {
       "name": "obv",
-      "importance": 4
+      "importance": 18
     },
     {
-      "name": "ad",
-      "importance": 2
-    },
-    {
-      "name": "pv_corr_20",
-      "importance": 2
+      "name": "vpt",
+      "importance": 12
     },
     {
       "name": "track_semiconductor_min_ret_20d",
-      "importance": 2
+      "importance": 12
     },
     {
-      "name": "fund_每股经营性现金流_元",
-      "importance": 2
+      "name": "ad",
+      "importance": 9
     },
     {
-      "name": "fund_净资产增长率_pct",
-      "importance": 2
+      "name": "ret_skew_60",
+      "importance": 9
     },
     {
-      "name": "track_storage_volatility_20d",
-      "importance": 2
+      "name": "pv_corr_20",
+      "importance": 7
     },
     {
-      "name": "macd_hist",
-      "importance": 1
+      "name": "track_semiconductor_volatility_20d",
+      "importance": 7
+    },
+    {
+      "name": "sma_5",
+      "importance": 6
     },
     {
       "name": "adx",
-      "importance": 1
+      "importance": 5
     },
     {
-      "name": "bb_width",
-      "importance": 1
+      "name": "price_pos_60",
+      "importance": 5
     }
   ]
 }

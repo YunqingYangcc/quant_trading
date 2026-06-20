@@ -38,12 +38,13 @@ cd frontend && npm install && npm run dev
 
 ## 可用 Skills
 
-项目集成了 12 个 Skill（`.qoder/skills/`），分为量化业务和工程通用两类：
+项目集成了 13 个 Skill（`.qoder/skills/`），分为量化业务和工程通用两类：
 
 ### 量化业务 Skill（赛道专属）
 
 | Skill | 触发方式 | 用途 |
 |:------|:---------|:-----|
+| `/factor-research` | 说"加新数据源""加因子"自动触发 | **最高优先级门禁**：因子发现 6 问 + 数据源分级 + 多假设检验修正 |
 | `/add-feature` | 说"加个特征"自动触发 | 新增特征必须走 6 步验证流程（计算→入库→Alphalens→白名单） |
 | `/check-data` | 说"检查数据"自动触发 | 数据质量巡检：完整性/未来泄露/NaN/重复 |
 | `/train-model` | 说"训练模型"自动触发 | LightGBM 固定参数训练，防无限调参 |
@@ -66,8 +67,9 @@ cd frontend && npm install && npm run dev
 ### 开发时序中的 Skill 调用
 
 ```
-Phase 开发 → /check-data（数据检查）→ /add-feature（加特征）→ /train-model（训练）
-          → /run-backtest（回测）→ /review-phase（验收）
+新因子/数据源 → /factor-research（6 问门禁）→ /check-data（数据检查）
+             → /add-feature（加特征）→ /train-model（训练）
+             → /run-backtest（回测）→ /review-phase（验收）
 提交代码 → code-review-and-quality（代码审查）→ git-commit（提交）
 启动新功能 → spec-driven-development → planning-and-task-breakdown
           → incremental-implementation → pr-description-writer

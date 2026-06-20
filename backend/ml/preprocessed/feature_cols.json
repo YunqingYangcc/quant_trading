@@ -59,17 +59,6 @@
   "track_semiconductor_max_ret_5d",
   "track_semiconductor_min_ret_5d",
   "track_semiconductor_min_ret_20d",
-  "fund_\u6bcf\u80a1\u7ecf\u8425\u6027\u73b0\u91d1\u6d41_\u5143",
-  "fund_\u4e3b\u8425\u4e1a\u52a1\u6536\u5165\u589e\u957f\u7387_pct",
-  "fund_\u51c0\u5229\u6da6\u589e\u957f\u7387_pct",
-  "fund_\u51c0\u8d44\u4ea7\u589e\u957f\u7387_pct",
-  "fund_\u603b\u8d44\u4ea7\u589e\u957f\u7387_pct",
-  "fund_\u9500\u552e\u51c0\u5229\u7387_pct",
-  "fund_\u8d44\u4ea7\u8d1f\u503a\u7387_pct",
-  "fund_\u901f\u52a8\u6bd4\u7387",
-  "fund_\u5e94\u6536\u8d26\u6b3e\u5468\u8f6c\u7387_\u6b21",
-  "fund_\u5b58\u8d27\u5468\u8f6c\u7387_\u6b21",
-  "fund_\u603b\u8d44\u4ea7\u5468\u8f6c\u7387_\u6b21",
   "track_robot_mom_20d",
   "track_robot_mom_60d",
   "track_robot_trend_20d",
@@ -133,8 +122,5 @@
   "track_ai-power_max_ret_5d",
   "track_ai-power_min_ret_5d",
   "track_ai-power_max_ret_20d",
-  "track_ai-power_min_ret_20d",
-  "fund_\u644a\u8584\u6bcf\u80a1\u6536\u76ca_\u5143",
-  "fund_\u6bcf\u80a1\u51c0\u8d44\u4ea7_\u8c03\u6574\u524d_\u5143",
-  "fund_\u51c0\u8d44\u4ea7\u6536\u76ca\u7387_pct"
+  "track_ai-power_min_ret_20d"
 ]

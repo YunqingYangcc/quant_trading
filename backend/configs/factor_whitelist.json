@@ -500,72 +500,6 @@
       "type": "track_specific"
     },
     {
-      "name": "fund_每股经营性现金流_元",
-      "ic_mean": -0.006197,
-      "ir": -0.2759,
-      "type": "generic"
-    },
-    {
-      "name": "fund_主营业务收入增长率_pct",
-      "ic_mean": 0.034197,
-      "ir": 1.5224,
-      "type": "generic"
-    },
-    {
-      "name": "fund_净利润增长率_pct",
-      "ic_mean": 0.03641,
-      "ir": 1.621,
-      "type": "generic"
-    },
-    {
-      "name": "fund_净资产增长率_pct",
-      "ic_mean": -0.020608,
-      "ir": -0.9174,
-      "type": "generic"
-    },
-    {
-      "name": "fund_总资产增长率_pct",
-      "ic_mean": -0.019545,
-      "ir": -0.8701,
-      "type": "generic"
-    },
-    {
-      "name": "fund_销售净利率_pct",
-      "ic_mean": 0.021299,
-      "ir": 0.9482,
-      "type": "generic"
-    },
-    {
-      "name": "fund_资产负债率_pct",
-      "ic_mean": 0.009377,
-      "ir": 0.4175,
-      "type": "generic"
-    },
-    {
-      "name": "fund_速动比率",
-      "ic_mean": -0.011493,
-      "ir": -0.5116,
-      "type": "generic"
-    },
-    {
-      "name": "fund_应收账款周转率_次",
-      "ic_mean": -0.043365,
-      "ir": -1.9306,
-      "type": "generic"
-    },
-    {
-      "name": "fund_存货周转率_次",
-      "ic_mean": -0.043816,
-      "ir": -1.9507,
-      "type": "generic"
-    },
-    {
-      "name": "fund_总资产周转率_次",
-      "ic_mean": -0.025174,
-      "ir": -1.1207,
-      "type": "generic"
-    },
-    {
       "name": "track_robot_mom_20d",
       "ic_mean": -0.04464,
       "ir": -3.5625,
@@ -1038,22 +972,6 @@
       "reason": "ic_too_low(0.0014)"
     },
     {
-      "name": "fund_摊薄每股收益_元",
-      "reason": "ic_too_low(0.0026)"
-    },
-    {
-      "name": "fund_每股净资产_调整前_元",
-      "reason": "ic_too_low(0.0049)"
-    },
-    {
-      "name": "fund_净资产收益率_pct",
-      "reason": "ic_too_low(-0.0016)"
-    },
-    {
-      "name": "fund_流动比率",
-      "reason": "ic_too_low(-0.0042)"
-    },
-    {
       "name": "track_robot_mom_5d",
       "reason": "ic_too_low(0.0022)"
     },
@@ -1128,16 +1046,12 @@
     {
       "name": "track_ai-power_money_flow_ratio_20d",
       "reason": "ic_too_low(-0.0012)"
-    },
-    {
-      "name": "fund_销售毛利率_pct",
-      "reason": "ic_too_low(-0.0030)"
     }
   ],
   "summary": {
-    "total_screened": 199,
-    "passed": 164,
-    "failed": 35,
-    "pass_rate": "82.4%"
+    "total_screened": 183,
+    "passed": 153,
+    "failed": 30,
+    "pass_rate": "83.6%"
   }
 }

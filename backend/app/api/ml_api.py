@@ -5,6 +5,8 @@ from pathlib import Path
 import asyncio
 import json
 import csv
+import uuid
+import time
 from datetime import datetime
 
 import numpy as np
@@ -18,6 +20,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# ── 流水线异步任务管理 ──
+_pipeline_tasks: dict[str, dict] = {}  # task_id → {status, steps, logs, cancel_event}
 MODELS_DIR = BASE_DIR / "ml" / "models"
 PREPROCESSED_DIR = BASE_DIR / "ml" / "preprocessed"
 
@@ -631,74 +636,170 @@ async def api_preprocess():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/ml/run-pipeline", summary="运行全流水线")
-async def api_run_pipeline(step: str = "all"):
-    """按序执行量化流水线
+@router.post("/ml/run-pipeline", summary="运行全流水线（异步+可取消）")
+async def api_run_pipeline(step: str = "all", track_name: str | None = None):
+    """按序执行量化流水线，返回 task_id 用于轮询状态。
     - step=all: 全部步骤
     - step=compute: 仅计算特征
     - step=screen: 仅因子筛选
     - step=preprocess: 仅预处理
     - step=train: 仅训练模型
     - step=backtest: 仅回测
+    - track_name: 指定赛道（仅 train 步骤按赛道运行，其他步骤全局执行）
+
+    轮询 GET /ml/pipeline-status/{task_id}
+    取消 POST /ml/pipeline-cancel/{task_id}
     """
-    results = {}
+    task_id = uuid.uuid4().hex[:12]
+    cancel_event = asyncio.Event()
+
+    _pipeline_tasks[task_id] = {
+        "status": "running",
+        "step": "",
+        "steps": {},
+        "logs": [],
+        "cancel_event": cancel_event,
+        "started_at": datetime.now().isoformat(),
+    }
+
+    # 在后台运行
+    asyncio.create_task(_run_pipeline_background(task_id, step, track_name, cancel_event))
+
+    return {"task_id": task_id, "status": "started"}
+
+
+@router.get("/ml/pipeline-status/{task_id}", summary="获取流水线运行状态")
+async def api_pipeline_status(task_id: str):
+    """轮询流水线任务状态，返回当前步骤、日志"""
+    task = _pipeline_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在")
+    return {
+        "task_id": task_id,
+        "status": task["status"],
+        "step": task["step"],
+        "logs": task["logs"],
+        "steps": task["steps"],
+        "started_at": task["started_at"],
+        "finished_at": task.get("finished_at"),
+    }
+
+
+@router.post("/ml/pipeline-cancel/{task_id}", summary="取消流水线运行")
+async def api_pipeline_cancel(task_id: str):
+    """取消正在运行的流水线任务"""
+    task = _pipeline_tasks.get(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"任务 {task_id} 不存在")
+    if task["status"] != "running":
+        return {"task_id": task_id, "status": task["status"], "message": "任务未在运行"}
+    task["cancel_event"].set()
+    task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️ 收到取消请求...")
+    return {"task_id": task_id, "status": "cancelling"}
+
+
+async def _run_pipeline_background(task_id: str, step: str, track_name: str | None, cancel_event: asyncio.Event):
+    """后台执行流水线，检查 cancel_event"""
+    task = _pipeline_tasks[task_id]
     steps_order = ["compute", "screen", "preprocess", "train", "backtest"]
+    step_names = {
+        "compute": "Phase B 特征计算",
+        "screen": "Phase C 因子筛选",
+        "preprocess": "Phase D 特征预处理",
+        "train": "Phase E 模型训练",
+        "backtest": "Phase G 回测校验",
+    }
     start_idx = 0 if step == "all" else (steps_order.index(step) if step in steps_order else 0)
 
-    if "compute" in steps_order[start_idx:]:
-        try:
-            from scripts.compute_features import run_compute_features
-            results["compute"] = await run_compute_features()
-        except Exception as e:
-            results["compute"] = {"status": "failed", "error": str(e)}
-            if step != "all":
-                raise HTTPException(status_code=500, detail=str(e))
+    for s in steps_order[start_idx:]:
+        if cancel_event.is_set():
+            task["status"] = "cancelled"
+            task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ 流水线已取消")
+            task["finished_at"] = datetime.now().isoformat()
+            return
 
-    if "screen" in steps_order[start_idx:]:
-        try:
-            from scripts.screen_factors import run_screen_factors
-            results["screen"] = await run_screen_factors()
-        except Exception as e:
-            results["screen"] = {"status": "failed", "error": str(e)}
-            if step != "all":
-                raise HTTPException(status_code=500, detail=str(e))
+        task["step"] = s
+        if track_name:
+            task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ▶ 赛道 [{track_name}] 开始 {step_names.get(s, s)}...")
+        else:
+            task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ▶ 开始 {step_names.get(s, s)}...")
+        t0 = time.time()
 
-    if "preprocess" in steps_order[start_idx:]:
         try:
-            from scripts.preprocess_features import run_preprocess_features
-            results["preprocess"] = await run_preprocess_features()
+            result = await _run_single_step(s, track_name)
+            elapsed = time.time() - t0
+            task["steps"][s] = result
+            if result.get("status") == "failed":
+                task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ {step_names.get(s, s)} 失败 ({elapsed:.1f}s): {result.get('error', '')}")
+                if step != "all":
+                    task["status"] = "failed"
+                    task["finished_at"] = datetime.now().isoformat()
+                    return
+            else:
+                task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ {step_names.get(s, s)} 完成 ({elapsed:.1f}s)")
         except Exception as e:
-            results["preprocess"] = {"status": "failed", "error": str(e)}
+            elapsed = time.time() - t0
+            task["steps"][s] = {"status": "failed", "error": str(e)}
+            task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ {step_names.get(s, s)} 异常 ({elapsed:.1f}s): {e}")
             if step != "all":
-                raise HTTPException(status_code=500, detail=str(e))
+                task["status"] = "failed"
+                task["finished_at"] = datetime.now().isoformat()
+                return
 
-    if "train" in steps_order[start_idx:]:
-        try:
+    task["status"] = "completed"
+    task["step"] = ""
+    if track_name:
+        task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] 🎉 赛道 [{track_name}] 流水线全部完成")
+    else:
+        task["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] 🎉 流水线全部完成")
+    task["finished_at"] = datetime.now().isoformat()
+
+
+async def _run_single_step(step_name: str, track_name: str | None = None) -> dict:
+    """执行单个流水线步骤"""
+    if step_name == "compute":
+        from scripts.compute_features import run_compute_features
+        return await run_compute_features()
+    elif step_name == "screen":
+        from scripts.screen_factors import run_screen_factors
+        return await run_screen_factors()
+    elif step_name == "preprocess":
+        from scripts.preprocess_features import run_preprocess_features
+        return await run_preprocess_features()
+    elif step_name == "train":
+        if track_name:
+            import importlib.util as _util
+            script_path = BASE_DIR / "scripts" / "train_models.py"
+            spec = _util.spec_from_file_location("train_models", script_path)
+            if not spec or not spec.loader:
+                return {"status": "failed", "error": "训练脚本加载失败"}
+            tm = _util.module_from_spec(spec)
+            spec.loader.exec_module(tm)
+            track_map = await tm.get_track_stock_map()
+            if track_name not in track_map:
+                return {"status": "failed", "error": f"赛道 '{track_name}' 不存在"}
+            train_df, val_df, test_df, feature_cols = tm.load_data()
+            result = tm.train_track_model(
+                track_name, track_map[track_name],
+                train_df, val_df, test_df, feature_cols,
+                params=None,
+            )
+            return {"status": "success", "track": track_name, "result": result}
+        else:
             from scripts.train_models import main as train_all
             await train_all()
-            results["train"] = {"status": "success"}
-        except Exception as e:
-            results["train"] = {"status": "failed", "error": str(e)}
-            if step != "all":
-                raise HTTPException(status_code=500, detail=str(e))
-
-    if "backtest" in steps_order[start_idx:]:
-        try:
-            import subprocess
-            result = subprocess.run(
-                ["python3", "scripts/run_backtest.py"],
-                capture_output=True, text=True, cwd=BASE_DIR
-            )
-            results["backtest"] = {
-                "status": "success" if result.returncode == 0 else "failed",
-                "log": result.stdout[-500:] if result.stdout else "",
-            }
-        except Exception as e:
-            results["backtest"] = {"status": "failed", "error": str(e)}
-            if step != "all":
-                raise HTTPException(status_code=500, detail=str(e))
-
-    return {"status": "completed", "steps": results}
+            return {"status": "success"}
+    elif step_name == "backtest":
+        import subprocess
+        result = subprocess.run(
+            ["python3", "scripts/run_backtest.py"],
+            capture_output=True, text=True, cwd=BASE_DIR, timeout=300
+        )
+        return {
+            "status": "success" if result.returncode == 0 else "failed",
+            "log": result.stdout[-800:] if result.stdout else "",
+        }
+    return {"status": "failed", "error": f"未知步骤: {step_name}"}
 
 
 @router.get("/ml/pipeline-runs", summary="获取流水线运行记录")

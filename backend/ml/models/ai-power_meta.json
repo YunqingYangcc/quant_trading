@@ -15,8 +15,8 @@
   "val_rows": 1936,
   "test_rows": 4592,
   "objective": "binary",
-  "cv_mean_acc": 0.5629,
-  "cv_std_acc": 0.0049,
+  "cv_mean_acc": 0.5432,
+  "cv_std_acc": 0.0091,
   "train_acc": 0.5405,
   "val_acc": 0.5,
   "test_acc": 0.5,
@@ -42,6 +42,10 @@
   },
   "top_features": [
     {
+      "name": "ret_skew_60",
+      "importance": 4
+    },
+    {
       "name": "obv",
       "importance": 3
     },
@@ -50,31 +54,27 @@
       "importance": 3
     },
     {
+      "name": "track_ai-power_trend_60d",
+      "importance": 3
+    },
+    {
+      "name": "ppo",
+      "importance": 2
+    },
+    {
       "name": "sma_5",
       "importance": 2
     },
     {
-      "name": "adx",
+      "name": "ad",
       "importance": 2
     },
     {
-      "name": "fi_13",
+      "name": "track_ai-power_volatility_20d",
       "importance": 2
     },
     {
-      "name": "ret_skew_60",
-      "importance": 2
-    },
-    {
-      "name": "price_pos_60",
-      "importance": 2
-    },
-    {
-      "name": "fund_主营业务收入增长率_pct",
-      "importance": 2
-    },
-    {
-      "name": "fund_速动比率",
+      "name": "track_ai-power_max_ret_20d",
       "importance": 2
     },
     {

@@ -3,7 +3,7 @@
   "val_rows": 16448,
   "test_rows": 38981,
   "total_rows": 204110,
-  "feature_count": 138,
+  "feature_count": 124,
   "target_col": "target",
   "train_end": "2022-12-31",
   "val_end": "2023-12-31",

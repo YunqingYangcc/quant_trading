@@ -15,12 +15,12 @@
   "val_rows": 1928,
   "test_rows": 4592,
   "objective": "binary",
-  "cv_mean_acc": 0.5415,
-  "cv_std_acc": 0.0108,
-  "train_acc": 0.6491,
-  "val_acc": 0.4995,
-  "test_acc": 0.4841,
-  "acc_gap": 0.1497,
+  "cv_mean_acc": 0.5397,
+  "cv_std_acc": 0.0134,
+  "train_acc": 0.6868,
+  "val_acc": 0.5259,
+  "test_acc": 0.5111,
+  "acc_gap": 0.1608,
   "overfitting": true,
   "params": {
     "objective": "binary",
@@ -43,43 +43,43 @@
   "top_features": [
     {
       "name": "sma_5",
-      "importance": 29
+      "importance": 83
     },
     {
       "name": "vpt",
-      "importance": 27
+      "importance": 77
     },
     {
       "name": "obv",
-      "importance": 22
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 20
-    },
-    {
-      "name": "fund_销售净利率_pct",
-      "importance": 18
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 17
+      "importance": 59
     },
     {
       "name": "ad",
-      "importance": 15
+      "importance": 51
+    },
+    {
+      "name": "track_material_max_ret_20d",
+      "importance": 49
+    },
+    {
+      "name": "track_material_min_ret_20d",
+      "importance": 39
     },
     {
       "name": "pv_corr_20",
-      "importance": 12
-    },
-    {
-      "name": "fund_主营业务收入增长率_pct",
-      "importance": 12
+      "importance": 29
     },
     {
       "name": "adx",
-      "importance": 9
+      "importance": 28
+    },
+    {
+      "name": "roc_60",
+      "importance": 27
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 26
     }
   ]
 }

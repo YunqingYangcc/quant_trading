@@ -277,7 +277,7 @@ function formatTime(ts: string) {
 async function loadPipelineRuns() {
   try {
     const res: any = await getPipelineRuns(10)
-    pipelineRuns.value = res.data || []
+    pipelineRuns.value = Array.isArray(res) ? res : (res?.data || [])
   } catch { /* ignore */ }
 }
 

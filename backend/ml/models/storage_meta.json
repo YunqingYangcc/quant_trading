@@ -18,12 +18,12 @@
   "val_rows": 3146,
   "test_rows": 7469,
   "objective": "binary",
-  "cv_mean_acc": 0.4676,
-  "cv_std_acc": 0.1959,
-  "train_acc": 0.6532,
-  "val_acc": 0.5397,
-  "test_acc": 0.5517,
-  "acc_gap": 0.1134,
+  "cv_mean_acc": 0.4708,
+  "cv_std_acc": 0.1914,
+  "train_acc": 0.7106,
+  "val_acc": 0.5461,
+  "test_acc": 0.5294,
+  "acc_gap": 0.1645,
   "overfitting": true,
   "params": {
     "objective": "binary",
@@ -46,43 +46,43 @@
   "top_features": [
     {
       "name": "obv",
-      "importance": 43
-    },
-    {
-      "name": "atr_5",
-      "importance": 23
-    },
-    {
-      "name": "track_storage_max_ret_20d",
-      "importance": 21
-    },
-    {
-      "name": "track_semiconductor_money_flow_ratio_20d",
-      "importance": 19
+      "importance": 80
     },
     {
       "name": "sma_5",
-      "importance": 18
+      "importance": 76
     },
     {
       "name": "vpt",
-      "importance": 17
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 16
+      "importance": 51
     },
     {
       "name": "ad",
-      "importance": 13
+      "importance": 40
     },
     {
-      "name": "cmf",
-      "importance": 11
+      "name": "ret_skew_60",
+      "importance": 35
     },
     {
-      "name": "fund_净资产增长率_pct",
-      "importance": 11
+      "name": "track_storage_max_ret_20d",
+      "importance": 30
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 27
+    },
+    {
+      "name": "adx",
+      "importance": 26
+    },
+    {
+      "name": "track_semiconductor_money_flow_ratio_20d",
+      "importance": 24
+    },
+    {
+      "name": "track_semiconductor_trend_20d",
+      "importance": 20
     }
   ]
 }
