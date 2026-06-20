@@ -489,7 +489,7 @@ def print_comparison(all_results: list[dict]):
 
 
 def run_all_strategies(scores: pd.DataFrame, prices: pd.DataFrame):
-    """运行全部策略并对比"""
+    """运行全部策略并对比（含基线）"""
     strategies = [
         # (name, param_overrides)
         ("周频", {"rebalance_freq": "W"}),
@@ -505,6 +505,15 @@ def run_all_strategies(scores: pd.DataFrame, prices: pd.DataFrame):
         result = run_single_strategy(name, params, scores, prices)
         all_results.append(result)
 
+    # ── 基线策略对比 ──
+    from strategies import BASELINE_STRATEGIES, STRATEGY_REGISTRY
+    logger.info("")
+    logger.info("=" * 60)
+    logger.info("基线策略对比")
+    logger.info("=" * 60)
+    baseline_results = run_strategy_baselines(prices)
+    all_results.extend(baseline_results)
+
     print_comparison(all_results)
 
     # 保存所有结果
@@ -513,6 +522,147 @@ def run_all_strategies(scores: pd.DataFrame, prices: pd.DataFrame):
         json.dump(all_results, f, indent=2, ensure_ascii=False, default=str)
 
     return all_results
+
+
+def run_strategy_baselines(prices: pd.DataFrame) -> list[dict]:
+    """运行内置基线策略（等权持有、动量Top-3）"""
+    from strategies import BASELINE_STRATEGIES, STRATEGY_REGISTRY
+    results = []
+    for key in BASELINE_STRATEGIES:
+        entry = STRATEGY_REGISTRY.get(key)
+        if not entry:
+            continue
+        gen = entry["generator"]
+        signals = gen.generate_signals(prices)
+        if signals.empty:
+            logger.warning(f"  {entry['name']}: 无信号")
+            continue
+        # 用回测引擎模拟
+        params = {**BACKTEST_PARAMS, "rebalance_freq": "M"}
+        result = _simulate_from_signals(signals, prices, params, entry["name"])
+        results.append(result)
+    return results
+
+
+def run_strategy_by_name(strategy_name: str, prices: pd.DataFrame, params: dict | None = None) -> dict:
+    """按策略名运行回测（供 API 调用）"""
+    from strategies import STRATEGY_REGISTRY, get_strategy
+    entry = STRATEGY_REGISTRY.get(strategy_name)
+    if not entry:
+        raise ValueError(f"未知策略: {strategy_name}")
+    gen = entry["generator"]
+    signals = gen.generate_signals(prices)
+    if signals.empty:
+        return {"name": entry["name"], "error": "无信号"}
+    bt_params = {**BACKTEST_PARAMS, **(params or {})}
+    return _simulate_from_signals(signals, prices, bt_params, entry["name"])
+
+
+def _simulate_from_signals(signals: pd.DataFrame, prices: pd.DataFrame, params: dict, name: str) -> dict:
+    """从信号 DataFrame 直接模拟交易."""
+    portfolio = {"cash": params["initial_capital"], "positions": {}}
+    trades = []
+    equity_curve = []
+    entry_prices: dict[str, float] = {}
+
+    prices_ffill = prices.ffill()
+    all_dates = sorted(set(signals.index).union(set(prices.index)))
+    rebalance_dates = set(signals.index)
+
+    for date in all_dates:
+        if date not in rebalance_dates:
+            # 非调仓日：记录净值 + 检查止损止盈
+            for code, shares in list(portfolio["positions"].items()):
+                if date not in prices_ffill.index or code not in prices_ffill.columns:
+                    continue
+                px = prices_ffill.loc[date, code]
+                if pd.isna(px) or code not in entry_prices:
+                    continue
+                ret = (px - entry_prices[code]) / entry_prices[code]
+                if ret <= params.get("stop_loss_pct", -0.15):
+                    cost = px * (params["commission"] + params["slippage"])
+                    portfolio["cash"] += shares * (px - cost)
+                    trades.append({"date": str(date.date()), "code": code, "type": "stop_loss",
+                                  "price": round(px, 3), "shares": shares,
+                                  "reason": f"止损 {ret*100:.1f}%"})
+                    del portfolio["positions"][code]
+                    del entry_prices[code]
+                elif ret >= params.get("take_profit_pct", 0.30):
+                    cost = px * (params["commission"] + params["slippage"])
+                    portfolio["cash"] += shares * (px - cost)
+                    trades.append({"date": str(date.date()), "code": code, "type": "take_profit",
+                                  "price": round(px, 3), "shares": shares,
+                                  "reason": f"止盈 {ret*100:.1f}%"})
+                    del portfolio["positions"][code]
+                    del entry_prices[code]
+
+            nav = portfolio["cash"]
+            for code, shares in portfolio["positions"].items():
+                if date in prices_ffill.index and code in prices_ffill.columns:
+                    px = prices_ffill.loc[date, code]
+                    if not pd.isna(px):
+                        nav += shares * px
+            equity_curve.append({"date": str(date.date()), "total_value": round(nav, 2)})
+            continue
+
+        # 调仓日
+        signal = signals.loc[date]
+        # 卖出全部
+        for code, shares in list(portfolio["positions"].items()):
+            sold = False
+            if date in prices_ffill.index and code in prices_ffill.columns:
+                px = prices_ffill.loc[date, code]
+                if not pd.isna(px):
+                    cost = px * (params["commission"] + params["slippage"])
+                    portfolio["cash"] += shares * (px - cost)
+                    trades.append({"date": str(date.date()), "code": code, "type": "sell",
+                                  "price": round(px, 3), "shares": shares})
+                    sold = True
+            if sold:
+                del portfolio["positions"][code]
+                if code in entry_prices:
+                    del entry_prices[code]
+
+        # 买入
+        buy_list = signal.get("buy", [])
+        weights = signal.get("weights", {})
+        if not buy_list:
+            continue
+        buy_cash = portfolio["cash"] * 0.95
+        for code in buy_list:
+            if date not in prices_ffill.index or code not in prices_ffill.columns:
+                continue
+            px = prices_ffill.loc[date, code]
+            if pd.isna(px):
+                continue
+            w = weights.get(code, 1.0 / len(buy_list))
+            per_stock = min(buy_cash * w, portfolio["cash"] * params["max_single_stock"])
+            total_cost = px * (1 + params["commission"] + params["slippage"])
+            shares = int(per_stock / total_cost)
+            if shares > 0:
+                portfolio["positions"][code] = shares
+                entry_prices[code] = px
+                portfolio["cash"] -= shares * px * (1 + params["commission"] + params["slippage"])
+                trades.append({"date": str(date.date()), "code": code, "type": "buy",
+                              "price": round(px, 3), "shares": shares})
+
+        nav = portfolio["cash"]
+        for code, shares in portfolio["positions"].items():
+            if date in prices_ffill.index and code in prices_ffill.columns:
+                px = prices_ffill.loc[date, code]
+                if not pd.isna(px):
+                    nav += shares * px
+        equity_curve.append({"date": str(date.date()), "total_value": round(nav, 2)})
+
+    metrics = _calculate_metrics(equity_curve, params)
+    metrics["name"] = name
+    metrics["trades"] = len(trades)
+    metrics["rebalance_count"] = len(signals)
+    metrics["stop_loss_count"] = sum(1 for t in trades if t.get("type") == "stop_loss")
+    metrics["take_profit_count"] = sum(1 for t in trades if t.get("type") == "take_profit")
+
+    logger.info(f"  {name:20s} 夏普={metrics['sharpe_ratio']:.3f}  收益={metrics['total_return']:+.1f}%  回撤={metrics['max_drawdown']:.1f}%")
+    return metrics
 
 
 def main():

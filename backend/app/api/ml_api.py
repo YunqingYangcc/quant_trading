@@ -454,6 +454,126 @@ async def get_backtest_equity():
     return {"data": data}
 
 
+# ── 策略回测 API ──
+
+@router.get("/backtest/strategies", summary="列出可用策略")
+async def list_backtest_strategies():
+    """返回所有注册的策略列表（供前端下拉框）"""
+    from strategies import list_strategies
+    return list_strategies()
+
+
+@router.post("/backtest/strategy/{strategy_name}", summary="按策略运行回测")
+async def run_strategy_backtest(strategy_name: str):
+    """指定策略名称运行回测，返回绩效指标"""
+    import sys as _sys
+    import importlib.util as _util
+    import pandas as pd
+
+    script_path = BASE_DIR / "scripts" / "run_backtest.py"
+    spec = _util.spec_from_file_location("run_backtest", script_path)
+    if not spec or not spec.loader:
+        raise HTTPException(status_code=500, detail="回测脚本加载失败")
+    bt = _util.module_from_spec(spec)
+    spec.loader.exec_module(bt)
+
+    try:
+        prices = pd.read_parquet(PREPROCESSED_DIR / "backtest_prices.parquet")
+        result = bt.run_strategy_by_name(strategy_name, prices)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        logger.error(f"策略回测失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/backtest/single/{stock_code}", summary="单只股票回测")
+async def run_single_stock_backtest(stock_code: str, strategy: str = "momentum_20d"):
+    """对单只股票运行技术指标策略回测，返回交易明细+绩效
+    
+    支持策略: momentum_20d, momentum_60d (单标的趋势跟踪)
+    """
+    import sqlite3
+    import pandas as pd
+    import numpy as np
+
+    db_path = BASE_DIR / "track_quant.db"
+    conn = sqlite3.connect(str(db_path))
+    # 加载单只股票日线
+    df = pd.read_sql(
+        f"SELECT trade_date, close_px FROM track_data_cache WHERE stock_code='{stock_code}' ORDER BY trade_date",
+        conn
+    )
+    conn.close()
+    if df.empty:
+        raise HTTPException(status_code=404, detail=f"未找到 {stock_code} 数据")
+
+    df["trade_date"] = pd.to_datetime(df["trade_date"])
+    df = df.set_index("trade_date").sort_index()
+    close = df["close_px"]
+
+    # 简单策略: 20日动量 > 0 时买入，否则空仓
+    lookback = 20 if "20" in strategy else 60
+    mom = close.pct_change(lookback)
+    signals = (mom > 0).astype(int)
+
+    # 模拟交易
+    params = {"initial_capital": 100000, "commission": 0.0003, "slippage": 0.001}
+    cash = params["initial_capital"]
+    position = 0
+    trades = []
+    equity = []
+
+    for i in range(lookback + 1, len(close)):
+        date = close.index[i]
+        px = close.iloc[i]
+        sig = signals.iloc[i-1]  # 用前一天信号
+
+        # 卖出
+        if sig == 0 and position > 0:
+            proceeds = position * px * (1 - params["commission"] - params["slippage"])
+            profit = proceeds - position * entry_px if entry_px else 0
+            trades.append({"date": str(date.date()), "type": "sell", "price": round(px, 3),
+                          "shares": position, "profit": round(profit, 2)})
+            cash += proceeds
+            position = 0
+
+        # 买入
+        if sig == 1 and position == 0:
+            shares = int(cash * 0.95 / (px * (1 + params["commission"] + params["slippage"])))
+            if shares > 0:
+                cost = shares * px * (1 + params["commission"] + params["slippage"])
+                cash -= cost
+                position = shares
+                entry_px = px
+                trades.append({"date": str(date.date()), "type": "buy", "price": round(px, 3),
+                              "shares": shares})
+
+        nav = cash + position * px
+        equity.append({"date": str(date.date()), "total_value": round(nav, 2)})
+
+    # 绩效
+    eq_df = pd.DataFrame(equity).set_index("date")
+    eq_df["returns"] = eq_df["total_value"].pct_change()
+    rets = eq_df["returns"].dropna()
+    metrics = {
+        "stock_code": stock_code,
+        "strategy": strategy,
+        "total_return": round((eq_df["total_value"].iloc[-1] / params["initial_capital"] - 1) * 100, 2),
+        "sharpe": round(float(rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0, 3),
+        "max_drawdown": round(float((eq_df["total_value"] / eq_df["total_value"].cummax() - 1).min() * 100), 2),
+        "win_rate": round(float((rets > 0).mean() * 100), 2),
+        "total_trades": len(trades),
+    }
+
+    return {
+        "metrics": metrics,
+        "trades": trades[-20:],  # 最近 20 笔
+        "equity": equity[-252:],  # 最近一年净值
+    }
+
+
 @router.post("/backtest/run", summary="手动运行回测")
 async def run_backtest(params: BacktestRunParams = Body(...)):
     """根据传入参数运行回测，返回绩效报告"""
@@ -784,6 +904,32 @@ async def _run_single_step(step_name: str, track_name: str | None = None) -> dic
                 train_df, val_df, test_df, feature_cols,
                 params=None,
             )
+
+            # 记录单赛道训练日志
+            try:
+                from app.db.database import async_session_maker
+                from app.models.track import PipelineRun
+                import subprocess as _sp
+                try:
+                    git_hash = _sp.check_output(
+                        ["git", "rev-parse", "--short", "HEAD"], stderr=_sp.DEVNULL, text=True
+                    ).strip()
+                except Exception:
+                    git_hash = None
+                async with async_session_maker() as _session:
+                    _run_log = PipelineRun(
+                        run_type="train",
+                        status="success",
+                        params_snapshot={"scope": "single", "track_name": track_name},
+                        results_summary={track_name: result},
+                        git_commit_hash=git_hash,
+                        feature_count=len(feature_cols),
+                    )
+                    _session.add(_run_log)
+                    await _session.commit()
+            except Exception as _e:
+                logger.warning(f"单赛道训练日志记录失败: {_e}")
+
             return {"status": "success", "track": track_name, "result": result}
         else:
             from scripts.train_models import main as train_all
