@@ -28,80 +28,6 @@
       </div>
     </div>
 
-    <!-- 因子详情（全宽） -->
-    <div class="content-row">
-      <div class="factor-col">
-        <div class="factor-detail-panel">
-          <div class="section-header">
-            <span class="section-title">📖 因子完全手册</span>
-            <el-tag size="small" type="info">共 75 个有效因子</el-tag>
-          </div>
-
-          <!-- 搜索 + 分类筛选 -->
-          <div class="factor-toolbar">
-            <el-input
-              v-model="searchQuery"
-              placeholder="搜索因子名称..."
-              size="small"
-              clearable
-              :prefix-icon="Search"
-              class="factor-search"
-            />
-            <el-select v-model="selectedCategory" size="small" placeholder="全部分类" clearable class="category-select">
-              <el-option v-for="cat in categories" :key="cat.value" :label="cat.label" :value="cat.value" />
-            </el-select>
-          </div>
-
-          <!-- 因子卡片列表（带完整释义） -->
-          <div class="factor-grid">
-            <div
-              v-for="f in filteredFactors"
-              :key="f.factor_name"
-              class="factor-detail-card"
-              @click="toggleDetail(f.factor_name)"
-            >
-              <div class="card-head">
-                <div class="card-info">
-                  <span class="card-cn-name">{{ getCnName(f.factor_name) }}</span>
-                  <span class="card-en-name">{{ f.factor_name }}</span>
-                </div>
-                <div class="card-metrics-top">
-                  <el-tag size="small" :type="f.ic_mean >= 0 ? 'success' : 'danger'" round effect="dark">
-                    IC {{ (f.ic_mean * 100).toFixed(2) }}
-                  </el-tag>
-                  <span class="card-ir">IR {{ f.ir?.toFixed(2) }}</span>
-                </div>
-              </div>
-
-              <!-- 展开后的完整释义 -->
-              <div v-if="expanded.has(f.factor_name)" class="card-detail">
-                <div class="detail-section">
-                  <div class="detail-label">📐 计算公式</div>
-                  <div class="detail-value formula-box">{{ getFormula(f.factor_name) }}</div>
-                </div>
-                <div class="detail-section">
-                  <div class="detail-label">💡 解读方法</div>
-                  <div class="detail-value">{{ getInterpretation(f.factor_name) }}</div>
-                </div>
-                <div class="detail-section">
-                  <div class="detail-label">📊 IC 表现</div>
-                  <div class="detail-value">
-                    IC={{ (f.ic_mean * 100).toFixed(2) }}, IR={{ f.ir?.toFixed(2) }}，
-                    {{ f.ic_mean >= 0 ? '正向因子（值越大越好）' : '负向因子（值越小越好）' }}
-                    <div class="ic-bar-bg">
-                      <div class="ic-bar-fill" :style="{ width: Math.min(Math.abs(f.ic_mean) * 3000, 100) + '%', background: f.ic_mean >= 0 ? '#67c23a' : '#f56c6c' }" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <el-empty v-if="!filteredFactors.length" :description="searchQuery ? '无匹配因子' : '暂无因子数据'" />
-        </div>
-      </div>
-    </div>
-
     <!-- 筛选标准 -->
     <div class="content-row">
       <div class="factor-col">
@@ -173,6 +99,80 @@
               <li>同类趋势指标中保留 IC 最高者，去除冗余</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 因子详情（全宽） -->
+    <div class="content-row">
+      <div class="factor-col">
+        <div class="factor-detail-panel">
+          <div class="section-header">
+            <span class="section-title">📖 因子完全手册</span>
+            <el-tag size="small" type="info">共 75 个有效因子</el-tag>
+          </div>
+
+          <!-- 搜索 + 分类筛选 -->
+          <div class="factor-toolbar">
+            <el-input
+              v-model="searchQuery"
+              placeholder="搜索因子名称..."
+              size="small"
+              clearable
+              :prefix-icon="Search"
+              class="factor-search"
+            />
+            <el-select v-model="selectedCategory" size="small" placeholder="全部分类" clearable class="category-select">
+              <el-option v-for="cat in categories" :key="cat.value" :label="cat.label" :value="cat.value" />
+            </el-select>
+          </div>
+
+          <!-- 因子卡片列表（带完整释义） -->
+          <div class="factor-grid">
+            <div
+              v-for="f in filteredFactors"
+              :key="f.factor_name"
+              class="factor-detail-card"
+              @click="toggleDetail(f.factor_name)"
+            >
+              <div class="card-head">
+                <div class="card-info">
+                  <span class="card-cn-name">{{ getCnName(f.factor_name) }}</span>
+                  <span class="card-en-name">{{ f.factor_name }}</span>
+                </div>
+                <div class="card-metrics-top">
+                  <el-tag size="small" :type="f.ic_mean >= 0 ? 'success' : 'danger'" round effect="dark">
+                    IC {{ (f.ic_mean * 100).toFixed(2) }}
+                  </el-tag>
+                  <span class="card-ir">IR {{ f.ir?.toFixed(2) }}</span>
+                </div>
+              </div>
+
+              <!-- 展开后的完整释义 -->
+              <div v-if="expanded.has(f.factor_name)" class="card-detail">
+                <div class="detail-section">
+                  <div class="detail-label">📐 计算公式</div>
+                  <div class="detail-value formula-box">{{ getFormula(f.factor_name) }}</div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">💡 解读方法</div>
+                  <div class="detail-value">{{ getInterpretation(f.factor_name) }}</div>
+                </div>
+                <div class="detail-section">
+                  <div class="detail-label">📊 IC 表现</div>
+                  <div class="detail-value">
+                    IC={{ (f.ic_mean * 100).toFixed(2) }}, IR={{ f.ir?.toFixed(2) }}，
+                    {{ f.ic_mean >= 0 ? '正向因子（值越大越好）' : '负向因子（值越小越好）' }}
+                    <div class="ic-bar-bg">
+                      <div class="ic-bar-fill" :style="{ width: Math.min(Math.abs(f.ic_mean) * 3000, 100) + '%', background: f.ic_mean >= 0 ? '#67c23a' : '#f56c6c' }" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <el-empty v-if="!filteredFactors.length" :description="searchQuery ? '无匹配因子' : '暂无因子数据'" />
         </div>
       </div>
     </div>
@@ -395,6 +395,7 @@ onMounted(async () => {
 .content-row {
   display: flex;
   gap: 16px;
+  margin-bottom: 16px;
 }
 
 .pipeline-col {
@@ -547,7 +548,6 @@ onMounted(async () => {
   transition: width 0.3s;
 }
 
-
 /* ── 筛选流程 ── */
 .criteria-card {
   background: #fff;
@@ -608,6 +608,7 @@ onMounted(async () => {
   border-radius: 10px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   overflow: hidden;
+  margin-bottom: 16px;
 }
 
 .bl-header {
@@ -652,5 +653,4 @@ onMounted(async () => {
   font-family: 'SF Mono', monospace;
   color: #475569;
 }
-
 </style>

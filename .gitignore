@@ -1,6 +1,5 @@
 __pycache__/
 *.pyc
-*.db
 .env
 node_modules/
 dist/
@@ -8,9 +7,5 @@ dist/
 venv/
 *.egg-info/
 
-# 模型文件
-*.pkl
-
-# 回测输出 & 数据文件
-*.csv
-*.parquet
+# 大型数据文件（超 GitHub 100MB 限制）
+backend/track_quant.db
