@@ -1,5 +1,41 @@
 <template>
   <div class="data-view">
+    <!-- 流水线控制台 -->
+    <div class="pipeline-runner">
+      <div class="pr-header">
+        <div class="pr-title-row">
+          <span class="pr-title-icon">⚙</span>
+          <span class="pr-title">Pipeline Runner</span>
+          <span class="pr-subtitle">量化流水线控制台</span>
+        </div>
+        <el-button type="primary" size="small" @click="runPipeline('all')" :loading="running === 'all'" :icon="CaretRight">
+          {{ running === 'all' ? '运行中...' : '▶ 一键跑全部' }}
+        </el-button>
+      </div>
+      <div class="pr-steps">
+        <div v-for="s in pipelineSteps" :key="s.key" class="pr-step" :class="stepClass(s.key)">
+          <div class="pr-step-indicator">
+            <span v-if="pipelineStatus[s.key] === 'done'" class="pr-dot pr-dot-done">✓</span>
+            <span v-else-if="pipelineStatus[s.key] === 'running'" class="pr-dot pr-dot-running">⟳</span>
+            <span v-else class="pr-dot pr-dot-idle">○</span>
+          </div>
+          <div class="pr-step-info">
+            <div class="pr-step-name">{{ s.label }}</div>
+            <div class="pr-step-desc">{{ s.desc }}</div>
+          </div>
+          <div class="pr-step-action">
+            <el-button v-if="pipelineStatus[s.key] !== 'running'" size="small" text @click="runPipeline(s.key)" :loading="running === s.key">
+              {{ s.action }}
+            </el-button>
+            <el-tag v-else size="small" type="warning" effect="dark">运行中...</el-tag>
+          </div>
+        </div>
+      </div>
+      <div v-if="pipelineLog" class="pr-log">
+        <pre>{{ pipelineLog }}</pre>
+      </div>
+    </div>
+
     <!-- 顶部统计卡片（动态数据） -->
     <div class="stats-row">
       <div class="stat-card">
@@ -180,9 +216,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { Search, ArrowRight } from '@element-plus/icons-vue'
-import { getWhitelist, getBlacklist, listTracks } from '@/api/track'
+import { ref, computed, reactive, onMounted } from 'vue'
+import { Search, ArrowRight, CaretRight } from '@element-plus/icons-vue'
+import { getWhitelist, getBlacklist, listTracks, runPipeline as runPipelineApi } from '@/api/track'
+import { ElMessage } from 'element-plus'
 
 const factors = ref<any[]>([])
 const blacklistFactors = ref<any[]>([])
@@ -197,6 +234,76 @@ const stats = ref({
   finalFeatures: 54,
   models: 4,
 })
+
+// ── Pipeline Runner ──
+const running = ref<string | null>(null)
+const pipelineLog = ref('')
+const pipelineStatus = reactive<Record<string, string>>({
+  compute: 'idle',
+  screen: 'idle',
+  preprocess: 'idle',
+  train: 'idle',
+  backtest: 'idle',
+})
+
+const pipelineSteps = [
+  { key: 'compute', label: 'Phase B 特征计算', desc: '93通用+18赛道特征', action: '计算' },
+  { key: 'screen', label: 'Phase C 因子筛选', desc: 'Alphalens 白/黑名单', action: '筛选' },
+  { key: 'preprocess', label: 'Phase D 特征预处理', desc: '标准化+去共线+时序分割', action: '预处理' },
+  { key: 'train', label: 'Phase E 模型训练', desc: '6 赛道 LightGBM', action: '训练' },
+  { key: 'backtest', label: 'Phase G 回测校验', desc: '轮动策略+夏普/回撤', action: '回测' },
+]
+
+function stepClass(key: string) {
+  const s = pipelineStatus[key]
+  return {
+    'pr-step-done': s === 'done',
+    'pr-step-running': s === 'running',
+  }
+}
+
+async function runPipeline(step: string) {
+  running.value = step
+  pipelineLog.value = ''
+
+  const steps = step === 'all' ? ['compute', 'screen', 'preprocess', 'train', 'backtest'] : [step]
+
+  for (const s of steps) {
+    pipelineStatus[s] = 'running'
+    try {
+      const res: any = await runPipelineApi(s)
+      if (step === 'all' && res?.steps?.[s]?.status === 'failed') {
+        pipelineStatus[s] = 'failed'
+        ElMessage.warning(`${s} 失败: ${res.steps[s].error}`)
+        break
+      }
+      pipelineStatus[s] = 'done'
+      if (res?.steps?.[s]?.log) {
+        pipelineLog.value += `[${s}] ${res.steps[s].log.slice(0, 200)}\n`
+      }
+      ElMessage.success(`${s} 完成`)
+    } catch (e: any) {
+      pipelineStatus[s] = 'failed'
+      ElMessage.error(`${s} 失败: ${e.message || ''}`)
+      if (step !== 'all') break
+    }
+  }
+
+  running.value = null
+  // 完成后刷新统计
+  refreshStats()
+}
+
+async function refreshStats() {
+  try {
+    const [wl, tr] = await Promise.all([getWhitelist(), listTracks()])
+    const wlCount = Array.isArray(wl) ? wl.length : 0
+    const trackItems = tr?.items || []
+    stats.value.stocks = trackItems.reduce((s: number, t: any) => s + (t.stock_count || 0), 0)
+    stats.value.whitelist = wlCount
+    stats.value.models = trackItems.length || 0
+  } catch {}
+}
 
 function toggleDetail(name: string) {
   if (expanded.value.has(name)) expanded.value.delete(name)
@@ -359,6 +466,150 @@ onMounted(async () => {
   padding: 16px;
   min-height: 100%;
   background: #f5f7fa;
+}
+
+/* ── Pipeline Runner ── */
+.pipeline-runner {
+  background: #fff;
+  border-radius: 10px;
+  padding: 16px 20px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  margin-bottom: 16px;
+}
+
+.pr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pr-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pr-title-icon {
+  font-size: 18px;
+}
+
+.pr-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.pr-subtitle {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pr-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pr-step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.pr-step:hover {
+  background: #f8fafc;
+}
+
+.pr-step.pr-step-running {
+  background: #eff6ff;
+}
+
+.pr-step.pr-step-done {
+  background: #f0fdf4;
+}
+
+.pr-step-indicator {
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.pr-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pr-dot-idle {
+  background: #f1f5f9;
+  color: #cbd5e1;
+  border: 1px solid #e2e8f0;
+}
+
+.pr-dot-running {
+  background: #eff6ff;
+  color: #3b82f6;
+  border: 1px solid #93c5fd;
+  animation: spin 1.2s linear infinite;
+}
+
+.pr-dot-done {
+  background: #dcfce7;
+  color: #16a34a;
+  border: 1px solid #86efac;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pr-step-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pr-step-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pr-step-desc {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.pr-step-action {
+  flex-shrink: 0;
+}
+
+.pr-log {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #1e293b;
+  border-radius: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.pr-log pre {
+  margin: 0;
+  font-size: 11px;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: 'SF Mono', monospace;
+  line-height: 1.5;
 }
 
 /* ── 统计卡片行 ── */

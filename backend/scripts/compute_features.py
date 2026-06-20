@@ -220,6 +220,18 @@ async def main():
     logger.info(f"NaN < 50%: {'✅' if all_pass else '⚠️ 部分股票有超高NaN特征'}")
     logger.info("=" * 60)
 
+    return {
+        "status": "success",
+        "stocks_processed": len(all_stats),
+        "total_features": total_features_count,
+        "all_pass": all_pass,
+    }
+
+
+async def run_compute_features() -> dict:
+    """特征计算入口（供 API 调用）"""
+    return await main()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

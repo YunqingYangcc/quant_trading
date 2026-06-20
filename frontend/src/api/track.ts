@@ -81,8 +81,18 @@ export function getAllTrackScores() {
   return request.get('/ml/scores')
 }
 
-export function trainTrackModel(trackName: string) {
-  return request.post(`/ml/train/${trackName}`)
+export function trainTrackModel(trackName: string, params?: {
+  num_leaves?: number
+  max_depth?: number
+  learning_rate?: number
+  n_estimators?: number
+  reg_alpha?: number
+  reg_lambda?: number
+  feature_fraction?: number
+  bagging_fraction?: number
+  min_child_samples?: number
+}) {
+  return request.post(`/ml/train/${trackName}`, params || {})
 }
 
 export function trainAllModels() {
@@ -91,6 +101,10 @@ export function trainAllModels() {
 
 export function listTrackModels(trackName: string) {
   return request.get(`/ml/models/${trackName}`)
+}
+
+export function getScoreHistory(trackName: string, limit = 5) {
+  return request.get(`/ml/score/history/${trackName}`, { params: { limit } })
 }
 
 export function getAllModels() {
@@ -121,4 +135,20 @@ export function runBacktest(data: {
   max_single_track: number
 }) {
   return request.post('/backtest/run', data)
+}
+
+export function computeFeatures() {
+  return request.post('/ml/compute-features')
+}
+
+export function screenFactors() {
+  return request.post('/ml/screen-factors')
+}
+
+export function preprocessFeatures() {
+  return request.post('/ml/preprocess')
+}
+
+export function runPipeline(step: string = 'all') {
+  return request.post('/ml/run-pipeline', null, { params: { step } })
 }

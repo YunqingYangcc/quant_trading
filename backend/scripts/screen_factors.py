@@ -384,6 +384,19 @@ async def main():
     logger.info(f"JSON 配置已固化: ✅")
     logger.info("=" * 60)
 
+    return {
+        "status": "success",
+        "total_factors": len(feature_cols),
+        "whitelist_count": len(whitelist),
+        "blacklist_count": len(blacklist),
+        "pass_rate": round(len(whitelist) / max(len(feature_cols), 1) * 100, 1),
+    }
+
+
+async def run_screen_factors() -> dict:
+    """因子筛选入口（供 API 调用）"""
+    return await main()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

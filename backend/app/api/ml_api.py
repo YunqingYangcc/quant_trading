@@ -14,7 +14,7 @@ from fastapi import APIRouter, Body, HTTPException
 
 from app.ml.model_trainer import LightGBMTrainer
 from app.ml.scorer import TrackScorer
-from app.schemas.track import BacktestRunParams
+from app.schemas.track import BacktestRunParams, TrainModelParams
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -24,26 +24,115 @@ MODELS_DIR = BASE_DIR / "ml" / "models"
 PREPROCESSED_DIR = BASE_DIR / "ml" / "preprocessed"
 
 
-@router.post("/ml/train/{track_name}", summary="训练赛道模型")
-async def train_track_model(track_name: str):
-    """触发指定赛道的 LightGBM 训练"""
-    from scripts.train_models import load_data, get_track_stock_map, train_track_model as train_one
+@router.post("/ml/train/{track_name}", summary="训练赛道模型（可传参+自动打分落库）")
+async def train_track_model(track_name: str, params: TrainModelParams = Body(default=None)):
+    """触发指定赛道的 LightGBM 训练，训练后自动打分并保存到数据库"""
+    import sys as _sys
+    import importlib.util as _util
+
+    script_path = BASE_DIR / "scripts" / "train_models.py"
+    spec = _util.spec_from_file_location("train_models", script_path)
+    if not spec or not spec.loader:
+        raise HTTPException(status_code=500, detail="训练脚本加载失败")
+    tm = _util.module_from_spec(spec)
+    spec.loader.exec_module(tm)
 
     try:
-        track_map = await get_track_stock_map()
+        track_map = await tm.get_track_stock_map()
         if track_name not in track_map:
             raise HTTPException(status_code=404, detail=f"赛道 '{track_name}' 不存在")
 
-        train_df, val_df, test_df, feature_cols = load_data()
-        with open(PREPROCESSED_DIR / "feature_cols.json") as f:
-            import json
-            feature_cols = json.load(f)
+        train_df, val_df, test_df, feature_cols = tm.load_data()
 
-        result = train_one(
+        # 合并用户自定义参数
+        user_params = params.model_dump(exclude_none=True) if params else {}
+
+        result = tm.train_track_model(
             track_name, track_map[track_name],
-            train_df, val_df, test_df, feature_cols
+            train_df, val_df, test_df, feature_cols,
+            params=user_params if user_params else None,
         )
-        return result
+
+        if result["status"] == "skipped":
+            return result
+
+        # ── 训练成功后自动打分并落库 ──
+        from app.db.database import async_session_maker
+        from sqlalchemy import select
+        from app.models.track import Track, TrackStock, track_stock, ScoreHistory
+
+        async with async_session_maker() as session:
+            # 获取股票名称
+            track_result = await session.execute(
+                select(Track).where(Track.name == track_name, Track.is_active == 1)
+            )
+            track = track_result.scalar_one_or_none()
+            stock_names = {}
+            if track:
+                stocks_result = await session.execute(
+                    select(track_stock.c.stock_code, TrackStock.name).
+                    where(track_stock.c.track_id == track.id).
+                    join(TrackStock, track_stock.c.stock_code == TrackStock.code)
+                )
+                stock_names = {r.stock_code: r.name for r in stocks_result.all()}
+
+            # 加载模型 & 最新特征进行打分
+            import joblib
+            model_path = MODELS_DIR / f"{track_name}.pkl"
+            model = joblib.load(model_path)
+
+            test_df = pd.read_parquet(PREPROCESSED_DIR / "test.parquet")
+            test_df = test_df[test_df["stock_code"].isin(track_map[track_name])]
+
+            scores = []
+            for code in track_map[track_name]:
+                stock_data = test_df[test_df["stock_code"] == code]
+                row = {"stock_code": code, "stock_name": stock_names.get(code, ""), "score": 0.0, "rank": 0}
+                if len(stock_data) > 0:
+                    try:
+                        latest = stock_data.iloc[-1:][feature_cols]
+                        pred = model.predict(latest)[0]
+                        row["score"] = round(float(pred), 6)
+                    except Exception:
+                        pass
+                scores.append(row)
+
+            scores.sort(key=lambda x: x["score"], reverse=True)
+            for i, s in enumerate(scores):
+                s["rank"] = i + 1
+
+            # 保存到 score_history 表
+            effective_params = {**tm.LGB_PARAMS, **user_params}
+            for s in scores:
+                sh = ScoreHistory(
+                    track_name=track_name,
+                    model_id=track_name,
+                    stock_code=s["stock_code"],
+                    stock_name=s["stock_name"],
+                    score=s["score"],
+                    rank=s["rank"],
+                    train_r2=result.get("train_r2", 0),
+                    val_r2=result.get("val_r2", 0),
+                    test_r2=result.get("test_r2", 0),
+                    params_snapshot=effective_params,
+                )
+                session.add(sh)
+            await session.commit()
+
+        # 赛道景气分
+        if scores:
+            median_score = np.median([s["score"] for s in scores])
+            track_sentiment = round(100.0 / (1.0 + np.exp(-median_score * 5)), 2)
+        else:
+            track_sentiment = 0.0
+
+        return {
+            **result,
+            "params_used": effective_params,
+            "scores": scores,
+            "track_sentiment": track_sentiment,
+            "top_stock": scores[0]["stock_code"] if scores else "",
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -266,6 +355,55 @@ async def get_all_track_scores():
     return all_scores
 
 
+@router.get("/ml/score/history/{track_name}", summary="获取赛道评分历史")
+async def get_score_history(track_name: str, limit: int = 5):
+    """获取赛道最近 N 次训练的评分历史"""
+    from app.db.database import async_session_maker
+    from sqlalchemy import select, desc
+    from app.models.track import ScoreHistory
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(ScoreHistory)
+            .where(ScoreHistory.track_name == track_name)
+            .order_by(desc(ScoreHistory.scored_at))
+            .limit(limit * 50)  # 每批次最多 50 只股票
+        )
+        records = result.scalars().all()
+
+    # 按 scored_at 分组
+    from collections import defaultdict
+    groups = defaultdict(list)
+    for r in records:
+        key = r.scored_at.isoformat()
+        groups[key].append({
+            "id": r.id,
+            "stock_code": r.stock_code,
+            "stock_name": r.stock_name,
+            "score": r.score,
+            "rank": r.rank,
+            "train_r2": r.train_r2,
+            "val_r2": r.val_r2,
+            "test_r2": r.test_r2,
+            "params_snapshot": r.params_snapshot,
+        })
+
+    history = []
+    for scored_at, scores in sorted(groups.items(), key=lambda x: x[0], reverse=True)[:limit]:
+        history.append({
+            "scored_at": scored_at,
+            "track_name": track_name,
+            "model_id": track_name,
+            "params_snapshot": scores[0]["params_snapshot"] if scores else None,
+            "train_r2": scores[0]["train_r2"] if scores else 0,
+            "val_r2": scores[0]["val_r2"] if scores else 0,
+            "test_r2": scores[0]["test_r2"] if scores else 0,
+            "scores": sorted(scores, key=lambda x: x["rank"]),
+        })
+
+    return history
+
+
 @router.get("/ml/models/{track_name}", summary="列出赛道模型")
 async def list_models(track_name: str):
     """列出赛道已训练模型"""
@@ -446,4 +584,110 @@ async def get_portfolio_summary():
         "risk_metrics": risk_metrics,
         "total_sentiment": round(total_sentiment, 2),
     }
+
+
+@router.post("/ml/compute-features", summary="计算特征")
+async def api_compute_features():
+    """触发特征计算（Phase B）"""
+    try:
+        from scripts.compute_features import run_compute_features
+        result = await run_compute_features()
+        return result
+    except Exception as e:
+        logger.error(f"特征计算失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ml/screen-factors", summary="因子筛选")
+async def api_screen_factors():
+    """触发 Alphalens 因子筛选（Phase C）"""
+    try:
+        from scripts.screen_factors import run_screen_factors
+        result = await run_screen_factors()
+        return result
+    except Exception as e:
+        logger.error(f"因子筛选失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ml/preprocess", summary="特征预处理")
+async def api_preprocess():
+    """触发特征预处理（Phase D）"""
+    try:
+        from scripts.preprocess_features import run_preprocess_features
+        result = await run_preprocess_features()
+        return result
+    except Exception as e:
+        logger.error(f"特征预处理失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/ml/run-pipeline", summary="运行全流水线")
+async def api_run_pipeline(step: str = "all"):
+    """按序执行量化流水线
+    - step=all: 全部步骤
+    - step=compute: 仅计算特征
+    - step=screen: 仅因子筛选
+    - step=preprocess: 仅预处理
+    - step=train: 仅训练模型
+    - step=backtest: 仅回测
+    """
+    results = {}
+    steps_order = ["compute", "screen", "preprocess", "train", "backtest"]
+    start_idx = 0 if step == "all" else (steps_order.index(step) if step in steps_order else 0)
+
+    if "compute" in steps_order[start_idx:]:
+        try:
+            from scripts.compute_features import run_compute_features
+            results["compute"] = await run_compute_features()
+        except Exception as e:
+            results["compute"] = {"status": "failed", "error": str(e)}
+            if step != "all":
+                raise HTTPException(status_code=500, detail=str(e))
+
+    if "screen" in steps_order[start_idx:]:
+        try:
+            from scripts.screen_factors import run_screen_factors
+            results["screen"] = await run_screen_factors()
+        except Exception as e:
+            results["screen"] = {"status": "failed", "error": str(e)}
+            if step != "all":
+                raise HTTPException(status_code=500, detail=str(e))
+
+    if "preprocess" in steps_order[start_idx:]:
+        try:
+            from scripts.preprocess_features import run_preprocess_features
+            results["preprocess"] = await run_preprocess_features()
+        except Exception as e:
+            results["preprocess"] = {"status": "failed", "error": str(e)}
+            if step != "all":
+                raise HTTPException(status_code=500, detail=str(e))
+
+    if "train" in steps_order[start_idx:]:
+        try:
+            from scripts.train_models import main as train_all
+            await train_all()
+            results["train"] = {"status": "success"}
+        except Exception as e:
+            results["train"] = {"status": "failed", "error": str(e)}
+            if step != "all":
+                raise HTTPException(status_code=500, detail=str(e))
+
+    if "backtest" in steps_order[start_idx:]:
+        try:
+            import subprocess
+            result = subprocess.run(
+                ["python3", "scripts/run_backtest.py"],
+                capture_output=True, text=True, cwd=BASE_DIR
+            )
+            results["backtest"] = {
+                "status": "success" if result.returncode == 0 else "failed",
+                "log": result.stdout[-500:] if result.stdout else "",
+            }
+        except Exception as e:
+            results["backtest"] = {"status": "failed", "error": str(e)}
+            if step != "all":
+                raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "completed", "steps": results}
 

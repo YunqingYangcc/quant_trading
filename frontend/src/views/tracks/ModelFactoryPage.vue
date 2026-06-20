@@ -52,10 +52,30 @@
               <span class="m-value">{{ (m.train_rows || 0).toLocaleString() }}</span>
             </div>
           </div>
-          <div class="card-actions">
+          <div class="card-actions" style="display:flex;gap:6px;">
             <el-button size="small" type="primary" plain @click="retrain(m.track_name)" :loading="trainingTrack === m.track_name">
               {{ trainingTrack === m.track_name ? 'Training...' : '🔄 Retrain' }}
             </el-button>
+            <el-button size="small" @click="openParamDialog(m.track_name)">
+              ⚙️ 参数训练
+            </el-button>
+          </div>
+          <!-- 评分结果展示 -->
+          <div v-if="latestScores[m.track_name]" class="card-scores">
+            <div class="scores-header" @click="toggleScores(m.track_name)">
+              <span>📊 评分结果</span>
+              <span class="sentiment-badge" :style="{ background: sentimentColor(latestScores[m.track_name].track_sentiment) }">
+                {{ latestScores[m.track_name].track_sentiment }}
+              </span>
+              <span class="toggle-icon">{{ expandedScores[m.track_name] ? '▲' : '▼' }}</span>
+            </div>
+            <div v-show="expandedScores[m.track_name]" class="scores-body">
+              <div v-for="s in latestScores[m.track_name].scores.slice(0, 20)" :key="s.stock_code" class="score-row">
+                <span class="score-rank">#{{ s.rank }}</span>
+                <span class="score-stock">{{ s.stock_name || s.stock_code }}</span>
+                <span class="score-val" :style="{ color: s.score > 0 ? '#f56c6c' : '#67c23a' }">{{ s.score.toFixed(4) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -111,13 +131,88 @@
           </el-table-column>
         </el-table>
       </div>
+
+      <!-- 评分历史 -->
+      <div class="section-card">
+        <div class="section-title">📈 评分历史</div>
+        <div style="margin-bottom:12px;">
+          <el-radio-group v-model="historyTrackName" size="small">
+            <el-radio-button v-for="m in models" :key="m.track_name" :value="m.track_name">
+              {{ m.track_name?.toUpperCase() }}
+            </el-radio-button>
+          </el-radio-group>
+        </div>
+        <div v-if="scoreHistory.length === 0" style="color:#909399;font-size:13px;padding:12px 0;">暂无评分历史，训练后将自动生成</div>
+        <div v-for="(h, hi) in scoreHistory" :key="hi" class="history-item">
+          <div class="history-header">
+            <span class="history-time">{{ h.scored_at }}</span>
+            <span class="history-metrics">
+              Train R²: <b :style="{ color: h.train_r2 > 0 ? '#67c23a' : '#f56c6c' }">{{ h.train_r2.toFixed(4) }}</b>
+              Val R²: <b>{{ h.val_r2.toFixed(4) }}</b>
+              Test R²: <b>{{ h.test_r2.toFixed(4) }}</b>
+            </span>
+          </div>
+          <div class="history-scores">
+            <div v-for="s in h.scores.slice(0, 10)" :key="s.rank" class="score-row">
+              <span class="score-rank">#{{ s.rank }}</span>
+              <span class="score-stock">{{ s.stock_name || s.stock_code }}</span>
+              <span class="score-val" :style="{ color: s.score > 0 ? '#f56c6c' : '#67c23a' }">{{ s.score.toFixed(4) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </template>
+
+    <!-- 参数配置对话框 -->
+    <el-dialog v-model="paramDialogVisible" :title="`⚙️ 参数训练 - ${paramDialogTrack.toUpperCase()}`" width="500px" :close-on-click-modal="false">
+      <div class="param-form">
+        <div class="param-row">
+          <label>num_leaves（叶子节点数）</label>
+          <el-slider v-model="trainParams.num_leaves" :min="4" :max="128" :step="1" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>max_depth（最大深度）</label>
+          <el-slider v-model="trainParams.max_depth" :min="3" :max="20" :step="1" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>learning_rate（学习率）</label>
+          <el-slider v-model="trainParams.learning_rate" :min="0.01" :max="0.5" :step="0.01" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>n_estimators（迭代轮数）</label>
+          <el-slider v-model="trainParams.n_estimators" :min="100" :max="3000" :step="100" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>reg_alpha（L1 正则）</label>
+          <el-slider v-model="trainParams.reg_alpha" :min="0" :max="5" :step="0.1" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>reg_lambda（L2 正则）</label>
+          <el-slider v-model="trainParams.reg_lambda" :min="0" :max="5" :step="0.1" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>feature_fraction（特征采样）</label>
+          <el-slider v-model="trainParams.feature_fraction" :min="0.3" :max="1.0" :step="0.05" show-input size="small" />
+        </div>
+        <div class="param-row">
+          <label>bagging_fraction（样本采样）</label>
+          <el-slider v-model="trainParams.bagging_fraction" :min="0.3" :max="1.0" :step="0.05" show-input size="small" />
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="paramDialogVisible = false" size="small">取消</el-button>
+        <el-button type="primary" @click="trainWithParams" :loading="trainingTrack === paramDialogTrack" size="small">
+          {{ trainingTrack === paramDialogTrack ? '训练中...' : '开始训练' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
-import { getAllModels, trainTrackModel } from '@/api/track'
+import { getAllModels, trainTrackModel, getScoreHistory } from '@/api/track'
+import { ElMessage } from 'element-plus'
 import * as echarts from 'echarts'
 
 const loading = ref(true)
@@ -126,6 +221,29 @@ const trainingTrack = ref('')
 const selectedModelForFeat = ref('')
 const featChartRef = ref<HTMLElement>()
 
+// 参数训练对话框
+const paramDialogVisible = ref(false)
+const paramDialogTrack = ref('')
+const trainParams = ref({
+  num_leaves: 31,
+  max_depth: 8,
+  learning_rate: 0.05,
+  n_estimators: 1000,
+  reg_alpha: 0.1,
+  reg_lambda: 1.0,
+  feature_fraction: 0.8,
+  bagging_fraction: 0.9,
+  min_child_samples: 20,
+})
+
+// 评分结果
+const latestScores = ref<Record<string, any>>({})
+const expandedScores = ref<Record<string, boolean>>({})
+
+// 评分历史
+const historyTrackName = ref('')
+const scoreHistory = ref<any[]>([])
+
 const trackColors: Record<string, string> = {
   semiconductor: '#3b82f6',
   ai: '#f59e0b',
@@ -133,6 +251,12 @@ const trackColors: Record<string, string> = {
   storage: '#8b5cf6',
 }
 function trackColor(name: string) { return trackColors[name] || '#909399' }
+
+function sentimentColor(val: number): string {
+  if (val >= 60) return '#f56c6c'
+  if (val >= 40) return '#e6a23c'
+  return '#67c23a'
+}
 
 const currentModel = computed(() => {
   return models.value.find(m => m.track_name === selectedModelForFeat.value)
@@ -145,23 +269,69 @@ async function loadData() {
     models.value = (res as any) || []
     if (models.value.length > 0 && !selectedModelForFeat.value) {
       selectedModelForFeat.value = models.value[0].track_name
+      historyTrackName.value = models.value[0].track_name
     }
   } catch (e) {
     console.error('Model data load failed', e)
   }
   loading.value = false
   nextTick(renderFeatChart)
+  loadScoreHistory()
 }
 
 async function retrain(trackName: string) {
   trainingTrack.value = trackName
   try {
-    await trainTrackModel(trackName)
+    const res = await trainTrackModel(trackName)
+    if ((res as any)?.scores) {
+      latestScores.value[trackName] = res as any
+      expandedScores.value[trackName] = true
+    }
+    ElMessage.success(`${trackName} 训练完成`)
     await loadData()
   } catch (e: any) {
+    ElMessage.error(`${trackName} 训练失败: ${e.message || ''}`)
     console.error('Retrain failed', e)
   }
   trainingTrack.value = ''
+}
+
+function openParamDialog(trackName: string) {
+  paramDialogTrack.value = trackName
+  // 如果有历史参数，用最后一次的
+  paramDialogVisible.value = true
+}
+
+async function trainWithParams() {
+  const trackName = paramDialogTrack.value
+  if (!trackName) return
+  trainingTrack.value = trackName
+  paramDialogVisible.value = false
+  try {
+    const res = await trainTrackModel(trackName, { ...trainParams.value })
+    if ((res as any)?.scores) {
+      latestScores.value[trackName] = res as any
+      expandedScores.value[trackName] = true
+    }
+    await loadData()
+  } catch (e: any) {
+    console.error('Train with params failed', e)
+  }
+  trainingTrack.value = ''
+}
+
+function toggleScores(trackName: string) {
+  expandedScores.value[trackName] = !expandedScores.value[trackName]
+}
+
+async function loadScoreHistory() {
+  if (!historyTrackName.value || models.value.length === 0) return
+  try {
+    const res = await getScoreHistory(historyTrackName.value)
+    scoreHistory.value = (res as any) || []
+  } catch (e) {
+    console.error('Load score history failed', e)
+  }
 }
 
 function renderFeatChart() {
@@ -196,6 +366,7 @@ function renderFeatChart() {
 
 watch(selectedModelForFeat, renderFeatChart)
 watch(models, () => { nextTick(renderFeatChart) })
+watch(historyTrackName, loadScoreHistory)
 
 onMounted(loadData)
 </script>
@@ -228,4 +399,28 @@ onMounted(loadData)
 .section-title { font-size: 14px; font-weight: 600; color: #303133; margin-bottom: 12px; }
 .chart-box { width: 100%; height: 380px; }
 .track-tabs { margin-bottom: 12px; }
+
+/* 评分结果 */
+.card-scores { margin-top: 10px; border-top: 1px solid #f0f0f0; padding-top: 8px; }
+.scores-header { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #606266; cursor: pointer; padding: 4px 0; }
+.sentiment-badge { font-size: 10px; font-weight: 700; color: #fff; padding: 1px 8px; border-radius: 8px; }
+.toggle-icon { margin-left: auto; font-size: 10px; color: #909399; }
+.scores-body { max-height: 320px; overflow-y: auto; margin-top: 6px; }
+.score-row { display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 3px 4px; border-bottom: 1px solid #f8f8f8; }
+.score-row:hover { background: #fafafa; }
+.score-rank { width: 24px; color: #909399; font-weight: 500; }
+.score-stock { flex: 1; color: #303133; }
+.score-val { font-weight: 600; font-family: 'SF Mono', monospace; min-width: 60px; text-align: right; }
+
+/* 评分历史 */
+.history-item { margin-bottom: 12px; padding: 10px 12px; background: #fafafa; border-radius: 6px; border: 1px solid #eee; }
+.history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.history-time { font-size: 11px; color: #909399; }
+.history-metrics { font-size: 11px; color: #606266; display: flex; gap: 12px; }
+.history-metrics b { margin-left: 2px; }
+.history-scores { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 12px; }
+
+/* 参数表单 */
+.param-form { display: flex; flex-direction: column; gap: 14px; }
+.param-row label { display: block; font-size: 12px; color: #606266; margin-bottom: 4px; font-weight: 500; }
 </style>

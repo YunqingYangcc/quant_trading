@@ -306,6 +306,21 @@ async def main():
     logger.info(f"时序无 shuffle: ✅ (按日期切分)")
     logger.info("=" * 60)
 
+    return {
+        "status": "success",
+        "whitelist_count": len(whitelist),
+        "final_features": len(kept_cols),
+        "train_rows": len(train),
+        "val_rows": len(val),
+        "test_rows": len(test),
+        "max_corr": round(float(max_corr), 4),
+    }
+
+
+async def run_preprocess_features() -> dict:
+    """特征预处理入口（供 API 调用）"""
+    return await main()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
