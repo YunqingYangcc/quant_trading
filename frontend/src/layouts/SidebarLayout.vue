@@ -114,7 +114,7 @@ const pageTitle = computed(() => {
 .app-sidebar {
   width: 220px;
   min-width: 220px;
-  background: linear-gradient(180deg, #0a0d14 0%, #11161f 100%);
+  background: linear-gradient(180deg, #141a29 0%, #1a2235 100%);
   display: flex;
   flex-direction: column;
   user-select: none;
@@ -168,7 +168,7 @@ const pageTitle = computed(() => {
 
 .logo-meta {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.35);
   letter-spacing: 0.3px;
   line-height: 1.3;
   margin-top: 1px;
@@ -197,7 +197,7 @@ const pageTitle = computed(() => {
 .section-label {
   font-size: 9px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.3);
   padding: 14px 20px 6px;
   letter-spacing: 1.5px;
 }
@@ -220,7 +220,7 @@ const pageTitle = computed(() => {
   margin: 1px 8px;
   padding: 0 12px;
   border-radius: 6px;
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.55);
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -231,8 +231,8 @@ const pageTitle = computed(() => {
 
 /* Hover */
 .app-sidebar :deep(.el-menu-item:hover) {
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
 }
 
 /* Active state */
@@ -311,7 +311,7 @@ const pageTitle = computed(() => {
 
 .status-text {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.3);
   letter-spacing: 0.5px;
 }
 
