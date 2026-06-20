@@ -41,17 +41,17 @@ LGB_PARAMS = {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 15,           # 20→15: 控制复杂度
-    "max_depth": 5,            # 6→5: 限制深度
-    "min_child_samples": 30,
-    "min_child_weight": 5,
-    "learning_rate": 0.03,
-    "feature_fraction": 0.7,
-    "bagging_fraction": 0.8,
+    "num_leaves": 31,            # 15→31: 大幅提高模型容量
+    "max_depth": 8,              # 5→8: 允许更深
+    "min_child_samples": 20,     # 30→20: 放松叶子节点最小样本
+    "min_child_weight": 0.001,   # 5→0.001: 几乎移除约束
+    "learning_rate": 0.05,       # 0.03→0.05
+    "feature_fraction": 0.8,     # 0.7→0.8
+    "bagging_fraction": 0.9,     # 0.8→0.9
     "bagging_freq": 3,
-    "n_estimators": 500,       # 200→500: 提高上限，交给早停决定终止点
-    "reg_alpha": 2.0,          # 1→2: 加强 L1
-    "reg_lambda": 5.0,         # 3→5: 加强 L2
+    "n_estimators": 1000,        # 500→1000: 给更多迭代，早停决定终止
+    "reg_alpha": 0.1,            # 2.0→0.1: 大幅降低 L1 正则
+    "reg_lambda": 1.0,           # 5.0→1.0: 大幅降低 L2 正则
     "verbose": -1,
     "random_state": 42,
 }

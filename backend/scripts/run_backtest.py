@@ -117,6 +117,46 @@ def _period_label(date: pd.Timestamp, freq: str) -> str:
         return f"{date.year}-{date.month:02d}"
 
 
+def _build_stock_to_track_map(track_stocks: dict[str, list[str]]) -> dict[str, str]:
+    """构建股票代码→赛道名称映射"""
+    mapping = {}
+    for track, stocks in track_stocks.items():
+        for code in stocks:
+            mapping[code] = track
+    return mapping
+
+
+def _calculate_track_weights(
+    scores: pd.DataFrame,
+    date: pd.Timestamp,
+    stock_to_track: dict[str, str],
+    track_stocks: dict[str, list[str]],
+    threshold: float,
+) -> dict[str, float]:
+    """基于赛道景气度计算个股买入权重"""
+    date_scores = scores[scores["trade_date"] == date]
+    if len(date_scores) == 0:
+        return {}
+
+    # 计算各赛道平均景气度
+    track_sentiments = {}
+    for track, stocks in track_stocks.items():
+        ts = date_scores[date_scores["stock_code"].isin(stocks)]
+        track_sentiments[track] = ts["pred_score"].mean() if len(ts) > 0 else 0.0
+
+    # 景气度低于阈值 → 权重打折
+    weights = {}
+    for track, sentiment in track_sentiments.items():
+        if sentiment <= 0:
+            weights[track] = 0.3
+        elif sentiment < threshold:
+            weights[track] = 0.3 + 0.7 * (sentiment / threshold)
+        else:
+            weights[track] = 1.0 + 0.3 * min((sentiment - threshold) / threshold, 2.0)
+
+    return weights
+
+
 def generate_signals(scores: pd.DataFrame, params: dict) -> pd.DataFrame:
     """打分 -> 买卖信号"""
     scores = scores.copy()
@@ -286,18 +326,38 @@ def run_single_strategy(
                 if code in entry_prices:
                     del entry_prices[code]
 
-        # 买入 Top-N
+        # 买入 Top-N（含赛道景气降仓）
         buy_list = signal["buy"]
         if not buy_list:
             continue
 
-        per_stock_budget = portfolio["cash"] * 0.95 / len(buy_list)
-        per_stock_budget = min(per_stock_budget, portfolio["cash"] * params["max_single_stock"])
+        # 构建赛道映射&计算景气权重
+        track_stocks = _get_track_stocks()
+        stock_to_track = _build_stock_to_track_map(track_stocks)
+        track_w = _calculate_track_weights(scores, date, stock_to_track, track_stocks, params.get("track_prosperity_threshold", 40))
+
+        # 计算个股买入权重（等权 × 赛道景气系数）
+        stock_w = {}
+        for code in buy_list:
+            t = stock_to_track.get(code, "")
+            base_w = 1.0 / len(buy_list)
+            tw = track_w.get(t, 0.5)
+            stock_w[code] = base_w * tw
+
+        total_w = sum(stock_w.values())
+        if total_w <= 0:
+            continue
+        # 归一化权重
+        for k in stock_w:
+            stock_w[k] /= total_w
+
+        buy_cash = portfolio["cash"] * 0.95
 
         for code in buy_list:
             px = all_prices_df.loc[date, code] if date in all_prices_df.index and code in all_prices_df.columns else None
             if px is None or np.isnan(px):
                 continue
+            per_stock_budget = min(buy_cash * stock_w.get(code, 0), portfolio["cash"] * params["max_single_stock"])
             total_cost = px * (1 + params["commission"] + params["slippage"])
             shares = int(per_stock_budget / total_cost)
             if shares > 0:
