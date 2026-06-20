@@ -18,71 +18,71 @@
   "train_rows": 22019,
   "val_rows": 2904,
   "test_rows": 6888,
-  "cv_mean_r2": 0.0032,
-  "cv_std_r2": 0.0103,
-  "train_r2": 0.0303,
-  "val_r2": 0.0015,
-  "test_r2": -0.0059,
-  "r2_gap": 0.0288,
+  "cv_mean_r2": 0.0049,
+  "cv_std_r2": 0.0136,
+  "train_r2": 0.0099,
+  "val_r2": -0.0002,
+  "test_r2": -0.0026,
+  "r2_gap": 0.0101,
   "overfitting": false,
   "params": {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 15,
-    "max_depth": 5,
-    "min_child_samples": 30,
-    "min_child_weight": 5,
-    "learning_rate": 0.03,
-    "feature_fraction": 0.7,
-    "bagging_fraction": 0.8,
+    "num_leaves": 31,
+    "max_depth": 8,
+    "min_child_samples": 20,
+    "min_child_weight": 0.001,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.9,
     "bagging_freq": 3,
-    "n_estimators": 500,
-    "reg_alpha": 2.0,
-    "reg_lambda": 5.0,
+    "n_estimators": 1000,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
       "name": "sma_5",
-      "importance": 23
-    },
-    {
-      "name": "adx",
-      "importance": 18
-    },
-    {
-      "name": "atr_5",
-      "importance": 17
-    },
-    {
-      "name": "track_robot_trend_60d",
-      "importance": 15
-    },
-    {
-      "name": "track_robot_money_flow_20d",
-      "importance": 13
-    },
-    {
-      "name": "track_robot_mom_60d",
-      "importance": 10
+      "importance": 5
     },
     {
       "name": "ret_skew_60",
-      "importance": 9
+      "importance": 3
     },
     {
-      "name": "macd_hist",
-      "importance": 8
-    },
-    {
-      "name": "pv_corr_20",
-      "importance": 8
+      "name": "track_robot_money_flow_20d",
+      "importance": 3
     },
     {
       "name": "ao",
-      "importance": 5
+      "importance": 2
+    },
+    {
+      "name": "adx",
+      "importance": 2
+    },
+    {
+      "name": "adx_pos",
+      "importance": 2
+    },
+    {
+      "name": "adx_neg",
+      "importance": 2
+    },
+    {
+      "name": "track_robot_mom_60d",
+      "importance": 2
+    },
+    {
+      "name": "track_robot_trend_60d",
+      "importance": 2
+    },
+    {
+      "name": "sma_dev_60",
+      "importance": 1
     }
   ]
 }

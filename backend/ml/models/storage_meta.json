@@ -17,71 +17,71 @@
   "train_rows": 21512,
   "val_rows": 3146,
   "test_rows": 7469,
-  "cv_mean_r2": -0.0023,
-  "cv_std_r2": 0.0042,
-  "train_r2": 0.0554,
-  "val_r2": 0.0087,
+  "cv_mean_r2": -0.0046,
+  "cv_std_r2": 0.0068,
+  "train_r2": 0.0377,
+  "val_r2": 0.0017,
   "test_r2": -0.0054,
-  "r2_gap": 0.0467,
+  "r2_gap": 0.0359,
   "overfitting": false,
   "params": {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 15,
-    "max_depth": 5,
-    "min_child_samples": 30,
-    "min_child_weight": 5,
-    "learning_rate": 0.03,
-    "feature_fraction": 0.7,
-    "bagging_fraction": 0.8,
+    "num_leaves": 31,
+    "max_depth": 8,
+    "min_child_samples": 20,
+    "min_child_weight": 0.001,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.9,
     "bagging_freq": 3,
-    "n_estimators": 500,
-    "reg_alpha": 2.0,
-    "reg_lambda": 5.0,
+    "n_estimators": 1000,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
       "name": "track_storage_max_ret_20d",
-      "importance": 40
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 35
-    },
-    {
-      "name": "sma_5",
-      "importance": 32
-    },
-    {
-      "name": "adx",
-      "importance": 26
-    },
-    {
-      "name": "atr_5",
-      "importance": 26
-    },
-    {
-      "name": "track_semiconductor_trend_20d",
-      "importance": 19
-    },
-    {
-      "name": "bb_width",
       "importance": 18
     },
     {
+      "name": "adx",
+      "importance": 17
+    },
+    {
+      "name": "sma_5",
+      "importance": 13
+    },
+    {
+      "name": "bb_width",
+      "importance": 10
+    },
+    {
       "name": "adx_pos",
-      "importance": 16
+      "importance": 8
     },
     {
       "name": "fi_13",
-      "importance": 16
+      "importance": 8
+    },
+    {
+      "name": "atr_5",
+      "importance": 7
+    },
+    {
+      "name": "track_semiconductor_trend_20d",
+      "importance": 7
     },
     {
       "name": "track_storage_money_flow_20d",
-      "importance": 16
+      "importance": 7
+    },
+    {
+      "name": "ppo",
+      "importance": 6
     }
   ]
 }

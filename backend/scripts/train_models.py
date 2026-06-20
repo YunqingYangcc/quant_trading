@@ -99,12 +99,17 @@ def train_track_model(
     val_df: pd.DataFrame,
     test_df: pd.DataFrame,
     feature_cols: list[str],
+    params: dict | None = None,
 ) -> dict:
     """训练单个赛道的 LightGBM 模型.
+
+    Args:
+        params: 可选超参数覆盖，不传则使用 LGB_PARAMS 默认值
 
     Returns:
         dict with training metrics
     """
+    effective_params = {**LGB_PARAMS, **(params or {})}
     # 过滤到该赛道的股票
     train_track = train_df[train_df["stock_code"].isin(stock_codes)].copy()
     val_track = val_df[val_df["stock_code"].isin(stock_codes)].copy()
@@ -146,7 +151,7 @@ def train_track_model(
         X_fold_train, X_fold_val = X_train[train_idx], X_train[val_idx]
         y_fold_train, y_fold_val = y_train[train_idx], y_train[val_idx]
 
-        model_cv = lgb.LGBMRegressor(**LGB_PARAMS)
+        model_cv = lgb.LGBMRegressor(**effective_params)
         model_cv.fit(
             X_fold_train, y_fold_train,
             eval_set=[(X_fold_val, y_fold_val)],
@@ -162,7 +167,7 @@ def train_track_model(
     logger.info(f"  CV R²: {cv_mean:.4f} ± {cv_std:.4f}")
 
     # ── 最终模型: 用全部训练集训练 ─────────
-    model = lgb.LGBMRegressor(**LGB_PARAMS)
+    model = lgb.LGBMRegressor(**effective_params)
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
@@ -170,7 +175,7 @@ def train_track_model(
     )
 
     best_iter = model.best_iteration_
-    logger.info(f"  最佳迭代轮数: {best_iter}/{LGB_PARAMS['n_estimators']}")
+    logger.info(f"  最佳迭代轮数: {best_iter}/{effective_params['n_estimators']}")
 
     # ── 评估 ─────────────────
     y_train_pred = model.predict(X_train, num_iteration=best_iter)
@@ -215,7 +220,7 @@ def train_track_model(
         "test_r2": round(test_r2, 4),
         "r2_gap": round(r2_gap, 4),
         "overfitting": overfitting,
-        "params": LGB_PARAMS,
+        "params": effective_params,
         "top_features": [{"name": n, "importance": int(i)} for n, i in top10],
     }
     meta_path = MODELS_DIR / f"{track_name}_meta.json"

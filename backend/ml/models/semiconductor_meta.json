@@ -23,71 +23,71 @@
   "train_rows": 50420,
   "val_rows": 4598,
   "test_rows": 10898,
-  "cv_mean_r2": -0.0029,
+  "cv_mean_r2": -0.0035,
   "cv_std_r2": 0.0014,
-  "train_r2": 0.0014,
-  "val_r2": -0.0001,
-  "test_r2": -0.0001,
-  "r2_gap": 0.0015,
+  "train_r2": 0.0042,
+  "val_r2": -0.0004,
+  "test_r2": -0.0009,
+  "r2_gap": 0.0046,
   "overfitting": false,
   "params": {
     "objective": "regression",
     "metric": "mse",
     "boosting_type": "gbdt",
-    "num_leaves": 15,
-    "max_depth": 5,
-    "min_child_samples": 30,
-    "min_child_weight": 5,
-    "learning_rate": 0.03,
-    "feature_fraction": 0.7,
-    "bagging_fraction": 0.8,
+    "num_leaves": 31,
+    "max_depth": 8,
+    "min_child_samples": 20,
+    "min_child_weight": 0.001,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.9,
     "bagging_freq": 3,
-    "n_estimators": 500,
-    "reg_alpha": 2.0,
-    "reg_lambda": 5.0,
+    "n_estimators": 1000,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
+      "name": "atr_5",
+      "importance": 5
+    },
+    {
+      "name": "sma_5",
+      "importance": 3
+    },
+    {
+      "name": "adx",
+      "importance": 3
+    },
+    {
       "name": "fi_13",
       "importance": 3
     },
     {
-      "name": "sma_5",
-      "importance": 2
-    },
-    {
-      "name": "atr_5",
-      "importance": 2
-    },
-    {
-      "name": "bb_width",
+      "name": "rsi_14",
       "importance": 2
     },
     {
       "name": "adx_pos",
-      "importance": 1
+      "importance": 2
     },
     {
       "name": "ulcer_14",
-      "importance": 1
-    },
-    {
-      "name": "pv_corr_20",
-      "importance": 1
+      "importance": 2
     },
     {
       "name": "track_semiconductor_max_ret_5d",
+      "importance": 2
+    },
+    {
+      "name": "ppo_signal",
       "importance": 1
     },
     {
-      "name": "track_storage_mom_20d",
+      "name": "sma_dev_60",
       "importance": 1
-    },
-    {
-      "name": "rsi_14",
-      "importance": 0
     }
   ]
 }

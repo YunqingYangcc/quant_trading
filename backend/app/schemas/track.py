@@ -136,6 +136,37 @@ class LabeledDataResponse(BaseModel):
 # ── 回测参数 ──────────────────────────────────────
 
 
+class TrainModelParams(BaseModel):
+    """训练模型可配置参数（可选覆盖，不传则用默认值）"""
+    num_leaves: int | None = Field(default=None, description="叶子节点数", ge=4, le=128)
+    max_depth: int | None = Field(default=None, description="最大深度", ge=3, le=20)
+    learning_rate: float | None = Field(default=None, description="学习率", gt=0, le=0.5)
+    n_estimators: int | None = Field(default=None, description="迭代轮数", ge=100, le=5000)
+    reg_alpha: float | None = Field(default=None, description="L1 正则", ge=0, le=10)
+    reg_lambda: float | None = Field(default=None, description="L2 正则", ge=0, le=10)
+    feature_fraction: float | None = Field(default=None, description="特征采样比例", gt=0, le=1)
+    bagging_fraction: float | None = Field(default=None, description="样本采样比例", gt=0, le=1)
+    min_child_samples: int | None = Field(default=None, description="叶节点最小样本", ge=5, le=200)
+
+
+class ScoreHistoryResponse(BaseModel):
+    """评分历史记录"""
+    id: int
+    track_name: str
+    model_id: str
+    stock_code: str
+    stock_name: str | None = None
+    score: float = 0
+    rank: int = 0
+    train_r2: float = 0
+    val_r2: float = 0
+    test_r2: float = 0
+    params_snapshot: dict | None = None
+    scored_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class BacktestRunParams(BaseModel):
     """人工回测可配置参数"""
     initial_capital: int = Field(default=100000, description="初始资金", ge=10000)

@@ -122,3 +122,22 @@ class FeatureStore(Base):
     features = Column(JSON, nullable=False)  # {"mom_1d": 0.02, "ma_dev_5d": -0.01, ...}
     feature_version = Column(String(20), default="v1")  # 特征版本
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ScoreHistory(Base):
+    """评分历史表 - 每次训练的模型评分结果"""
+
+    __tablename__ = "score_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    track_name = Column(String(50), nullable=False, index=True)
+    model_id = Column(String(100), nullable=False)
+    stock_code = Column(String(20), nullable=False)
+    stock_name = Column(String(50), nullable=True)
+    score = Column(Float, default=0)
+    rank = Column(Integer, default=0)
+    train_r2 = Column(Float, default=0)  # 训练 R²
+    val_r2 = Column(Float, default=0)  # 验证 R²
+    test_r2 = Column(Float, default=0)  # 测试 R²
+    params_snapshot = Column(JSON, nullable=True)  # 训练参数快照
+    scored_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
