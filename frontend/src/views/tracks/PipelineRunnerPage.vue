@@ -100,6 +100,12 @@
             {{ statusLabel(task.status) }}
           </el-tag>
           <span class="rhi-type-tag" :class="'rhi-type-' + task.runType">{{ task.runType === 'train' ? '训练' : '回测' }}</span>
+          <el-tag v-if="task.params_snapshot?.scope === 'single'" size="small" type="warning" effect="plain" class="rhi-scope-tag">
+            {{ task.params_snapshot.track_name || '单赛道' }}
+          </el-tag>
+          <el-tag v-else-if="task.runType === 'train'" size="small" type="" effect="plain" class="rhi-scope-tag rhi-scope-all">
+            全赛道
+          </el-tag>
           <span class="rhi-id">#{{ task.taskId }}</span>
           <span class="rhi-time">{{ formatTime(task.startedAt) }}</span>
         </div>
@@ -685,6 +691,19 @@ onMounted(async () => {
 }
 .rhi-type-train { background: #dbeafe; color: #2563eb; }
 .rhi-type-backtest { background: #d1fae5; color: #059669; }
+
+.rhi-scope-tag {
+  font-size: 10px;
+  padding: 0 6px;
+  height: 20px;
+  line-height: 20px;
+  border-radius: 3px;
+}
+.rhi-scope-all {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
 
 .rh-item.rh-expanded {
   border-color: #93c5fd;
