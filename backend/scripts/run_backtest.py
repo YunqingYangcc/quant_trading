@@ -89,7 +89,7 @@ def load_historical_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
             continue
 
         X = track_df[feature_cols].fillna(0).values
-        df.loc[mask, "pred_score"] = model.predict(X)
+        df.loc[mask, "pred_score"] = model.predict_proba(X)[:, 1]
 
     scores = df[["trade_date", "stock_code", "pred_score"]].copy()
     prices = df.pivot_table(index="trade_date", columns="stock_code", values="close")

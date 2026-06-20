@@ -91,7 +91,7 @@ async def train_track_model(track_name: str, params: TrainModelParams = Body(def
                 if len(stock_data) > 0:
                     try:
                         latest = stock_data.iloc[-1:][feature_cols]
-                        pred = model.predict(latest)[0]
+                        pred = model.predict_proba(latest)[0][1]
                         row["score"] = round(float(pred), 6)
                     except Exception:
                         pass
@@ -297,7 +297,7 @@ async def get_track_score(track_name: str):
             scores.append(row)
             continue
         try:
-            pred = model.predict(feature_dict[code])[0]
+            pred = model.predict_proba(feature_dict[code])[0][1]
             row["score"] = round(float(pred), 6)
             scores.append(row)
         except Exception as e:

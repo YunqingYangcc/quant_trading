@@ -19,16 +19,17 @@
   "train_rows": 29001,
   "val_rows": 2904,
   "test_rows": 6868,
-  "cv_mean_r2": -0.001,
-  "cv_std_r2": 0.0014,
-  "train_r2": 0.0269,
-  "val_r2": 0.0084,
-  "test_r2": -0.0171,
-  "r2_gap": 0.0185,
+  "objective": "binary",
+  "cv_mean_acc": 0.5452,
+  "cv_std_acc": 0.01,
+  "train_acc": 0.5316,
+  "val_acc": 0.5,
+  "test_acc": 0.5,
+  "acc_gap": 0.0316,
   "overfitting": false,
   "params": {
-    "objective": "regression",
-    "metric": "mse",
+    "objective": "binary",
+    "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
     "max_depth": 8,
@@ -47,43 +48,43 @@
   "top_features": [
     {
       "name": "track_ai_max_ret_20d",
-      "importance": 30
-    },
-    {
-      "name": "sma_5",
-      "importance": 17
-    },
-    {
-      "name": "track_ai_trend_60d",
-      "importance": 14
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 12
+      "importance": 5
     },
     {
       "name": "roc_60",
-      "importance": 9
+      "importance": 4
+    },
+    {
+      "name": "sma_5",
+      "importance": 4
     },
     {
       "name": "atr_5",
-      "importance": 9
+      "importance": 4
     },
     {
-      "name": "ao",
-      "importance": 6
+      "name": "ret_skew_60",
+      "importance": 3
+    },
+    {
+      "name": "rsi_14",
+      "importance": 1
     },
     {
       "name": "ppo_signal",
-      "importance": 6
+      "importance": 1
     },
     {
-      "name": "bb_width",
-      "importance": 6
+      "name": "macd_hist",
+      "importance": 1
     },
     {
       "name": "adx",
-      "importance": 5
+      "importance": 1
+    },
+    {
+      "name": "adx_neg",
+      "importance": 1
     }
   ]
 }

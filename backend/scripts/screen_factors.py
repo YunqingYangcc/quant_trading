@@ -40,8 +40,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 # ── 筛选阈值 ────────────────────────────────────────
-IC_THRESHOLD = 0.01      # |IC| >= 0.01 (池化 Rank IC，小池放宽)
-IR_THRESHOLD = 0.05      # |IR| >= 0.05 (日度 IC mean/std，小池放宽)
+IC_THRESHOLD = 0.02      # |IC| >= 0.02（纲领要求，69只股票池已足够）
+IR_THRESHOLD = 0.5       # |IR| >= 0.5（纲领要求）
 QUANTILES = 10           # 10 层分组
 
 

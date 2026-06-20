@@ -23,7 +23,7 @@ import joblib
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
-from sklearn.metrics import r2_score, mean_squared_error
+from sklearn.metrics import r2_score, mean_squared_error, accuracy_score
 from sklearn.model_selection import TimeSeriesSplit
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -38,26 +38,26 @@ logger = logging.getLogger(__name__)
 
 # ── 固定超参数（禁止调参刷指标）────────────────
 LGB_PARAMS = {
-    "objective": "regression",
-    "metric": "mse",
+    "objective": "binary",
+    "metric": "binary_logloss",
     "boosting_type": "gbdt",
-    "num_leaves": 31,            # 15→31: 大幅提高模型容量
-    "max_depth": 8,              # 5→8: 允许更深
-    "min_child_samples": 20,     # 30→20: 放松叶子节点最小样本
-    "min_child_weight": 0.001,   # 5→0.001: 几乎移除约束
-    "learning_rate": 0.05,       # 0.03→0.05
-    "feature_fraction": 0.8,     # 0.7→0.8
-    "bagging_fraction": 0.9,     # 0.8→0.9
+    "num_leaves": 31,
+    "max_depth": 8,
+    "min_child_samples": 20,
+    "min_child_weight": 0.001,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.9,
     "bagging_freq": 3,
-    "n_estimators": 1000,        # 500→1000: 给更多迭代，早停决定终止
-    "reg_alpha": 0.1,            # 2.0→0.1: 大幅降低 L1 正则
-    "reg_lambda": 1.0,           # 5.0→1.0: 大幅降低 L2 正则
+    "n_estimators": 1000,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42,
 }
 
 TIMESERIES_SPLITS = 3     # TimeSeriesSplit 折数
-R2_GAP_THRESHOLD = 0.15   # 训练/测试 R² 差距阈值
+ACC_GAP_THRESHOLD = 0.10  # 训练/验证准确率差距阈值
 
 PREPROCESSED_DIR = Path(__file__).resolve().parent.parent / "ml" / "preprocessed"
 MODELS_DIR = Path(__file__).resolve().parent.parent / "ml" / "models"
@@ -119,27 +119,20 @@ def train_track_model(
         logger.warning(f"  {track_name}: 训练数据不足 ({len(train_track)} 行), 跳过")
         return {"status": "skipped", "reason": "insufficient_data"}
 
-    # ── 转换目标：绝对收益 → 赛道内相对排名 ─────
-    # 对每个日期，将 target 转换为赛道内 z-score（相对强弱）
+    # ── 转换目标：连续收益 → 二分类标签 ─────
+    # 对每个日期，判断个股收益是否超过赛道当日中位数
     for df_tmp in [train_track, val_track, test_track]:
         if len(df_tmp) == 0:
             continue
-        # 按 date 分组，计算赛道内标准化
-        means = df_tmp.groupby("date")["target"].transform("mean")
-        stds = df_tmp.groupby("date")["target"].transform("std")
-        # 如果 std 为 0（该日期只有 1 只票或无波动），设为 0
-        df_tmp["target"] = np.where(
-            stds > 1e-10,
-            (df_tmp["target"] - means) / stds,
-            0.0
-        )
+        med = df_tmp.groupby("date")["target"].transform("median")
+        df_tmp["target_binary"] = (df_tmp["target"] > med).astype(int)
 
     X_train = train_track[feature_cols].values
-    y_train = train_track["target"].values
+    y_train = train_track["target_binary"].values
     X_val = val_track[feature_cols].values
-    y_val = val_track["target"].values
+    y_val = val_track["target_binary"].values
     X_test = test_track[feature_cols].values
-    y_test = test_track["target"].values
+    y_test = test_track["target_binary"].values
 
     logger.info(f"  数据: train={len(train_track)}, val={len(val_track)}, test={len(test_track)}")
 
@@ -151,23 +144,24 @@ def train_track_model(
         X_fold_train, X_fold_val = X_train[train_idx], X_train[val_idx]
         y_fold_train, y_fold_val = y_train[train_idx], y_train[val_idx]
 
-        model_cv = lgb.LGBMRegressor(**effective_params)
+        model_cv = lgb.LGBMClassifier(**effective_params)
         model_cv.fit(
             X_fold_train, y_fold_train,
             eval_set=[(X_fold_val, y_fold_val)],
             callbacks=[lgb.early_stopping(20)],
         )
 
-        y_pred = model_cv.predict(X_fold_val, num_iteration=model_cv.best_iteration_)
-        r2 = r2_score(y_fold_val, y_pred)
-        cv_scores.append(r2)
+        y_pred_proba = model_cv.predict_proba(X_fold_val, num_iteration=model_cv.best_iteration_)[:, 1]
+        y_pred = (y_pred_proba > 0.5).astype(int)
+        acc = accuracy_score(y_fold_val, y_pred)
+        cv_scores.append(acc)
 
     cv_mean = np.mean(cv_scores)
     cv_std = np.std(cv_scores)
-    logger.info(f"  CV R²: {cv_mean:.4f} ± {cv_std:.4f}")
+    logger.info(f"  CV Accuracy: {cv_mean:.4f} ± {cv_std:.4f}")
 
     # ── 最终模型: 用全部训练集训练 ─────────
-    model = lgb.LGBMRegressor(**effective_params)
+    model = lgb.LGBMClassifier(**effective_params)
     model.fit(
         X_train, y_train,
         eval_set=[(X_val, y_val)],
@@ -178,18 +172,19 @@ def train_track_model(
     logger.info(f"  最佳迭代轮数: {best_iter}/{effective_params['n_estimators']}")
 
     # ── 评估 ─────────────────
-    y_train_pred = model.predict(X_train, num_iteration=best_iter)
-    y_val_pred = model.predict(X_val, num_iteration=best_iter)
+    y_train_pred = (model.predict_proba(X_train, num_iteration=best_iter)[:, 1] > 0.5).astype(int)
+    y_val_pred = (model.predict_proba(X_val, num_iteration=best_iter)[:, 1] > 0.5).astype(int)
+    y_test_pred = (model.predict_proba(X_test, num_iteration=best_iter)[:, 1] > 0.5).astype(int) if len(y_test) > 0 else []
 
-    train_r2 = r2_score(y_train, y_train_pred)
-    val_r2 = r2_score(y_val, y_val_pred)
-    test_r2 = r2_score(y_test, model.predict(X_test, num_iteration=best_iter)) if len(y_test) > 0 else 0.0
+    train_acc = accuracy_score(y_train, y_train_pred)
+    val_acc = accuracy_score(y_val, y_val_pred)
+    test_acc = accuracy_score(y_test, y_test_pred) if len(y_test_pred) > 0 else 0.0
 
-    r2_gap = train_r2 - val_r2
-    overfitting = r2_gap > R2_GAP_THRESHOLD
+    acc_gap = train_acc - val_acc
+    overfitting = acc_gap > ACC_GAP_THRESHOLD
 
-    logger.info(f"  Train R²: {train_r2:.4f}, Val R²: {val_r2:.4f}, Test R²: {test_r2:.4f}")
-    logger.info(f"  R² gap (train-val): {r2_gap:.4f} {'⚠️ 过拟合!' if overfitting else '✅'}")
+    logger.info(f"  Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Test Acc: {test_acc:.4f}")
+    logger.info(f"  Acc gap (train-val): {acc_gap:.4f} {'⚠️ 过拟合!' if overfitting else '✅'}")
 
     # ── 特征重要性 Top 10 ─────────
     importances = model.feature_importances_
@@ -213,12 +208,13 @@ def train_track_model(
         "train_rows": len(train_track),
         "val_rows": len(val_track),
         "test_rows": len(test_track),
-        "cv_mean_r2": round(cv_mean, 4),
-        "cv_std_r2": round(cv_std, 4),
-        "train_r2": round(train_r2, 4),
-        "val_r2": round(val_r2, 4),
-        "test_r2": round(test_r2, 4),
-        "r2_gap": round(r2_gap, 4),
+        "objective": "binary",
+        "cv_mean_acc": round(cv_mean, 4),
+        "cv_std_acc": round(cv_std, 4),
+        "train_acc": round(train_acc, 4),
+        "val_acc": round(val_acc, 4),
+        "test_acc": round(test_acc, 4),
+        "acc_gap": round(acc_gap, 4),
         "overfitting": overfitting,
         "params": effective_params,
         "top_features": [{"name": n, "importance": int(i)} for n, i in top10],
@@ -231,10 +227,10 @@ def train_track_model(
         "status": "trained",
         "track_name": track_name,
         "n_stocks": len(stock_codes),
-        "train_r2": train_r2,
-        "val_r2": val_r2,
-        "test_r2": test_r2,
-        "r2_gap": r2_gap,
+        "train_acc": train_acc,
+        "val_acc": val_acc,
+        "test_acc": test_acc,
+        "acc_gap": acc_gap,
         "overfitting": overfitting,
         "cv_mean": cv_mean,
     }
@@ -246,7 +242,7 @@ async def main():
     logger.info("=" * 60)
     logger.info(f"超参数: {json.dumps(LGB_PARAMS, indent=2)}")
     logger.info(f"TimeSeriesSplit: {TIMESERIES_SPLITS} folds")
-    logger.info(f"R² gap 阈值: {R2_GAP_THRESHOLD}")
+    logger.info(f"ACC gap 阈值: {ACC_GAP_THRESHOLD}")
 
     await ensure_database_ready()
 
@@ -284,17 +280,17 @@ async def main():
             logger.info(f"  {track_name:15s} ❌ 跳过 ({r['reason']})")
             all_pass = False
         elif r["overfitting"]:
-            logger.info(f"  {track_name:15s} ⚠️ 过拟合 (R²gap={r['r2_gap']:.4f})")
+            logger.info(f"  {track_name:15s} ⚠️ 过拟合 (acc_gap={r['acc_gap']:.4f})")
             all_pass = False
         else:
-            logger.info(f"  {track_name:15s} ✅ Train={r['train_r2']:.4f} Val={r['val_r2']:.4f} Test={r['test_r2']:.4f} gap={r['r2_gap']:.4f}")
+            logger.info(f"  {track_name:15s} ✅ Train={r['train_acc']:.4f} Val={r['val_acc']:.4f} Test={r['test_acc']:.4f} gap={r['acc_gap']:.4f}")
 
     trained_count = sum(1 for r in results.values() if r["status"] == "trained")
     no_overfit_count = sum(1 for r in results.values() if r["status"] == "trained" and not r["overfitting"])
 
     logger.info(f"\n模型数: {trained_count}/4")
     logger.info(f"无过拟合: {no_overfit_count}/{trained_count}")
-    logger.info(f"R² gap < {R2_GAP_THRESHOLD}: {'✅' if all_pass else '⚠️'}")
+    logger.info(f"ACC gap < {ACC_GAP_THRESHOLD}: {'✅' if all_pass else '⚠️'}")
     logger.info(f"TimeSeriesSplit (无 shuffle): ✅")
     logger.info("=" * 60)
 

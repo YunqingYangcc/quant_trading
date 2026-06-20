@@ -14,16 +14,17 @@
   "train_rows": 20123,
   "val_rows": 1936,
   "test_rows": 4592,
-  "cv_mean_r2": -0.0022,
-  "cv_std_r2": 0.0022,
-  "train_r2": 0.0082,
-  "val_r2": -0.0053,
-  "test_r2": -0.0014,
-  "r2_gap": 0.0135,
+  "objective": "binary",
+  "cv_mean_acc": 0.5465,
+  "cv_std_acc": 0.0141,
+  "train_acc": 0.5405,
+  "val_acc": 0.5,
+  "test_acc": 0.5,
+  "acc_gap": 0.0405,
   "overfitting": false,
   "params": {
-    "objective": "regression",
-    "metric": "mse",
+    "objective": "binary",
+    "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
     "max_depth": 8,
@@ -41,43 +42,43 @@
   },
   "top_features": [
     {
-      "name": "atr_5",
-      "importance": 6
-    },
-    {
       "name": "sma_5",
-      "importance": 5
+      "importance": 8
     },
     {
-      "name": "fi_13",
+      "name": "atr_5",
+      "importance": 4
+    },
+    {
+      "name": "bb_width",
+      "importance": 4
+    },
+    {
+      "name": "ret_skew_20",
+      "importance": 4
+    },
+    {
+      "name": "price_pos_60",
       "importance": 3
-    },
-    {
-      "name": "ao",
-      "importance": 2
-    },
-    {
-      "name": "ppo_signal",
-      "importance": 2
     },
     {
       "name": "adx",
       "importance": 2
     },
     {
-      "name": "bb_width",
-      "importance": 2
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 2
-    },
-    {
-      "name": "track_ai-power_amihud_illiq",
-      "importance": 2
-    },
-    {
       "name": "roc_60",
+      "importance": 1
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 1
+    },
+    {
+      "name": "adx_pos",
+      "importance": 1
+    },
+    {
+      "name": "adx_neg",
       "importance": 1
     }
   ]

@@ -18,16 +18,17 @@
   "train_rows": 22019,
   "val_rows": 2904,
   "test_rows": 6888,
-  "cv_mean_r2": 0.0049,
-  "cv_std_r2": 0.0136,
-  "train_r2": 0.0099,
-  "val_r2": -0.0002,
-  "test_r2": -0.0026,
-  "r2_gap": 0.0101,
+  "objective": "binary",
+  "cv_mean_acc": 0.5099,
+  "cv_std_acc": 0.0295,
+  "train_acc": 0.5735,
+  "val_acc": 0.5,
+  "test_acc": 0.5001,
+  "acc_gap": 0.0735,
   "overfitting": false,
   "params": {
-    "objective": "regression",
-    "metric": "mse",
+    "objective": "binary",
+    "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
     "max_depth": 8,
@@ -46,26 +47,22 @@
   "top_features": [
     {
       "name": "sma_5",
-      "importance": 5
+      "importance": 7
+    },
+    {
+      "name": "atr_5",
+      "importance": 4
     },
     {
       "name": "ret_skew_60",
       "importance": 3
     },
     {
-      "name": "track_robot_money_flow_20d",
+      "name": "track_robot_trend_60d",
       "importance": 3
     },
     {
-      "name": "ao",
-      "importance": 2
-    },
-    {
       "name": "adx",
-      "importance": 2
-    },
-    {
-      "name": "adx_pos",
       "importance": 2
     },
     {
@@ -73,15 +70,19 @@
       "importance": 2
     },
     {
+      "name": "ret_skew_20",
+      "importance": 2
+    },
+    {
       "name": "track_robot_mom_60d",
       "importance": 2
     },
     {
-      "name": "track_robot_trend_60d",
+      "name": "track_robot_money_flow_20d",
       "importance": 2
     },
     {
-      "name": "sma_dev_60",
+      "name": "ao",
       "importance": 1
     }
   ]

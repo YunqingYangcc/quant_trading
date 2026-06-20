@@ -23,16 +23,17 @@
   "train_rows": 50420,
   "val_rows": 4598,
   "test_rows": 10898,
-  "cv_mean_r2": -0.0035,
-  "cv_std_r2": 0.0014,
-  "train_r2": 0.0042,
-  "val_r2": -0.0004,
-  "test_r2": -0.0009,
-  "r2_gap": 0.0046,
+  "objective": "binary",
+  "cv_mean_acc": 0.5448,
+  "cv_std_acc": 0.013,
+  "train_acc": 0.5584,
+  "val_acc": 0.5402,
+  "test_acc": 0.5275,
+  "acc_gap": 0.0182,
   "overfitting": false,
   "params": {
-    "objective": "regression",
-    "metric": "mse",
+    "objective": "binary",
+    "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
     "max_depth": 8,
@@ -50,44 +51,44 @@
   },
   "top_features": [
     {
-      "name": "atr_5",
-      "importance": 5
+      "name": "sma_5",
+      "importance": 36
     },
     {
-      "name": "sma_5",
-      "importance": 3
+      "name": "track_storage_max_ret_20d",
+      "importance": 20
+    },
+    {
+      "name": "track_semiconductor_money_flow_20d",
+      "importance": 18
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 17
+    },
+    {
+      "name": "atr_5",
+      "importance": 15
     },
     {
       "name": "adx",
-      "importance": 3
-    },
-    {
-      "name": "fi_13",
-      "importance": 3
-    },
-    {
-      "name": "rsi_14",
-      "importance": 2
-    },
-    {
-      "name": "adx_pos",
-      "importance": 2
+      "importance": 13
     },
     {
       "name": "ulcer_14",
-      "importance": 2
+      "importance": 12
     },
     {
-      "name": "track_semiconductor_max_ret_5d",
-      "importance": 2
+      "name": "ret_skew_20",
+      "importance": 11
     },
     {
-      "name": "ppo_signal",
-      "importance": 1
+      "name": "track_storage_mom_60d",
+      "importance": 11
     },
     {
-      "name": "sma_dev_60",
-      "importance": 1
+      "name": "fi_13",
+      "importance": 10
     }
   ]
 }
