@@ -3,8 +3,62 @@
     <div class="page-header">
       <h2>📊 回测绩效</h2>
       <div class="header-actions">
-        <el-button size="small" @click="loadBacktest" :loading="loadingReport">重新加载</el-button>
+        <el-select v-model="selectedStrategy" size="small" placeholder="选择策略" style="width:200px;margin-right:8px" @change="onStrategyChange">
+          <el-option-group label="── 基线策略 ──">
+            <el-option v-for="s in baselineStrats" :key="s.key" :label="s.name" :value="s.key" />
+          </el-option-group>
+          <el-option-group label="── 动量策略 ──">
+            <el-option v-for="s in momentumStrats" :key="s.key" :label="s.name" :value="s.key" />
+          </el-option-group>
+          <el-option-group label="── AI 策略 ──">
+            <el-option v-for="s in aiStrats" :key="s.key" :label="s.name" :value="s.key" />
+          </el-option-group>
+        </el-select>
+        <el-button type="primary" size="small" @click="runStrategyBt" :loading="strategyRunning">
+          {{ strategyRunning ? '回测中...' : '▶ 运行策略' }}
+        </el-button>
+        <el-button size="small" @click="loadBacktest" :loading="loadingReport">刷新</el-button>
       </div>
+    </div>
+
+    <!-- 策略对比表 -->
+    <div v-if="strategyResults.length > 0" class="section-card" style="margin-bottom:16px">
+      <div class="section-header">
+        <div class="sh-left">
+          <div class="sh-icon">🏆</div>
+          <div>
+            <div class="sh-title">策略对比</div>
+            <div class="sh-sub">基线 vs 所选策略</div>
+          </div>
+        </div>
+      </div>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>策略</th>
+            <th>类型</th>
+            <th>夏普</th>
+            <th>总收益</th>
+            <th>年化收益</th>
+            <th>最大回撤</th>
+            <th>胜率</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(r, i) in strategyResults" :key="i" :class="{ 'row-best': i === bestIdx }">
+            <td>
+              <span v-if="i === bestIdx" class="best-badge">⭐</span>
+              {{ r.name }}
+            </td>
+            <td><el-tag size="small" :type="r.type === 'baseline' ? '' : 'primary'" effect="plain">{{ r.type }}</el-tag></td>
+            <td :class="scoreClass(r.sharpe_ratio, 1.2)">{{ r.sharpe_ratio?.toFixed(3) }}</td>
+            <td :class="scoreClass(r.total_return, 0)">{{ r.total_return?.toFixed(1) }}%</td>
+            <td :class="scoreClass(r.annual_return, 0)">{{ r.annual_return?.toFixed(1) }}%</td>
+            <td :class="scoreClass(-r.max_drawdown, -25, true)">{{ r.max_drawdown?.toFixed(1) }}%</td>
+            <td>{{ r.win_rate?.toFixed(1) }}%</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <!-- 回测参数配置 -->
@@ -197,12 +251,67 @@
 import { ref, computed, reactive, onMounted } from 'vue'
 import { CaretRight } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getBacktestReport, runBacktest as runBacktestApi } from '@/api/track'
+import { getBacktestReport, runBacktest as runBacktestApi, listStrategies, runStrategyBacktest } from '@/api/track'
 
 const loadingReport = ref(false)
 const running = ref(false)
 const error = ref('')
 const report = ref<any>(null)
+
+// ── 策略选择 ──
+const selectedStrategy = ref('momentum_20d')
+const strategyRunning = ref(false)
+const allStrategies = ref<any[]>([])
+const strategyResults = ref<any[]>([])
+
+const baselineStrats = computed(() => allStrategies.value.filter(s => s.type === 'baseline'))
+const momentumStrats = computed(() => allStrategies.value.filter(s => s.type === 'momentum'))
+const aiStrats = computed(() => allStrategies.value.filter(s => s.type === 'ai'))
+
+const bestIdx = computed(() => {
+  if (strategyResults.value.length === 0) return -1
+  return strategyResults.value.reduce((best, r, i) => (r.sharpe_ratio || 0) > (strategyResults.value[best]?.sharpe_ratio || 0) ? i : best, 0)
+})
+
+function scoreClass(value: number, threshold: number, inverted = false) {
+  if (value == null || isNaN(value)) return ''
+  const ok = inverted ? value > threshold : value >= threshold
+  return ok ? 'score-good' : 'score-bad'
+}
+
+async function loadStrategies() {
+  try {
+    allStrategies.value = await listStrategies()
+  } catch { /* ignore */ }
+}
+
+function onStrategyChange() {
+  // 切换策略时重置结果
+}
+
+async function runStrategyBt() {
+  strategyRunning.value = true
+  try {
+    // 跑所选策略
+    const result = await runStrategyBacktest(selectedStrategy.value)
+    result.type = allStrategies.value.find(s => s.key === selectedStrategy.value)?.type || 'unknown'
+    
+    // 跑基线
+    const promises = ['equal_weight', 'momentum_20d']
+      .filter(k => k !== selectedStrategy.value)
+      .map(k => runStrategyBacktest(k).then(r => ({ ...r, type: allStrategies.value.find(s => s.key === k)?.type || 'baseline', isBaseline: true })))
+    
+    const baselines = await Promise.all(promises)
+    strategyResults.value = [result, ...baselines]
+      .sort((a, b) => (b.sharpe_ratio || 0) - (a.sharpe_ratio || 0))
+    
+    ElMessage.success('策略回测完成')
+  } catch (e: any) {
+    ElMessage.error(e.response?.data?.detail || '回测失败')
+  } finally {
+    strategyRunning.value = false
+  }
+}
 
 const btParams = reactive({
   initial_capital: 100000,
@@ -276,7 +385,7 @@ async function loadBacktest() {
   }
 }
 
-onMounted(loadBacktest)
+onMounted(() => { loadBacktest(); loadStrategies() })
 </script>
 
 <style scoped>
@@ -610,5 +719,49 @@ onMounted(loadBacktest)
   color: #475569;
   margin-bottom: 12px;
   padding-left: 4px;
+}
+
+/* ── 策略对比表 ── */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.compare-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 11px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.compare-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.compare-table tr.row-best {
+  background: #fefce8;
+}
+
+.compare-table tr.row-best td:first-child {
+  font-weight: 700;
+}
+
+.best-badge {
+  margin-right: 4px;
+}
+
+.score-good {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.score-bad {
+  color: #dc2626;
 }
 </style>

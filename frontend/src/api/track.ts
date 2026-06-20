@@ -127,6 +127,20 @@ export function getBacktestEquity() {
   return request.get('/backtest/equity')
 }
 
+// ── 策略回测 ──
+
+export function listStrategies() {
+  return request.get('/backtest/strategies')
+}
+
+export function runStrategyBacktest(strategyName: string) {
+  return request.post(`/backtest/strategy/${strategyName}`)
+}
+
+export function runSingleStockBacktest(stockCode: string, strategy?: string) {
+  return request.post(`/backtest/single/${stockCode}`, null, { params: { strategy } })
+}
+
 export function runBacktest(data: {
   initial_capital: number
   top_n: number
