@@ -19,8 +19,8 @@
   "val_rows": 2904,
   "test_rows": 6888,
   "objective": "binary",
-  "cv_mean_acc": 0.5099,
-  "cv_std_acc": 0.0295,
+  "cv_mean_acc": 0.514,
+  "cv_std_acc": 0.026,
   "train_acc": 0.5735,
   "val_acc": 0.5,
   "test_acc": 0.5001,
@@ -31,7 +31,7 @@
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -39,51 +39,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.1,
-    "reg_lambda": 1.0,
+    "reg_alpha": 0.05,
+    "reg_lambda": 0.5,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
       "name": "sma_5",
-      "importance": 7
+      "importance": 13
     },
     {
-      "name": "atr_5",
+      "name": "vpt",
+      "importance": 11
+    },
+    {
+      "name": "obv",
+      "importance": 10
+    },
+    {
+      "name": "ad",
+      "importance": 5
+    },
+    {
+      "name": "fund_每股经营性现金流_元",
+      "importance": 5
+    },
+    {
+      "name": "fund_净利润增长率_pct",
       "importance": 4
     },
     {
-      "name": "ret_skew_60",
+      "name": "track_robot_volatility_20d",
+      "importance": 4
+    },
+    {
+      "name": "pv_corr_20",
       "importance": 3
     },
     {
-      "name": "track_robot_trend_60d",
+      "name": "fund_净资产增长率_pct",
       "importance": 3
     },
     {
-      "name": "adx",
-      "importance": 2
-    },
-    {
-      "name": "adx_neg",
-      "importance": 2
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 2
-    },
-    {
-      "name": "track_robot_mom_60d",
-      "importance": 2
-    },
-    {
-      "name": "track_robot_money_flow_20d",
-      "importance": 2
-    },
-    {
-      "name": "ao",
-      "importance": 1
+      "name": "fund_应收账款周转率_次",
+      "importance": 3
     }
   ]
 }

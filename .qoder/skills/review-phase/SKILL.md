@@ -130,11 +130,11 @@ Use this exact format:
 - [ ] Time-based train/val/test split (no shuffle)
 
 ### Phase E: LightGBM Training
-- [ ] 4 separate models (one per track)
+- [ ] 6 separate models (one per track)
 - [ ] TimeSeriesSplit used (no shuffle)
-- [ ] Target: future_20d_excess_return
+- [ ] Target: 二分类（高于/低于赛道当日中位数）
 - [ ] Models saved to `ml/models/{track}.pkl`
-- [ ] Train/test R² gap < 0.15
+- [ ] Train/Val accuracy gap < 0.10
 
 ### Phase F: Scoring API
 - [ ] Stock score (0-100) within track
@@ -145,7 +145,8 @@ Use this exact format:
 - [ ] Slippage 0.1%, commission 万三
 - [ ] Position limits: single stock ≤20%, single track ≤50%
 - [ ] Track prosperity-based position reduction
-- [ ] Sharpe ≥ 1.2, max drawdown < 25%
+- [ ] Stop loss -15%, take profit +30%
+- [ ] Sharpe ≥ 1.2 (当前月频 0.92), max drawdown < 25%
 
 ### Phase H: Frontend Visualization
 - [ ] K-line + Bollinger bands on main chart

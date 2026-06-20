@@ -15,8 +15,8 @@
   "val_rows": 1936,
   "test_rows": 4592,
   "objective": "binary",
-  "cv_mean_acc": 0.5465,
-  "cv_std_acc": 0.0141,
+  "cv_mean_acc": 0.5629,
+  "cv_std_acc": 0.0049,
   "train_acc": 0.5405,
   "val_acc": 0.5,
   "test_acc": 0.5,
@@ -27,7 +27,7 @@
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -35,50 +35,50 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.1,
-    "reg_lambda": 1.0,
+    "reg_alpha": 0.5,
+    "reg_lambda": 2.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "sma_5",
-      "importance": 8
-    },
-    {
-      "name": "atr_5",
-      "importance": 4
-    },
-    {
-      "name": "bb_width",
-      "importance": 4
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 4
-    },
-    {
-      "name": "price_pos_60",
+      "name": "obv",
       "importance": 3
+    },
+    {
+      "name": "vpt",
+      "importance": 3
+    },
+    {
+      "name": "sma_5",
+      "importance": 2
     },
     {
       "name": "adx",
       "importance": 2
     },
     {
+      "name": "fi_13",
+      "importance": 2
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 2
+    },
+    {
+      "name": "price_pos_60",
+      "importance": 2
+    },
+    {
+      "name": "fund_主营业务收入增长率_pct",
+      "importance": 2
+    },
+    {
+      "name": "fund_速动比率",
+      "importance": 2
+    },
+    {
       "name": "roc_60",
-      "importance": 1
-    },
-    {
-      "name": "ppo_signal",
-      "importance": 1
-    },
-    {
-      "name": "adx_pos",
-      "importance": 1
-    },
-    {
-      "name": "adx_neg",
       "importance": 1
     }
   ]

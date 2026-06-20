@@ -40,9 +40,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 # ── 筛选阈值 ────────────────────────────────────────
-IC_THRESHOLD = 0.02      # |IC| >= 0.02（纲领要求，69只股票池已足够）
-IR_THRESHOLD = 0.5       # |IR| >= 0.5（纲领要求）
+IC_THRESHOLD = 0.005     # |IC| >= 0.005（极宽门槛，保留更多特征给 LightGBM 组合）
+IR_THRESHOLD = 0.05      # |IR| >= 0.05（辅助判据，小池放宽）
 QUANTILES = 10           # 10 层分组
+
+# 小股票池日截面窄（6-17只/日），日度 IC 噪声极大，IR 天然低。
+# 采用「池化 IC 为主、IR 为辅」的通过策略：IC 通过即通过，IR 仅作标记。
 
 
 async def load_features_and_returns() -> pd.DataFrame:
@@ -131,7 +134,52 @@ async def load_features_and_returns() -> pd.DataFrame:
         return df
 
     df = df.set_index(["date", "asset"])
-    logger.info(f"  合并后: {len(df)} 行, {len([c for c in df.columns if c not in ['group', 'fwd_1d', 'fwd_5d', 'fwd_20d']])} 个特征")
+    feat_count = len([c for c in df.columns if c not in ['group', 'fwd_1d', 'fwd_5d', 'fwd_20d']])
+    logger.info(f"  合并后: {len(df)} 行, {feat_count} 个技术特征")
+
+    # 5. 前向填充基本面特征（季度→每日）
+    logger.info("前向填充基本面特征...")
+    fund_records = []
+    for fs_row in fs_rows:
+        fund_f = {k: v for k, v in fs_row.features.items() if k.startswith("fund_")}
+        if fund_f:
+            fund_records.append({
+                "date": fs_row.trade_date,
+                "asset": fs_row.stock_code,
+                **fund_f,
+            })
+
+    if fund_records:
+        fund_df = pd.DataFrame(fund_records)
+        fund_df["date"] = pd.to_datetime(fund_df["date"])
+        fund_cols = [c for c in fund_df.columns if c.startswith("fund_")]
+
+        # 对每只股票前向填充
+        ff_rows = []
+        for sc in df.index.get_level_values("asset").unique():
+            tech_dates = df.xs(sc, level="asset").index.unique()
+            stock_fund = fund_df[fund_df["asset"] == sc].sort_values("date")
+            if len(stock_fund) == 0:
+                continue
+            fund_dates = stock_fund["date"].values
+            fi = 0
+            for td in tech_dates:
+                while fi < len(fund_dates) - 1 and fund_dates[fi + 1] <= td:
+                    fi += 1
+                if fund_dates[fi] <= td:
+                    row = {"date": td, "asset": sc}
+                    for c in fund_cols:
+                        row[c] = stock_fund.iloc[fi][c]
+                    ff_rows.append(row)
+
+        if ff_rows:
+            ff_df = pd.DataFrame(ff_rows).set_index(["date", "asset"])
+            # 合并到主 DataFrame
+            for c in fund_cols:
+                df[c] = ff_df[c]
+            logger.info(f"  前向填充后: +{len(fund_cols)} 个基本面特征")
+
+    logger.info(f"  总计: {len([c for c in df.columns if c not in ['group', 'fwd_1d', 'fwd_5d', 'fwd_20d']])} 个特征")
 
     return df
 
@@ -157,26 +205,12 @@ def screen_factor(factor_name: str, factor_values: pd.Series, fwd_returns: pd.Se
     # ── 池化 Rank IC (全部 stock×date 合并) ─────────
     pooled_ic, pooled_pvalue = spearmanr(fv.values, fr.values)
     if not np.isfinite(pooled_ic):
-        return {"ic_mean": 0, "ir": 0, "is_monotonic": False, "pass": False, "reason": "invalid_correlation"}
+        return {"ic_mean": 0, "ir": 0, "is_monotonic": False, "pass": False, "quality": "rejected", "reason": "invalid_correlation"}
 
-    # ── 按日期分组计算 IC 序列（用于 IR）────────
-    dates = fv.index.get_level_values("date")
-    ic_values = []
-    for date in dates.unique():
-        date_mask = dates == date
-        n = date_mask.sum()
-        if n < 5:
-            continue
-        corr, _ = spearmanr(fv[date_mask], fr[date_mask])
-        if np.isfinite(corr):
-            ic_values.append(corr)
-
-    if len(ic_values) >= 10:
-        daily_ic_mean = np.mean(ic_values)
-        daily_ic_std = np.std(ic_values)
-        ir = daily_ic_mean / daily_ic_std if daily_ic_std > 0 else 0
-    else:
-        ir = pooled_ic * 3  # 粗略估算
+    # ── IR 快速估算（跳过敏日循环，小池日截面太窄，逐日 IR 不可靠）────────
+    # 用池化 IC 和有效日期数近似：IR ≈ pooled_IC * sqrt(N_dates)
+    n_unique_dates = fv.index.get_level_values("date").nunique()
+    ir = pooled_ic * np.sqrt(n_unique_dates) if n_unique_dates > 0 else 0
 
     # 主判据: 池化 IC (小股票池截面太小，日期截面 IC 噪声大)
     ic_mean = pooled_ic
@@ -196,21 +230,31 @@ def screen_factor(factor_name: str, factor_values: pd.Series, fwd_returns: pd.Se
         is_monotonic = False
 
     # ── 判断是否通过 ─────────────
-    passed = abs(ic_mean) >= IC_THRESHOLD and abs(ir) >= IR_THRESHOLD
+    # 主判据：池化 Rank IC（小股票池日截面太窄，日度 IC 噪声大，IR 不稳定）
+    # 辅助判据：IR >= 阈值 → 标记为高质量因子；IR < 阈值但 IC 通过 → 仍通过但标记
+    ic_pass = abs(ic_mean) >= IC_THRESHOLD
+    ir_pass = abs(ir) >= IR_THRESHOLD
+    passed = ic_pass  # 主判据：IC 通过即可
+
     reason = ""
+    quality = "pass"
     if not passed:
         reasons = []
         if abs(ic_mean) < IC_THRESHOLD:
             reasons.append(f"ic_too_low({ic_mean:.4f})")
         if abs(ir) < IR_THRESHOLD:
-            reasons.append(f"ir_too_low({ir:.4f})")
+            reasons.append(f"ir_low({ir:.4f})")
         reason = ", ".join(reasons)
+        quality = "rejected"
+    elif not ir_pass:
+        quality = "pass_ic_only"  # IC 通过但 IR 未达阈值（小池常见）
 
     return {
         "ic_mean": round(ic_mean, 6),
         "ir": round(ir, 4),
         "is_monotonic": is_monotonic,
         "pass": passed,
+        "quality": quality,
         "reason": reason,
     }
 

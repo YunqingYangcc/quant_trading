@@ -152,3 +152,23 @@ export function preprocessFeatures() {
 export function runPipeline(step: string = 'all') {
   return request.post('/ml/run-pipeline', null, { params: { step } })
 }
+
+// ── 流水线运行日志 ──
+
+export interface PipelineRun {
+  id: number
+  run_type: 'train' | 'backtest'
+  status: string
+  params_snapshot: Record<string, any> | null
+  results_summary: Record<string, any> | null
+  git_commit_hash: string | null
+  feature_count: number | null
+  duration_seconds: number | null
+  created_at: string
+}
+
+export function getPipelineRuns(limit = 10, runType?: string) {
+  const params: Record<string, any> = { limit }
+  if (runType) params.run_type = runType
+  return request.get('/ml/pipeline-runs', { params })
+}

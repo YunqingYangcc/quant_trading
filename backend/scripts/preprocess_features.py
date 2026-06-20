@@ -46,13 +46,33 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent / "ml" / "preprocessed"
 
 
 async def load_whitelist_features() -> list[str]:
-    """加载白名单因子名称."""
+    """加载白名单因子名称。白名单过短时自动回退到全量特征。"""
     async with async_session_maker() as session:
         result = await session.execute(
             select(FeatureWhiteList).where(FeatureWhiteList.is_active == 1)
         )
         items = result.scalars().all()
-    return [item.factor_name for item in items]
+    whitelist = [item.factor_name for item in items]
+    # 白名单少于 20 个因子时，自动回退到全量特征（避免因子筛选退化导致特征过少）
+    MIN_WHITELIST_SIZE = 20
+    if len(whitelist) < MIN_WHITELIST_SIZE:
+        logger.warning(
+            f"白名单仅 {len(whitelist)} 个因子 (<{MIN_WHITELIST_SIZE}), 自动回退到全量特征"
+        )
+        return await discover_all_features()
+    return whitelist
+
+
+async def discover_all_features() -> list[str]:
+    """白名单为空时，从 FeatureStore 发现所有可用特征名."""
+    async with async_session_maker() as session:
+        result = await session.execute(select(FeatureStore))
+        rows = result.scalars().all()
+
+    all_keys: set[str] = set()
+    for row in rows:
+        all_keys.update(row.features.keys())
+    return sorted(all_keys)
 
 
 async def load_feature_data(whitelist: list[str]) -> pd.DataFrame:
@@ -100,16 +120,22 @@ async def load_feature_data(whitelist: list[str]) -> pd.DataFrame:
             "target": fwd_returns[key],
         }
         features = fs_row.features
+        # 白名单特征
         for fname in whitelist:
             val = features.get(fname)
             if val is not None and np.isfinite(val):
                 record[fname] = val
             else:
                 record[fname] = np.nan
+        # 始终包含基本面特征（无论是否在白名单）
+        for k, v in features.items():
+            if k.startswith("fund_") and k not in record:
+                record[k] = v if (v is not None and np.isfinite(v)) else np.nan
         records.append(record)
 
     df = pd.DataFrame(records)
-    logger.info(f"  合并后: {len(df)} 行, {len(whitelist)} 个特征")
+    actual_cols = [c for c in df.columns if c not in ("date", "stock_code", "target")]
+    logger.info(f"  合并后: {len(df)} 行, {len(actual_cols)} 个特征 (白名单{len(whitelist)}+基本面{len([c for c in actual_cols if c.startswith('fund_')])})")
     return df
 
 
@@ -123,6 +149,21 @@ def fill_nan(df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
             df[col] = df[col].fillna(median_val)
     after_nan = df[feature_cols].isna().sum().sum()
     logger.info(f"  NaN 填充: {before_nan} → {after_nan} 个 NaN (用中位数填充)")
+    return df
+
+
+def forward_fill_fundamentals(df: pd.DataFrame) -> pd.DataFrame:
+    """对 fund_* 特征按股票前向填充（季度→日频）."""
+    fund_cols = [c for c in df.columns if c.startswith("fund_")]
+    if not fund_cols:
+        return df
+
+    before_nan = df[fund_cols].isna().sum().sum()
+    df = df.sort_values(["stock_code", "date"])
+    df[fund_cols] = df.groupby("stock_code")[fund_cols].transform(lambda g: g.ffill())
+    after_nan = df[fund_cols].isna().sum().sum()
+    filled = before_nan - after_nan
+    logger.info(f"  基本面(fund_*)前向填充: {before_nan} → {after_nan} 个 NaN ({filled} 个已填充)")
     return df
 
 
@@ -241,8 +282,9 @@ async def main():
     whitelist = await load_whitelist_features()
     logger.info(f"白名单因子: {len(whitelist)} 个")
     if not whitelist:
-        logger.error("白名单为空! 请先运行 Phase C (scripts/screen_factors.py)")
-        return
+        logger.warning("白名单为空, 从 FeatureStore 发现可用特征...")
+        whitelist = await discover_all_features()
+        logger.info(f"  已发现 {len(whitelist)} 个特征")
 
     # 2. 加载特征数据
     logger.info("加载特征数据...")
@@ -251,13 +293,18 @@ async def main():
         logger.error("无有效数据!")
         return
 
+    # 2b. 基本面前向填充（季度→日频）
+    logger.info("基本面前向填充...")
+    df = forward_fill_fundamentals(df)
+    all_feature_cols = [c for c in df.columns if c not in ("date", "stock_code", "target")]
+
     # 3. NaN 填充
     logger.info("NaN 填充...")
-    df = fill_nan(df, whitelist)
+    df = fill_nan(df, all_feature_cols)
 
     # 4. 去共线
     logger.info("去共线...")
-    kept_cols = decorrelate(df, whitelist, CORR_THRESHOLD)
+    kept_cols = decorrelate(df, all_feature_cols, CORR_THRESHOLD)
 
     # 5. 时序分割
     logger.info("时序分割...")

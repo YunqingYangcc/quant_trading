@@ -18,19 +18,19 @@
   "val_rows": 3146,
   "test_rows": 7469,
   "objective": "binary",
-  "cv_mean_acc": 0.5505,
-  "cv_std_acc": 0.0802,
-  "train_acc": 0.7153,
-  "val_acc": 0.5346,
-  "test_acc": 0.5263,
-  "acc_gap": 0.1806,
+  "cv_mean_acc": 0.4676,
+  "cv_std_acc": 0.1959,
+  "train_acc": 0.6532,
+  "val_acc": 0.5397,
+  "test_acc": 0.5517,
+  "acc_gap": 0.1134,
   "overfitting": true,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -38,51 +38,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.1,
-    "reg_lambda": 1.0,
+    "reg_alpha": 0.05,
+    "reg_lambda": 0.5,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "sma_5",
-      "importance": 106
-    },
-    {
-      "name": "track_storage_max_ret_20d",
-      "importance": 86
-    },
-    {
-      "name": "adx",
-      "importance": 65
+      "name": "obv",
+      "importance": 43
     },
     {
       "name": "atr_5",
-      "importance": 62
+      "importance": 23
+    },
+    {
+      "name": "track_storage_max_ret_20d",
+      "importance": 21
+    },
+    {
+      "name": "track_semiconductor_money_flow_ratio_20d",
+      "importance": 19
+    },
+    {
+      "name": "sma_5",
+      "importance": 18
+    },
+    {
+      "name": "vpt",
+      "importance": 17
     },
     {
       "name": "ret_skew_60",
-      "importance": 47
+      "importance": 16
     },
     {
-      "name": "ppo_signal",
-      "importance": 42
+      "name": "ad",
+      "importance": 13
     },
     {
-      "name": "track_semiconductor_mom_20d",
-      "importance": 40
+      "name": "cmf",
+      "importance": 11
     },
     {
-      "name": "ret_skew_20",
-      "importance": 25
-    },
-    {
-      "name": "track_semiconductor_money_flow_20d",
-      "importance": 25
-    },
-    {
-      "name": "roc_60",
-      "importance": 24
+      "name": "fund_净资产增长率_pct",
+      "importance": 11
     }
   ]
 }

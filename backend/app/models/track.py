@@ -141,3 +141,19 @@ class ScoreHistory(Base):
     test_r2 = Column(Float, default=0)  # 测试 R²
     params_snapshot = Column(JSON, nullable=True)  # 训练参数快照
     scored_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class PipelineRun(Base):
+    """流水线运行记录 - 每次训练/回测的日志"""
+
+    __tablename__ = "pipeline_runs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    run_type = Column(String(20), nullable=False, index=True)  # train / backtest
+    status = Column(String(20), nullable=False, default="success")  # success / failed
+    params_snapshot = Column(JSON, nullable=True)  # 使用的参数
+    results_summary = Column(JSON, nullable=True)  # 结果摘要
+    git_commit_hash = Column(String(40), nullable=True)  # Git commit
+    feature_count = Column(Integer, nullable=True)  # 特征数
+    duration_seconds = Column(Float, nullable=True)  # 耗时
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

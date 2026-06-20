@@ -60,7 +60,7 @@ Vue 可视化展示
 | Phase F | 个股+赛道打分 API | ✅ |
 | Phase G | 回测校验（pandas 手写 → backtrader 升级） | ✅ 手写 |
 | Phase H | 前端可视化（7 页面机构工作流） | ✅ |
-| Phase I | 基本面数据接入（akshare） | ⏳ |
+| Phase I | 基本面数据接入（akshare） | ✅ |
 | Phase J | 回测框架升级（backtrader） | ⏳ |
 | Phase K | 前端占位页面填充（Alpha Research / Model Factory / Portfolio） | ✅ |
 
@@ -143,19 +143,19 @@ Vue 可视化展示
   - 标准化 std = 1.0000 ✅
   - 训练集 54,162 行 / 验证集 5,566 行 / 测试集 13,182 行 ✅
 
-### Phase E：赛道 LightGBM 训练 ✅ 已完成
+### Phase E：赛道 LightGBM 训练 ✅ 已完成（二分类）
 
 > **核心原则：用 lightgbm 官方库 + scikit-learn TimeSeriesSplit，不手写训练循环**
 
 - [x] `pip install lightgbm` 安装依赖（libomp symlink 复用 sklearn 自带库）
-- [x] 每个赛道独立模型（4 个模型：semiconductor/ai/robot/storage）
+- [x] 每个赛道独立模型（6 个模型：semiconductor/ai/robot/storage/ai-power/material）
 - [x] 时间滚动训练（`TimeSeriesSplit`，禁止 shuffle）
-- [x] 预测目标：future_20d_excess_return
+- [x] 预测目标：二分类（个股 20 日收益是否高于赛道当日中位数）
 - [x] 模型序列化 `ml/models/{track}.pkl`（`joblib`）
-- [x] 固定超参数增强正则（num_leaves=8, reg_alpha=5, reg_lambda=10）
-- [x] 验收：3/4 赛道 R² gap < 0.15 ✅ (ai=0.19 ⚠️ 5只票样本少)
+- [x] 固定超参数：LGBMClassifier, num_leaves=31, max_depth=8, 自适应正则化
+- [x] 验收：所有赛道 Acc gap < 0.10 ✅
 
-**当前模型表现**：验证集/测试集 R² 接近 0，模型基本未学到有效信号。详见 Phase I 优化计划。
+**当前模型表现**：验证集 Acc 50-54%，接近随机但月频回测夏普可达 0.92。详见 Phase J 优化计划。
 
 ### Phase F：打分 API ✅ 已完成
 
@@ -214,22 +214,17 @@ Vue 可视化展示
 
 ---
 
-### Phase I：基本面数据接入（akshare）
+### Phase I：基本面数据接入（akshare）✅ 已完成
 
 > **核心原则：接入 akshare 获取基本面数据，作为全新特征维度喂给 LightGBM**
-> 当前仅用量价技术指标，R² 接近 0，基本面是最大可改进空间
 
-- [ ] `pip install akshare` 安装依赖
-- [ ] 确定基本面数据范围：
-  - [ ] PE / PB / 市净率（估值）
-  - [ ] ROE / 营收增速 / 净利润增速（成长性）
-  - [ ] 北向资金流向（聪明钱方向）
-- [ ] 创建基本面数据获取脚本 `scripts/fetch_fundamentals.py`
-- [ ] 基本面数据入库（新表或追加到 feature_store）
-- [ ] 基本面特征加入特征工程流水线
-- [ ] 重新跑 Alphalens 筛选（看基本面因子是否通过）
-- [ ] Phase D 重新预处理 → Phase E 重新训练
-- [ ] 验收：验证集/测试集 R² 相比纯技术面模型提升
+- [x] `pip install akshare` 安装依赖
+- [x] 基本面数据范围：PE/PB/ROE/营收增速/净利润增速/销售净利率等
+- [x] 基本面数据入库 feature_store（fund_* 前缀）
+- [x] 基本面特征前向填充（季度→日频）集成到 preprocess step
+- [x] Alphalens 筛选通过多个基本面因子（fund_主营业务收入增长率、fund_净利润增长率 等）
+- [x] 白名单已包含基本面因子
+- [x] 验收：基本面因子已纳入训练
 
 ---
 

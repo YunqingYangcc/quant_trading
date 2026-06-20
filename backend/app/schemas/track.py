@@ -174,3 +174,18 @@ class BacktestRunParams(BaseModel):
     rebalance_freq: str = Field(default="W", description="调仓频率: W=周频, M=月频")
     max_single_stock: float = Field(default=0.20, description="单票上限", ge=0.05, le=0.50)
     max_single_track: float = Field(default=0.50, description="单赛道上限", ge=0.10, le=0.80)
+
+
+class PipelineRunResponse(BaseModel):
+    """流水线运行记录"""
+    id: int
+    run_type: str
+    status: str
+    params_snapshot: dict | None = None
+    results_summary: dict | None = None
+    git_commit_hash: str | None = None
+    feature_count: int | None = None
+    duration_seconds: float | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

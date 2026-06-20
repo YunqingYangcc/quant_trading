@@ -12,9 +12,7 @@ import joblib
 import pandas as pd
 from fastapi import APIRouter, Body, HTTPException
 
-from app.ml.model_trainer import LightGBMTrainer
-from app.ml.scorer import TrackScorer
-from app.schemas.track import BacktestRunParams, TrainModelParams
+from app.schemas.track import BacktestRunParams, PipelineRunResponse, TrainModelParams
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -406,9 +404,20 @@ async def get_score_history(track_name: str, limit: int = 5):
 
 @router.get("/ml/models/{track_name}", summary="列出赛道模型")
 async def list_models(track_name: str):
-    """列出赛道已训练模型"""
-    trainer = LightGBMTrainer(track_name)
-    models = trainer.list_models()
+    """列出赛道已训练模型的元信息（直接读 *_meta.json）"""
+    models = []
+    meta_path = MODELS_DIR / f"{track_name}_meta.json"
+    if meta_path.exists():
+        with open(meta_path) as f:
+            meta = json.load(f)
+        pkl_path = MODELS_DIR / f"{track_name}.pkl"
+        if pkl_path.exists():
+            import datetime as dt
+            mtime = dt.datetime.fromtimestamp(pkl_path.stat().st_mtime)
+            meta["trained_at"] = mtime.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            meta["trained_at"] = None
+        models.append(meta)
     return {"track_name": track_name, "models": models}
 
 
@@ -690,4 +699,22 @@ async def api_run_pipeline(step: str = "all"):
                 raise HTTPException(status_code=500, detail=str(e))
 
     return {"status": "completed", "steps": results}
+
+
+@router.get("/ml/pipeline-runs", summary="获取流水线运行记录")
+async def get_pipeline_runs(limit: int = 10, run_type: str | None = None):
+    """获取最近 N 次流水线运行记录（训练/回测）"""
+    from sqlalchemy import select, desc
+    from app.models.track import PipelineRun
+    from app.db.database import async_session_maker
+
+    async with async_session_maker() as session:
+        q = select(PipelineRun).order_by(desc(PipelineRun.created_at))
+        if run_type:
+            q = q.where(PipelineRun.run_type == run_type)
+        q = q.limit(limit)
+        result = await session.execute(q)
+        records = result.scalars().all()
+
+    return [PipelineRunResponse.model_validate(r) for r in records]
 

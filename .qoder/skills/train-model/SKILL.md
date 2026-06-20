@@ -63,27 +63,31 @@ tscv = TimeSeriesSplit(n_splits=5)
 import lightgbm as lgb
 
 # 固定超参数，不随意调
+# 当前使用二分类目标（预测个股是否跑赢赛道当日中位数）
 DEFAULT_PARAMS = {
-    "objective": "regression",
-    "metric": "mse",
-    "learning_rate": 0.05,
+    "objective": "binary",
+    "metric": "binary_logloss",
+    "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 6,
+    "max_depth": 8,
     "min_child_samples": 20,
-    "subsample": 0.8,
-    "colsample_bytree": 0.8,
+    "min_child_weight": 0.001,
+    "learning_rate": 0.05,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.9,
+    "bagging_freq": 3,
+    "n_estimators": 1000,
     "reg_alpha": 0.1,
     "reg_lambda": 1.0,
-    "n_estimators": 500,
     "random_state": 42,
     "verbose": -1,
 }
 
 # 每个赛道独立训练
-for track_name in ["semiconductor", "ai", "robot", "storage"]:
+for track_name in track_names:
     X_track, y_track = filter_by_track(X, y, track_name)
-    model = lgb.LGBMRegressor(**DEFAULT_PARAMS)
-    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], callbacks=[lgb.early_stopping(50)])
+    model = lgb.LGBMClassifier(**DEFAULT_PARAMS)
+    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], callbacks=[lgb.early_stopping(20)])
 ```
 
 **铁律**：
@@ -93,20 +97,20 @@ for track_name in ["semiconductor", "ai", "robot", "storage"]:
 ## Step 4: Validate — 过拟合检测
 
 ```python
-from sklearn.metrics import r2_score
+from sklearn.metrics import accuracy_score
 
-train_r2 = r2_score(y_train, model.predict(X_train))
-test_r2 = r2_score(y_test, model.predict(X_test))
-gap = train_r2 - test_r2
+train_acc = accuracy_score(y_train, model.predict(X_train))
+val_acc = accuracy_score(y_val, model.predict(X_val))
+gap = train_acc - val_acc
 
-assert gap < 0.15, f"过拟合！训练R²={train_r2:.3f}, 测试R²={test_r2:.3f}, 差距={gap:.3f}"
+assert gap < 0.10, f"过拟合！训练Acc={train_acc:.3f}, 验证Acc={val_acc:.3f}, 差距={gap:.3f}"
 ```
 
 | 情况 | 处理 |
 |:-----|:-----|
-| gap < 0.15 | ✅ 通过，继续 |
-| gap 0.15-0.25 | ⚠️ 警告，记录但可接受 |
-| gap > 0.25 | ❌ 过拟合，减少 n_estimators 或增大 reg_lambda 后重训 |
+| gap < 0.10 | ✅ 通过，继续 |
+| gap 0.10-0.15 | ⚠️ 警告，记录但可接受 |
+| gap > 0.15 | ❌ 过拟合，减少 n_estimators 或增大 reg_lambda 后重训 |
 
 ## Step 5: Save
 

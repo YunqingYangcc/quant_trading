@@ -36,6 +36,38 @@
       </div>
     </div>
 
+    <!-- 流水线运行日志 -->
+    <div class="pipeline-logs">
+      <div class="pl-header">
+        <span class="pl-title">流水线日志</span>
+        <el-button size="small" text @click="loadPipelineRuns">刷新</el-button>
+      </div>
+      <div v-if="pipelineRuns.length === 0" class="pl-empty">暂无运行记录</div>
+      <div v-for="run in pipelineRuns" :key="run.id" class="pl-item">
+        <div class="pl-item-header">
+          <el-tag :type="run.run_type === 'train' ? 'primary' : 'success'" size="small" effect="dark">
+            {{ run.run_type === 'train' ? '训练' : '回测' }}
+          </el-tag>
+          <span class="pl-item-time">{{ formatTime(run.created_at) }}</span>
+          <span v-if="run.feature_count" class="pl-item-info">{{ run.feature_count }} 个特征</span>
+          <span v-if="run.git_commit_hash" class="pl-item-hash">#{{ run.git_commit_hash }}</span>
+        </div>
+        <div v-if="run.results_summary" class="pl-item-body">
+          <template v-if="run.run_type === 'train'">
+            <span v-for="(v, k) in run.results_summary" :key="k" class="pl-metric">
+              {{ k }}: acc={{ (v.val_acc * 100).toFixed(1) }}%
+              <el-tag v-if="v.overfitting" size="small" type="danger" effect="plain">过拟合</el-tag>
+            </span>
+          </template>
+          <template v-else>
+            <span v-for="(v, k) in run.results_summary" :key="k" class="pl-metric">
+              {{ k }}: 夏普={{ v.sharpe_ratio.toFixed(2) }} 收益={{ (v.total_return).toFixed(1) }}%
+            </span>
+          </template>
+        </div>
+      </div>
+    </div>
+
     <!-- 顶部统计卡片（动态数据） -->
     <div class="stats-row">
       <div class="stat-card">
@@ -218,7 +250,7 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted } from 'vue'
 import { Search, ArrowRight, CaretRight } from '@element-plus/icons-vue'
-import { getWhitelist, getBlacklist, listTracks, runPipeline as runPipelineApi } from '@/api/track'
+import { getWhitelist, getBlacklist, listTracks, runPipeline as runPipelineApi, getPipelineRuns } from '@/api/track'
 import { ElMessage } from 'element-plus'
 
 const factors = ref<any[]>([])
@@ -233,6 +265,24 @@ const stats = ref({
   blacklist: 72,
   finalFeatures: 54,
   models: 4,
+})
+
+// ── 流水线运行日志 ──
+const pipelineRuns = ref<any[]>([])
+
+function formatTime(ts: string) {
+  return ts?.replace('T', ' ').slice(0, 19) || ''
+}
+
+async function loadPipelineRuns() {
+  try {
+    const res: any = await getPipelineRuns(10)
+    pipelineRuns.value = res.data || []
+  } catch { /* ignore */ }
+}
+
+onMounted(() => {
+  loadPipelineRuns()
 })
 
 // ── Pipeline Runner ──
@@ -610,6 +660,84 @@ onMounted(async () => {
   word-break: break-all;
   font-family: 'SF Mono', monospace;
   line-height: 1.5;
+}
+
+/* ── 流水线日志 ── */
+.pipeline-logs {
+  margin-bottom: 16px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.pl-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pl-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #303133;
+}
+
+.pl-empty {
+  color: #909399;
+  font-size: 12px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+.pl-item {
+  border-bottom: 1px solid #f0f0f0;
+  padding: 8px 0;
+}
+
+.pl-item:last-child {
+  border-bottom: none;
+}
+
+.pl-item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.pl-item-time {
+  color: #909399;
+  font-size: 11px;
+}
+
+.pl-item-info {
+  color: #909399;
+  font-size: 11px;
+}
+
+.pl-item-hash {
+  color: #909399;
+  font-size: 11px;
+  font-family: 'SF Mono', monospace;
+  margin-left: auto;
+}
+
+.pl-item-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-left: 4px;
+}
+
+.pl-metric {
+  font-size: 12px;
+  color: #606266;
+  background: #f5f7fa;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
 }
 
 /* ── 统计卡片行 ── */

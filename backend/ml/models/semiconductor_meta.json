@@ -24,19 +24,19 @@
   "val_rows": 4598,
   "test_rows": 10898,
   "objective": "binary",
-  "cv_mean_acc": 0.5448,
-  "cv_std_acc": 0.013,
-  "train_acc": 0.5584,
-  "val_acc": 0.5402,
-  "test_acc": 0.5275,
-  "acc_gap": 0.0182,
+  "cv_mean_acc": 0.5453,
+  "cv_std_acc": 0.0132,
+  "train_acc": 0.5397,
+  "val_acc": 0.5309,
+  "test_acc": 0.5295,
+  "acc_gap": 0.0088,
   "overfitting": false,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -51,44 +51,44 @@
   },
   "top_features": [
     {
-      "name": "sma_5",
-      "importance": 36
+      "name": "obv",
+      "importance": 4
     },
     {
-      "name": "track_storage_max_ret_20d",
-      "importance": 20
+      "name": "ad",
+      "importance": 2
     },
     {
-      "name": "track_semiconductor_money_flow_20d",
-      "importance": 18
+      "name": "pv_corr_20",
+      "importance": 2
     },
     {
-      "name": "ret_skew_60",
-      "importance": 17
+      "name": "track_semiconductor_min_ret_20d",
+      "importance": 2
     },
     {
-      "name": "atr_5",
-      "importance": 15
+      "name": "fund_每股经营性现金流_元",
+      "importance": 2
+    },
+    {
+      "name": "fund_净资产增长率_pct",
+      "importance": 2
+    },
+    {
+      "name": "track_storage_volatility_20d",
+      "importance": 2
+    },
+    {
+      "name": "macd_hist",
+      "importance": 1
     },
     {
       "name": "adx",
-      "importance": 13
+      "importance": 1
     },
     {
-      "name": "ulcer_14",
-      "importance": 12
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 11
-    },
-    {
-      "name": "track_storage_mom_60d",
-      "importance": 11
-    },
-    {
-      "name": "fi_13",
-      "importance": 10
+      "name": "bb_width",
+      "importance": 1
     }
   ]
 }

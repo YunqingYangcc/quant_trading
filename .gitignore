@@ -9,3 +9,10 @@ venv/
 
 # 大型数据文件（超 GitHub 100MB 限制）
 backend/track_quant.db
+
+# 量化流水线产出文件（模型/预处理/回测）
+backend/ml/models/*.pkl
+backend/ml/preprocessed/*.parquet
+backend/ml/backtest/*.csv
+backend/ml/preprocessed/backtest_*.parquet
+

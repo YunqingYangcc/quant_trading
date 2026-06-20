@@ -52,7 +52,25 @@ PREPROCESSED_DIR = Path(__file__).resolve().parent.parent / "ml" / "preprocessed
 
 
 def load_historical_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """加载数据并使用 AI 模型生成历史打分"""
+    """加载数据并使用 AI 模型生成历史打分（带缓存）"""
+    scores_cache_path = PREPROCESSED_DIR / "backtest_scores.parquet"
+    prices_cache_path = PREPROCESSED_DIR / "backtest_prices.parquet"
+
+    # 检查缓存是否有效（模型文件未变则直接用缓存）
+    if scores_cache_path.exists() and prices_cache_path.exists():
+        cache_mtime = scores_cache_path.stat().st_mtime
+        model_files = list(MODELS_DIR.glob("*.pkl"))
+        if model_files:
+            newest_model = max(f.stat().st_mtime for f in model_files)
+            if cache_mtime > newest_model:
+                logger.info("  ✅ 使用缓存打分（模型未变更，跳过 AI 预测）")
+                scores = pd.read_parquet(scores_cache_path)
+                prices = pd.read_parquet(prices_cache_path)
+                return scores, prices
+        else:
+            logger.warning("  未找到模型文件，重新计算打分")
+
+    logger.info("  计算 AI 打分（无缓存或模型已更新）...")
     val = pd.read_parquet(PREPROCESSED_DIR / "val.parquet")
     test = pd.read_parquet(PREPROCESSED_DIR / "test.parquet")
     df = pd.concat([val, test], ignore_index=True)
@@ -93,6 +111,12 @@ def load_historical_scores() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     scores = df[["trade_date", "stock_code", "pred_score"]].copy()
     prices = df.pivot_table(index="trade_date", columns="stock_code", values="close")
+
+    # 缓存结果
+    PREPROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    scores.to_parquet(scores_cache_path)
+    prices.to_parquet(prices_cache_path)
+    logger.info(f"  💾 打分已缓存 ({len(scores)} 条)")
 
     logger.info(f"  使用 AI 模型生成打分: {len(scores)} 条")
     return scores, prices
@@ -505,7 +529,53 @@ def main():
     # 2. 运行全部策略
     all_results = run_all_strategies(scores, prices)
 
+    # 3. 记录流水线日志
+    _record_backtest_log(all_results, BACKTEST_PARAMS)
+
     logger.info(f"\n结果已保存: {Path(__file__).resolve().parent.parent / 'ml' / 'backtest'}")
+
+
+import asyncio as _asyncio
+
+
+def _record_backtest_log(all_results: list[dict], params: dict):
+    """记录回测流水线日志到数据库."""
+    import subprocess
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except Exception:
+        git_hash = None
+
+    summary = {}
+    for r in all_results:
+        summary[r["name"]] = {
+            "sharpe_ratio": r["sharpe_ratio"],
+            "total_return": r["total_return"],
+            "annual_return": r["annual_return"],
+            "max_drawdown": r["max_drawdown"],
+            "win_rate": r["win_rate"],
+            "annual_volatility": r["annual_volatility"],
+            "trades": r["trades"],
+        }
+
+    async def _save():
+        from app.db.database import async_session_maker
+        from app.models.track import PipelineRun
+        async with async_session_maker() as session:
+            run_log = PipelineRun(
+                run_type="backtest",
+                status="success",
+                params_snapshot=dict(params),
+                results_summary=summary,
+                git_commit_hash=git_hash,
+            )
+            session.add(run_log)
+            await session.commit()
+
+    _asyncio.run(_save())
+    logger.info(f"回测日志已记录: {len(all_results)} 个策略")
 
 
 if __name__ == "__main__":

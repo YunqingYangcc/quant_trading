@@ -17,6 +17,7 @@ import asyncio
 import json
 import logging
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import joblib
@@ -42,7 +43,7 @@ LGB_PARAMS = {
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -110,6 +111,18 @@ def train_track_model(
         dict with training metrics
     """
     effective_params = {**LGB_PARAMS, **(params or {})}
+    # 自适应正则化：小样本赛道用更强的正则防过拟合
+    n_stocks = len(stock_codes)
+    if n_stocks <= 10:
+        effective_params["reg_alpha"] = 0.5
+        effective_params["reg_lambda"] = 2.0
+        logger.info(f"  {track_name}: 小样本赛道 ({n_stocks}只), 启用强正则化")
+    elif n_stocks <= 15:
+        effective_params["reg_alpha"] = 0.05
+        effective_params["reg_lambda"] = 0.5
+        logger.info(f"  {track_name}: 中等样本赛道 ({n_stocks}只), 启用中正则化")
+    else:
+        logger.info(f"  {track_name}: 充足样本赛道 ({n_stocks}只), 启用松绑参数")
     # 过滤到该赛道的股票
     train_track = train_df[train_df["stock_code"].isin(stock_codes)].copy()
     val_track = val_df[val_df["stock_code"].isin(stock_codes)].copy()
@@ -127,11 +140,11 @@ def train_track_model(
         med = df_tmp.groupby("date")["target"].transform("median")
         df_tmp["target_binary"] = (df_tmp["target"] > med).astype(int)
 
-    X_train = train_track[feature_cols].values
+    X_train = train_track[feature_cols]
     y_train = train_track["target_binary"].values
-    X_val = val_track[feature_cols].values
+    X_val = val_track[feature_cols]
     y_val = val_track["target_binary"].values
-    X_test = test_track[feature_cols].values
+    X_test = test_track[feature_cols]
     y_test = test_track["target_binary"].values
 
     logger.info(f"  数据: train={len(train_track)}, val={len(val_track)}, test={len(test_track)}")
@@ -141,7 +154,7 @@ def train_track_model(
     cv_scores = []
 
     for fold, (train_idx, val_idx) in enumerate(tscv.split(X_train)):
-        X_fold_train, X_fold_val = X_train[train_idx], X_train[val_idx]
+        X_fold_train, X_fold_val = X_train.iloc[train_idx], X_train.iloc[val_idx]
         y_fold_train, y_fold_val = y_train[train_idx], y_train[val_idx]
 
         model_cv = lgb.LGBMClassifier(**effective_params)
@@ -256,18 +269,28 @@ async def main():
     track_map = await get_track_stock_map()
     logger.info(f"  赛道: {', '.join(f'{k}({len(v)})' for k, v in track_map.items())}")
 
-    # 3. 分赛道训练
+    # 3. 分赛道训练（并行）
+    logger.info(f"\n开始并行训练 {len(track_map)} 个赛道...")
     results = {}
-    for track_name, stock_codes in track_map.items():
-        logger.info(f"\n{'─' * 40}")
-        logger.info(f"训练赛道: {track_name} ({len(stock_codes)} 只股票)")
-        logger.info(f"{'─' * 40}")
+    with ThreadPoolExecutor(max_workers=min(4, len(track_map))) as executor:
+        futures = {}
+        for track_name, stock_codes in track_map.items():
+            future = executor.submit(
+                train_track_model,
+                track_name, stock_codes,
+                train_df, val_df, test_df, feature_cols,
+                None,
+            )
+            futures[future] = track_name
 
-        result = train_track_model(
-            track_name, stock_codes,
-            train_df, val_df, test_df, feature_cols
-        )
-        results[track_name] = result
+        for future in as_completed(futures):
+            track_name = futures[future]
+            try:
+                result = future.result()
+                results[track_name] = result
+            except Exception as e:
+                logger.error(f"{track_name} 训练异常: {e}")
+                results[track_name] = {"status": "failed", "error": str(e)}
 
     # 4. 汇总报告
     logger.info("\n" + "=" * 60)
@@ -293,6 +316,49 @@ async def main():
     logger.info(f"ACC gap < {ACC_GAP_THRESHOLD}: {'✅' if all_pass else '⚠️'}")
     logger.info(f"TimeSeriesSplit (无 shuffle): ✅")
     logger.info("=" * 60)
+
+    # 5. 记录流水线日志
+    await _record_pipeline_run(results, train_df, feature_cols)
+
+
+async def _record_pipeline_run(results: dict, train_df: pd.DataFrame, feature_cols: list[str]):
+    """记录训练流水线日志到数据库."""
+    import subprocess
+    import time
+    try:
+        git_hash = subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL, text=True
+        ).strip()
+    except Exception:
+        git_hash = None
+
+    summary = {}
+    for name, r in results.items():
+        if r["status"] == "trained":
+            summary[name] = {
+                "train_acc": r["train_acc"],
+                "val_acc": r["val_acc"],
+                "test_acc": r["test_acc"],
+                "acc_gap": r["acc_gap"],
+                "overfitting": r["overfitting"],
+                "n_stocks": r.get("n_stocks", 0),
+            }
+
+    from app.db.database import async_session_maker
+    from app.models.track import PipelineRun
+
+    async with async_session_maker() as session:
+        run_log = PipelineRun(
+            run_type="train",
+            status="success",
+            params_snapshot=dict(LGB_PARAMS),
+            results_summary=summary,
+            git_commit_hash=git_hash,
+            feature_count=len(feature_cols),
+        )
+        session.add(run_log)
+        await session.commit()
+    logger.info(f"训练日志已记录: {len(results)} 个赛道")
 
 
 if __name__ == "__main__":

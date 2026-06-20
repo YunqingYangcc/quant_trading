@@ -15,19 +15,19 @@
   "val_rows": 1928,
   "test_rows": 4592,
   "objective": "binary",
-  "cv_mean_acc": 0.5437,
-  "cv_std_acc": 0.0199,
-  "train_acc": 0.6712,
-  "val_acc": 0.5389,
-  "test_acc": 0.5081,
-  "acc_gap": 0.1323,
+  "cv_mean_acc": 0.5415,
+  "cv_std_acc": 0.0108,
+  "train_acc": 0.6491,
+  "val_acc": 0.4995,
+  "test_acc": 0.4841,
+  "acc_gap": 0.1497,
   "overfitting": true,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 8,
+    "max_depth": 6,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -35,51 +35,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.1,
-    "reg_lambda": 1.0,
+    "reg_alpha": 0.5,
+    "reg_lambda": 2.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
       "name": "sma_5",
-      "importance": 97
-    },
-    {
-      "name": "track_material_max_ret_20d",
-      "importance": 67
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 45
-    },
-    {
-      "name": "atr_5",
-      "importance": 37
-    },
-    {
-      "name": "track_material_trend_60d",
-      "importance": 34
-    },
-    {
-      "name": "track_material_amihud_illiq",
-      "importance": 31
-    },
-    {
-      "name": "ret_skew_20",
       "importance": 29
     },
     {
-      "name": "pv_corr_20",
-      "importance": 28
+      "name": "vpt",
+      "importance": 27
     },
     {
-      "name": "track_material_volatility_20d",
-      "importance": 26
+      "name": "obv",
+      "importance": 22
     },
     {
-      "name": "roc_60",
+      "name": "ret_skew_20",
       "importance": 20
+    },
+    {
+      "name": "fund_销售净利率_pct",
+      "importance": 18
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 17
+    },
+    {
+      "name": "ad",
+      "importance": 15
+    },
+    {
+      "name": "pv_corr_20",
+      "importance": 12
+    },
+    {
+      "name": "fund_主营业务收入增长率_pct",
+      "importance": 12
+    },
+    {
+      "name": "adx",
+      "importance": 9
     }
   ]
 }
