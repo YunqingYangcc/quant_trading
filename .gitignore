@@ -16,3 +16,4 @@ backend/ml/preprocessed/*.parquet
 backend/ml/backtest/*.csv
 backend/ml/preprocessed/backtest_*.parquet
 
+track_quant.db
