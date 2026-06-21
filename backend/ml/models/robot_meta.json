@@ -2,33 +2,46 @@
   "track_name": "robot",
   "stock_codes": [
     "000837.SZ",
+    "002009.SZ",
     "002472.SZ",
+    "002527.SZ",
+    "002698.SZ",
     "002747.SZ",
     "002896.SZ",
+    "002979.SZ",
+    "003021.SZ",
+    "300024.SZ",
     "300124.SZ",
     "300161.SZ",
+    "300258.SZ",
+    "300354.SZ",
+    "300488.SZ",
     "300503.SZ",
     "300607.SZ",
     "301368.SZ",
+    "603667.SH",
     "688017.SH",
     "688160.SH",
-    "688320.SH"
+    "688165.SH",
+    "688255.SH",
+    "688320.SH",
+    "688698.SH"
   ],
-  "n_stocks": 12,
-  "train_rows": 22019,
-  "val_rows": 2904,
-  "test_rows": 6888,
+  "n_stocks": 25,
+  "train_rows": 46298,
+  "val_rows": 6050,
+  "test_rows": 14335,
   "objective": "binary",
-  "cv_mean_acc": 0.5183,
-  "cv_std_acc": 0.017,
-  "train_acc": 0.5735,
-  "val_acc": 0.5,
-  "test_acc": 0.5001,
-  "train_r2": 0.5735,
-  "val_r2": 0.5,
-  "test_r2": 0.5001,
-  "cv_mean_r2": 0.5183,
-  "acc_gap": 0.0735,
+  "cv_mean_acc": 0.5113,
+  "cv_std_acc": 0.0239,
+  "train_acc": 0.5231,
+  "val_acc": 0.52,
+  "test_acc": 0.5196,
+  "train_r2": 0.5231,
+  "val_r2": 0.52,
+  "test_r2": 0.5196,
+  "cv_mean_r2": 0.5113,
+  "acc_gap": 0.0031,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -43,51 +56,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.05,
-    "reg_lambda": 0.5,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "ad",
-      "importance": 8
-    },
-    {
-      "name": "vpt",
-      "importance": 8
-    },
-    {
-      "name": "sma_5",
+      "name": "ret_skew_60",
       "importance": 5
     },
     {
-      "name": "ret_skew_60",
-      "importance": 2
+      "name": "adx",
+      "importance": 4
+    },
+    {
+      "name": "track_robot_max_ret_20d",
+      "importance": 4
+    },
+    {
+      "name": "sma_5",
+      "importance": 3
+    },
+    {
+      "name": "obv",
+      "importance": 3
+    },
+    {
+      "name": "pv_corr_20",
+      "importance": 3
     },
     {
       "name": "track_robot_trend_60d",
       "importance": 2
     },
     {
-      "name": "track_robot_volatility_20d",
+      "name": "track_robot_money_flow_20d",
       "importance": 2
     },
     {
-      "name": "ppo_signal",
+      "name": "atr_5",
       "importance": 1
     },
     {
-      "name": "ulcer_14",
+      "name": "vpt",
       "importance": 1
-    },
-    {
-      "name": "track_robot_money_flow_20d",
-      "importance": 1
-    },
-    {
-      "name": "rsi_6",
-      "importance": 0
     }
   ]
 }

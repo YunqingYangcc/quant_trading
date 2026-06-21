@@ -1,35 +1,54 @@
 {
   "track_name": "ai",
   "stock_codes": [
+    "000938.SZ",
     "000977.SZ",
     "000988.SZ",
     "002230.SZ",
     "002281.SZ",
+    "300229.SZ",
     "300308.SZ",
+    "300383.SZ",
     "300394.SZ",
+    "300418.SZ",
+    "300442.SZ",
+    "300474.SZ",
     "300502.SZ",
+    "300624.SZ",
+    "300738.SZ",
+    "301205.SZ",
+    "600845.SH",
     "601138.SH",
     "603019.SH",
     "603083.SH",
+    "688039.SH",
     "688041.SH",
+    "688047.SH",
+    "688088.SH",
+    "688111.SH",
+    "688195.SH",
+    "688205.SH",
+    "688207.SH",
     "688256.SH",
-    "688498.SZ"
+    "688327.SH",
+    "688343.SH",
+    "688498.SH"
   ],
-  "n_stocks": 13,
-  "train_rows": 29001,
-  "val_rows": 2904,
-  "test_rows": 6868,
+  "n_stocks": 32,
+  "train_rows": 56418,
+  "val_rows": 7684,
+  "test_rows": 18332,
   "objective": "binary",
-  "cv_mean_acc": 0.5415,
-  "cv_std_acc": 0.0068,
-  "train_acc": 0.5404,
-  "val_acc": 0.4997,
-  "test_acc": 0.4875,
-  "train_r2": 0.5404,
-  "val_r2": 0.4997,
-  "test_r2": 0.4875,
-  "cv_mean_r2": 0.5415,
-  "acc_gap": 0.0407,
+  "cv_mean_acc": 0.5114,
+  "cv_std_acc": 0.0095,
+  "train_acc": 0.5268,
+  "val_acc": 0.5049,
+  "test_acc": 0.5002,
+  "train_r2": 0.5268,
+  "val_r2": 0.5049,
+  "test_r2": 0.5002,
+  "cv_mean_r2": 0.5114,
+  "acc_gap": 0.0219,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -44,51 +63,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.05,
-    "reg_lambda": 0.5,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "ret_skew_60",
-      "importance": 15
-    },
-    {
-      "name": "sma_5",
-      "importance": 14
-    },
-    {
       "name": "vpt",
-      "importance": 12
-    },
-    {
-      "name": "track_ai_max_ret_20d",
-      "importance": 12
-    },
-    {
-      "name": "ad",
-      "importance": 9
-    },
-    {
-      "name": "atr_5",
       "importance": 8
     },
     {
-      "name": "ppo_signal",
+      "name": "obv",
+      "importance": 7
+    },
+    {
+      "name": "track_ai_max_ret_20d",
+      "importance": 7
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 6
+    },
+    {
+      "name": "sma_5",
       "importance": 5
+    },
+    {
+      "name": "track_ai_min_ret_20d",
+      "importance": 4
+    },
+    {
+      "name": "adx",
+      "importance": 3
     },
     {
       "name": "pv_corr_20",
-      "importance": 5
+      "importance": 3
     },
     {
-      "name": "track_ai_trend_60d",
-      "importance": 5
+      "name": "sma_dev_60",
+      "importance": 2
     },
     {
-      "name": "track_ai_money_flow_20d",
-      "importance": 5
+      "name": "macd_hist",
+      "importance": 2
     }
   ]
 }

@@ -65,26 +65,44 @@ async def _get_best_strategy_for_track(track_name: str) -> dict | None:
         records = result.scalars().all()
 
     best_sharpe = -999
+    best_sharpe_tracked = -999
     best_strategy = None
+    best_strategy_tracked = None
+    has_any_tracked = False
 
     for r in records:
         summary = r.results_summary or {}
         params = r.params_snapshot or {}
         bt_track = params.get("track_name", "")
+        has_track = bool(bt_track)
         if bt_track and bt_track != track_name:
             continue
+        if has_track:
+            has_any_tracked = True
         if isinstance(summary, dict):
             for sname, smetrics in summary.items():
+                # 排除基准策略
+                if sname in {"equal_weight", "baseline"}:
+                    continue
                 if isinstance(smetrics, dict) and not smetrics.get("error"):
                     sharpe = smetrics.get("sharpe_ratio", 0)
-                    if isinstance(sharpe, (int, float)) and sharpe > best_sharpe:
-                        best_sharpe = sharpe
-                        best_strategy = {
-                            "key": sname,
-                            "name": smetrics.get("name", sname),
-                            "sharpe": round(sharpe, 3),
-                        }
-    return best_strategy
+                    if isinstance(sharpe, (int, float)) and sharpe > 0:
+                        if has_track and sharpe > best_sharpe_tracked:
+                            best_sharpe_tracked = sharpe
+                            best_strategy_tracked = {
+                                "key": sname,
+                                "name": smetrics.get("name", sname),
+                                "sharpe": round(sharpe, 3),
+                            }
+                        elif not has_track and sharpe > best_sharpe:
+                            best_sharpe = sharpe
+                            best_strategy = {
+                                "key": sname,
+                                "name": smetrics.get("name", sname),
+                                "sharpe": round(sharpe, 3),
+                            }
+    # 有专属记录则只取专属，否则用全局
+    return best_strategy_tracked if has_any_tracked else (best_strategy_tracked or best_strategy)
 
 
 def _detect_trend(prices: pd.DataFrame, stock_codes: list[str]) -> dict:
@@ -164,11 +182,59 @@ def _generate_top_picks(prices: pd.DataFrame, stock_codes: list[str]) -> list[di
     return picks
 
 
-def _load_prices() -> pd.DataFrame | None:
-    """加载回测价格数据"""
+def _load_prices_from_db(stock_codes: list[str]) -> pd.DataFrame | None:
+    """从数据库实时加载近 120 个交易日的收盘价，保证最新数据"""
+    import asyncio
+    from app.db.database import async_session_maker
+    from app.models.track import TrackDataCache
+    from sqlalchemy import select
+
+    async def _query():
+        async with async_session_maker() as session:
+            # 取最近的 120 个交易日
+            from sqlalchemy import func, desc
+            latest = await session.execute(
+                select(TrackDataCache.trade_date)
+                .where(TrackDataCache.stock_code == stock_codes[0] if stock_codes else "")
+                .order_by(desc(TrackDataCache.trade_date))
+                .limit(120)
+            )
+            dates = [r[0] for r in latest.all()]
+            if not dates:
+                return None
+            start_date = dates[-1]
+
+            q = select(TrackDataCache.stock_code, TrackDataCache.trade_date, TrackDataCache.close_px)\
+                .where(TrackDataCache.stock_code.in_(stock_codes))\
+                .where(TrackDataCache.trade_date >= start_date)
+            result = await session.execute(q)
+            rows = result.all()
+            if not rows:
+                return None
+
+            df = pd.DataFrame(rows, columns=["stock_code", "trade_date", "close_px"])
+            df["trade_date"] = pd.to_datetime(df["trade_date"])
+            pivot = df.pivot_table(index="trade_date", columns="stock_code", values="close_px")
+            pivot = pivot.sort_index().ffill().dropna(how="all", axis=1)
+            return pivot
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop.run_until_complete(_query())
+    except Exception as e:
+        logger.warning(f"DB 加载价格失败，回退 parquet: {e}")
+        return _load_prices_fallback(stock_codes)
+
+
+def _load_prices_fallback(stock_codes: list[str]) -> pd.DataFrame | None:
+    """回退方案：从 parquet 文件加载"""
     prices_path = PREPROCESSED_DIR / "backtest_prices.parquet"
     if prices_path.exists():
-        return pd.read_parquet(prices_path)
+        prices = pd.read_parquet(prices_path)
+        valid = [c for c in stock_codes if c in prices.columns]
+        if valid:
+            return prices[valid]
     return None
 
 
@@ -179,21 +245,19 @@ async def get_suggestions():
     if not tracks:
         raise HTTPException(status_code=404, detail="没有活跃赛道")
 
-    prices = _load_prices()
-
     suggestions = []
     for t in tracks:
-        if prices is not None:
+        # 从 DB 实时加载价格
+        prices = _load_prices_from_db(t["stock_codes"])
+
+        if prices is not None and len(prices) >= 20:
             trend = _detect_trend(prices, t["stock_codes"])
-        else:
-            trend = {"direction": "neutral", "label": "无价格数据", "score": 50}
-
-        best = await _get_best_strategy_for_track(t["name"])
-
-        if prices is not None:
             top_picks = _generate_top_picks(prices, t["stock_codes"])
         else:
+            trend = {"direction": "neutral", "label": "数据不足", "score": 50}
             top_picks = []
+
+        best = await _get_best_strategy_for_track(t["name"])
 
         suggestions.append({
             "track_name": t["name"],

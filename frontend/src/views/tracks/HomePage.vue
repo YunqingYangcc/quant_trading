@@ -180,6 +180,7 @@
         </div>
       </div>
     </div>
+  </template>
   </div>
 </template>
 
@@ -189,6 +190,7 @@ import { useRouter } from 'vue-router'
 import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, getLearningStats, getSuggestions, type Track, type SuggestionItem } from '@/api/track'
 import PipelineStatus from '@/components/tracks/PipelineStatus.vue'
 import SuggestionPanel from '@/components/dashboard/SuggestionPanel.vue'
+import { useDataRefresh } from '@/composables/useDataRefresh'
 
 const router = useRouter()
 const tracks = ref<Track[]>([])
@@ -345,6 +347,23 @@ onMounted(async () => {
     // silent fail
   }
   loading.value = false
+})
+
+// 监听回测完成信号，自动刷新数据
+const { onRefresh } = useDataRefresh('backtest')
+onRefresh(async () => {
+  try {
+    const sugRes = await getSuggestions()
+    if (sugRes?.suggestions) {
+      suggestions.value = sugRes.suggestions
+      suggestionsUpdatedAt.value = sugRes.updated_at?.slice(0, 10) || ''
+    }
+    const ls = await getLearningStats()
+    if (ls) learningStats.value = ls
+    const bt = await getBacktestReport()
+    const m = bt?.metrics || (Array.isArray(bt) ? bt[0] : bt) || {}
+    stats.value.backtestReturn = (m.total_return || 0).toFixed(1) + '%'
+  } catch {}
 })
 </script>
 

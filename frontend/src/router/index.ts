@@ -51,6 +51,12 @@ const router = createRouter({
       meta: { title: 'Backtest Lab' },
       component: () => import('@/views/tracks/BacktestPage.vue'),
     },
+    {
+      path: '/runner',
+      name: 'runner',
+      meta: { title: '量化流水线' },
+      component: () => import('@/views/tracks/PipelineRunnerPage.vue'),
+    },
   ],
 })
 

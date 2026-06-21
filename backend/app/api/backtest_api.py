@@ -39,8 +39,8 @@ _LOCKED_PARAMS = {
 class CompareBacktestParams(BaseModel):
     """多策略对比回测参数"""
     strategies: list[str] = Field(
-        ..., description="策略名列表 (至少1个,最多6个)",
-        min_length=1, max_length=6,
+        ..., description="策略名列表",
+        min_length=1,
     )
     track_name: str = Field(default="semiconductor", description="赛道名")
     initial_capital: int = Field(default=100000, ge=10000, le=10000000)
@@ -215,6 +215,40 @@ async def compare_strategies(params: CompareBacktestParams):
 
     # 基准
     benchmark_curve = _calc_benchmark(prices, params.initial_capital)
+
+    # 保存回测结果到 PipelineRun
+    try:
+        from app.db.database import async_session_maker
+        from app.models.track import PipelineRun
+        summary = {}
+        for sname, sres in results.items():
+            if not sres.get("error"):
+                summary[sname] = {
+                    "name": sres.get("name", sname),
+                    "sharpe_ratio": sres["metrics"].get("sharpe_ratio"),
+                    "total_return": sres["metrics"].get("total_return"),
+                    "annual_return": sres["metrics"].get("annual_return"),
+                    "max_drawdown": sres["metrics"].get("max_drawdown"),
+                    "win_rate": sres["metrics"].get("win_rate"),
+                    "total_trades": sres["metrics"].get("total_trades"),
+                }
+            else:
+                summary[sname] = {"error": sres["error"]}
+
+        async with async_session_maker() as session:
+            session.add(PipelineRun(
+                run_type="backtest",
+                status="success",
+                params_snapshot={
+                    **bt_params,
+                    "track_name": params.track_name,
+                    "strategies": params.strategies,
+                },
+                results_summary=summary,
+            ))
+            await session.commit()
+    except Exception as e:
+        logger.error(f"保存回测结果失败: {e}")
 
     return {
         "strategies": results,

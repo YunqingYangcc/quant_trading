@@ -1,30 +1,43 @@
 {
   "track_name": "ai-power",
   "stock_codes": [
+    "000400.SZ",
+    "002028.SZ",
     "002335.SZ",
+    "002518.SZ",
+    "002533.SZ",
     "002837.SZ",
     "300274.SZ",
+    "300286.SZ",
+    "300510.SZ",
+    "300693.SZ",
     "300737.SZ",
+    "600089.SH",
+    "600312.SH",
     "600406.SH",
     "600900.SH",
+    "600995.SH",
+    "601126.SH",
+    "601877.SH",
     "601985.SH",
+    "603912.SH",
     "688676.SH"
   ],
-  "n_stocks": 8,
-  "train_rows": 20123,
-  "val_rows": 1936,
-  "test_rows": 4592,
+  "n_stocks": 21,
+  "train_rows": 64335,
+  "val_rows": 5082,
+  "test_rows": 12054,
   "objective": "binary",
-  "cv_mean_acc": 0.5432,
-  "cv_std_acc": 0.0091,
-  "train_acc": 0.5405,
-  "val_acc": 0.5,
-  "test_acc": 0.5,
-  "train_r2": 0.5405,
-  "val_r2": 0.5,
-  "test_r2": 0.5,
-  "cv_mean_r2": 0.5432,
-  "acc_gap": 0.0405,
+  "cv_mean_acc": 0.5296,
+  "cv_std_acc": 0.0135,
+  "train_acc": 0.6057,
+  "val_acc": 0.5447,
+  "test_acc": 0.5199,
+  "train_r2": 0.6057,
+  "val_r2": 0.5447,
+  "test_r2": 0.5199,
+  "cv_mean_r2": 0.5296,
+  "acc_gap": 0.061,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -39,51 +52,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.5,
-    "reg_lambda": 2.0,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "ret_skew_60",
-      "importance": 4
-    },
-    {
       "name": "obv",
-      "importance": 3
-    },
-    {
-      "name": "vpt",
-      "importance": 3
-    },
-    {
-      "name": "track_ai-power_trend_60d",
-      "importance": 3
-    },
-    {
-      "name": "ppo",
-      "importance": 2
+      "importance": 60
     },
     {
       "name": "sma_5",
-      "importance": 2
+      "importance": 57
     },
     {
-      "name": "ad",
-      "importance": 2
+      "name": "vpt",
+      "importance": 53
     },
     {
-      "name": "track_ai-power_volatility_20d",
-      "importance": 2
+      "name": "track_ai-power_min_ret_20d",
+      "importance": 41
+    },
+    {
+      "name": "atr_5",
+      "importance": 39
     },
     {
       "name": "track_ai-power_max_ret_20d",
-      "importance": 2
+      "importance": 34
     },
     {
-      "name": "roc_60",
-      "importance": 1
+      "name": "adx",
+      "importance": 31
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 30
+    },
+    {
+      "name": "price_pos_60",
+      "importance": 21
+    },
+    {
+      "name": "track_ai-power_trend_60d",
+      "importance": 21
     }
   ]
 }

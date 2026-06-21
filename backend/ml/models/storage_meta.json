@@ -1,9 +1,13 @@
 {
   "track_name": "storage",
   "stock_codes": [
+    "000021.SZ",
+    "000066.SZ",
     "001309.SZ",
     "002185.SZ",
+    "300042.SZ",
     "300223.SZ",
+    "300857.SZ",
     "301308.SZ",
     "600584.SH",
     "603986.SH",
@@ -11,24 +15,25 @@
     "688110.SH",
     "688123.SH",
     "688525.SH",
+    "688702.SH",
     "688766.SH"
   ],
-  "n_stocks": 11,
-  "train_rows": 21512,
-  "val_rows": 3146,
-  "test_rows": 7469,
+  "n_stocks": 16,
+  "train_rows": 30095,
+  "val_rows": 3701,
+  "test_rows": 9156,
   "objective": "binary",
-  "cv_mean_acc": 0.4708,
-  "cv_std_acc": 0.1914,
-  "train_acc": 0.7106,
-  "val_acc": 0.5461,
-  "test_acc": 0.5294,
-  "train_r2": 0.7106,
-  "val_r2": 0.5461,
-  "test_r2": 0.5294,
-  "cv_mean_r2": 0.4708,
-  "acc_gap": 0.1645,
-  "overfitting": true,
+  "cv_mean_acc": 0.524,
+  "cv_std_acc": 0.0093,
+  "train_acc": 0.5401,
+  "val_acc": 0.5231,
+  "test_acc": 0.5015,
+  "train_r2": 0.5401,
+  "val_r2": 0.5231,
+  "test_r2": 0.5015,
+  "cv_mean_r2": 0.524,
+  "acc_gap": 0.017,
+  "overfitting": false,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
@@ -42,51 +47,51 @@
     "bagging_fraction": 0.9,
     "bagging_freq": 3,
     "n_estimators": 1000,
-    "reg_alpha": 0.05,
-    "reg_lambda": 0.5,
+    "reg_alpha": 0.1,
+    "reg_lambda": 1.0,
     "verbose": -1,
     "random_state": 42
   },
   "top_features": [
     {
-      "name": "obv",
-      "importance": 80
+      "name": "vpt",
+      "importance": 6
     },
     {
       "name": "sma_5",
-      "importance": 76
+      "importance": 4
     },
     {
-      "name": "vpt",
-      "importance": 51
+      "name": "obv",
+      "importance": 4
     },
     {
-      "name": "ad",
-      "importance": 40
-    },
-    {
-      "name": "ret_skew_60",
-      "importance": 35
+      "name": "track_storage_trend_60d",
+      "importance": 2
     },
     {
       "name": "track_storage_max_ret_20d",
-      "importance": 30
+      "importance": 2
     },
     {
-      "name": "ppo_signal",
-      "importance": 27
+      "name": "roc_60",
+      "importance": 1
+    },
+    {
+      "name": "ppo",
+      "importance": 1
+    },
+    {
+      "name": "macd_hist",
+      "importance": 1
     },
     {
       "name": "adx",
-      "importance": 26
+      "importance": 1
     },
     {
-      "name": "track_semiconductor_money_flow_ratio_20d",
-      "importance": 24
-    },
-    {
-      "name": "track_semiconductor_trend_20d",
-      "importance": 20
+      "name": "aroon_up",
+      "importance": 1
     }
   ]
 }

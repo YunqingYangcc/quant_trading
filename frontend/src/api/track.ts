@@ -173,6 +173,14 @@ export function runPipeline(step: string = 'all') {
   return request.post('/ml/run-pipeline', null, { params: { step } })
 }
 
+export function getPipelineStatus(taskId: string) {
+  return request.get(`/ml/pipeline-status/${taskId}`)
+}
+
+export function cancelPipeline(taskId: string) {
+  return request.post(`/ml/pipeline-cancel/${taskId}`)
+}
+
 // ── 流水线运行日志 ──
 
 export interface PipelineRun {

@@ -55,6 +55,7 @@
             <div class="config-group">
               <label class="config-label">赛道</label>
               <el-select v-model="selectedTrack" filterable placeholder="选择赛道" size="default" style="width:100%">
+                <el-option label="📊 所有赛道" value="__all__" />
                 <el-option v-for="t in trackList" :key="t.name" :label="t.display_name" :value="t.name" />
               </el-select>
             </div>
@@ -162,7 +163,7 @@
     </div>
     <div v-if="running" class="progress-card">
       <el-progress :percentage="progressPct" :stroke-width="6" striped striped-flow :duration="6" />
-      <div class="progress-text">正在运行 {{ progressStep }}...</div>
+      <div class="progress-text">{{ progressStep }}</div>
     </div>
 
     <!-- ── 对比结果（策略对比模式）── -->
@@ -457,6 +458,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useDataRefresh } from '@/composables/useDataRefresh'
 import {
   listTracks, listStrategies, compareStrategies,
   getPipelineRuns, getBacktestDetail, getLearningStats,
@@ -485,6 +487,7 @@ const stockList = ref<any[]>([])
 const singleStock = ref('')
 const selectedStrategy = ref('momentum_20d')
 const useAi = ref(false)
+const { notify: notifyDataRefresh } = useDataRefresh('backtest')
 
 // 策略详情
 const detailDialogVisible = ref(false)
@@ -549,7 +552,7 @@ const params = reactive({
 // ── 计算属性 ──
 const selectedTrackName = computed(() => {
   const t = trackList.value.find(t => t.name === selectedTrack.value)
-  return t?.display_name || selectedTrack.value
+  return t?.display_name || (selectedTrack.value === '__all__' ? '全部赛道' : selectedTrack.value)
 })
 
 const strategyGroups = computed(() => {
@@ -753,43 +756,67 @@ async function runComparison() {
   error.value = ''
   result.value = null
   expandedTrade.value = null
-
-  // 模拟进度
   progressPct.value = 0
-  progressStep.value = '初始化...'
-  const progTimer = setInterval(() => {
-    if (progressPct.value < 90) {
-      progressPct.value += Math.random() * 15
-      if (progressPct.value > 90) progressPct.value = 90
-    }
-  }, 800)
+
+  // 确定要跑的赛道列表
+  const tracksToRun = selectedTrack.value === '__all__'
+    ? trackList.value.map(t => t.name)
+    : [selectedTrack.value]
+
+  const allResults: Record<string, any> = {}
+  let completed = 0
 
   try {
-    progressStep.value = '运行回测...'
-    const res: any = await compareStrategies({
-      strategies: selectedStrategies.value,
-      track_name: selectedTrack.value,
-      initial_capital: params.capital,
-      top_n: params.topN,
-      rebalance_freq: params.freq,
-      max_single_stock: params.singleStockLimit / 100,
-      max_single_track: params.trackLimit / 100,
-      stop_loss_pct: -Math.abs(params.stopLoss) / 100,
-      take_profit_pct: 0.30,
-    })
-    result.value = res
+    for (const track of tracksToRun) {
+      const trackDisplay = trackList.value.find(t => t.name === track)?.display_name || track
+      progressStep.value = `${trackDisplay} (${completed + 1}/${tracksToRun.length})...`
+      progressPct.value = (completed / tracksToRun.length) * 100
+
+      const res: any = await compareStrategies({
+        strategies: selectedStrategies.value,
+        track_name: track,
+        initial_capital: params.capital,
+        top_n: params.topN,
+        rebalance_freq: params.freq,
+        max_single_stock: params.singleStockLimit / 100,
+        max_single_track: params.trackLimit / 100,
+        stop_loss_pct: -Math.abs(params.stopLoss) / 100,
+        take_profit_pct: 0.30,
+      })
+
+      allResults[track] = res
+      completed++
+    }
+
     progressPct.value = 100
     progressStep.value = '完成!'
 
-    const count = Object.keys(res.strategies || {}).length
-    const successCount = Object.values(res.strategies || {}).filter((s: any) => !s.error).length
-    ElMessage.success(`${successCount}/${count} 个策略回测完成`)
+    if (tracksToRun.length === 1) {
+      result.value = allResults[tracksToRun[0]]
+    } else {
+      // 多赛道：聚合显示
+      result.value = {
+        _multiTrack: true,
+        _tracks: tracksToRun,
+        _allResults: allResults,
+        strategies: allResults[tracksToRun[0]]?.strategies || {},
+      }
+      // 合并所有curve
+      const first = allResults[tracksToRun[0]]
+      if (first) {
+        result.value.benchmark_curve = first.benchmark_curve
+      }
+      ElMessage.success(`全部 ${tracksToRun.length} 个赛道完成`)
+      notifyDataRefresh()
+    }
   } catch (e: any) {
-    error.value = e.response?.data?.detail || e.message || '回测失败'
-  } finally {
-    clearInterval(progTimer)
-    running.value = false
+    const detail = e?.response?.data?.detail || e?.response?.data?.message || (typeof e?.response?.data === 'string' ? e.response.data : '') || e?.message || JSON.stringify(e)
+    error.value = `回测失败: ${detail}`
+    progressStep.value = '失败'
+    ElMessage.error(error.value)
   }
+
+  running.value = false
 }
 
 onMounted(() => {
