@@ -488,31 +488,36 @@ async def run_strategy_backtest(strategy_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/backtest/single/{stock_code}", summary="单只股票回测")
+@router.post("/backtest/single/{stock_code}", summary="单只股票回测（增强版）")
 async def run_single_stock_backtest(
     stock_code: str,
     strategy: str = "momentum_20d",
     lookback: int = 20,
     stop_loss: float = 0,
+    use_ai: bool = False,
 ):
-    """对单只股票运行趋势跟踪回测，返回交易明细+绩效
-    
+    """对单只股票运行策略回测，使用统一引擎，支持 AI 打分增强
+
     参数:
-      stock_code: 股票代码
-      strategy: 策略名 (momentum_20d/momentum_60d)
-      lookback: 动量周期 (天)
-      stop_loss: 止损比例 (%, 0=不止损)
+      stock_code: 股票代码 (如 002371.SZ)
+      strategy: 策略名（从注册表获取）
+      lookback: 动量/周期参数（部分策略使用）
+      stop_loss: 止损比例 (%)
+      use_ai: 是否使用 AI 打分增强
     """
     import sqlite3
     import pandas as pd
     import numpy as np
+    from backtest.engine import BacktestEngine
+    from backtest.report import benchmark_compare, buy_and_hold_curve
+    from strategies import STRATEGY_REGISTRY, get_strategy
+    from strategies.composite import ai_confidence, ai_position_size
 
     db_path = BASE_DIR / "track_quant.db"
     conn = sqlite3.connect(str(db_path))
-    # 加载单只股票日线
     df = pd.read_sql(
-        f"SELECT trade_date, close_px FROM track_data_cache WHERE stock_code='{stock_code}' ORDER BY trade_date",
-        conn
+        f"SELECT trade_date, close_px FROM track_data_cache WHERE stock_code=? ORDER BY trade_date",
+        conn, params=(stock_code,)
     )
     conn.close()
     if df.empty:
@@ -520,75 +525,128 @@ async def run_single_stock_backtest(
 
     df["trade_date"] = pd.to_datetime(df["trade_date"])
     df = df.set_index("trade_date").sort_index()
-    close = df["close_px"]
 
-    # 趋势跟踪：动量 > 0 时买入
-    mom = close.pct_change(lookback)
-    signals = (mom > 0).astype(int)
+    # 构建 prices DataFrame（单股格式）
+    prices = pd.DataFrame({stock_code: df["close_px"]})
 
-    # 止损线
-    stop_loss_ratio = -abs(stop_loss) / 100 if stop_loss else -999
+    # 加载 AI 打分（如果需要）
+    ai_scores = None
+    ai_confidence_data = None
+    if use_ai or strategy in ("ai_scoring", "momentum_20d_ai", "ma_cross_ai", "breakout_ai", "multi_vote", "ai_confidence"):
+        try:
+            ai_scores = _load_ai_scores_for_stock(stock_code)
+            # 计算 AI 置信度统计
+            if ai_scores is not None and not ai_scores.empty:
+                scores_arr = ai_scores["pred_score"].values
+                confs = [ai_confidence(s) for s in scores_arr]
+                positions = [ai_position_size(s) for s in scores_arr]
+                ai_confidence_data = {
+                    "mean_score": round(float(np.mean(scores_arr)), 4),
+                    "mean_confidence": round(float(np.mean(confs)), 4),
+                    "high_conf_count": int(sum(1 for c in confs if c > 0.6)),
+                    "med_conf_count": int(sum(1 for c in confs if 0.2 <= c <= 0.6)),
+                    "low_conf_count": int(sum(1 for c in confs if c < 0.2)),
+                    "buy_signals": int(sum(1 for p in positions if p > 0)),
+                    "strong_buy": int(sum(1 for p in positions if p >= 0.6)),
+                }
+        except Exception as e:
+            logger.warning(f"AI 打分加载失败: {e}")
 
-    # 模拟交易
-    params = {"initial_capital": 100000, "commission": 0.0003, "slippage": 0.001}
-    cash = params["initial_capital"]
-    position = 0
-    trades = []
-    equity = []
+    # 获取策略
+    try:
+        gen = get_strategy(strategy)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
-    for i in range(lookback + 1, len(close)):
-        date = close.index[i]
-        px = close.iloc[i]
-        sig = signals.iloc[i-1]  # 用前一天信号
+    # 设置策略参数
+    if hasattr(gen, "set_params"):
+        gen.set_params(lookback=lookback, top_n=1)
 
-        # 卖出（信号转空 + 止损）
-        should_sell = (sig == 0 and position > 0)
-        if position > 0 and entry_px:
-            current_ret = (px - entry_px) / entry_px
-            if current_ret <= stop_loss_ratio:
-                should_sell = True  # 止损触发
+    # 生成信号并转为单股模式（含 AI 置信度仓位）
+    from strategies.signal_base import to_single_stock_signals
+    portfolio_signals = gen.generate(prices, ai_scores=ai_scores)
+    if portfolio_signals.empty:
+        raise HTTPException(status_code=400, detail=f"策略 {strategy} 未生成信号")
+    signals = to_single_stock_signals(portfolio_signals, stock_code, ai_scores)
 
-        if should_sell:
-            proceeds = position * px * (1 - params["commission"] - params["slippage"])
-            profit = proceeds - position * entry_px if entry_px else 0
-            trades.append({"date": str(date.date()), "type": "sell", "price": round(px, 3),
-                          "shares": position, "profit": round(profit, 2)})
-            cash += proceeds
-            position = 0
+    # 执行回测
+    sl_pct = -abs(stop_loss) / 100 if stop_loss > 0 else 0
+    engine = BacktestEngine(params={
+        "initial_capital": 100000,
+        "stop_loss_pct": sl_pct,
+        "take_profit_pct": 0,
+    })
 
-        # 买入
-        if sig == 1 and position == 0:
-            shares = int(cash * 0.95 / (px * (1 + params["commission"] + params["slippage"])))
-            if shares > 0:
-                cost = shares * px * (1 + params["commission"] + params["slippage"])
-                cash -= cost
-                position = shares
-                entry_px = px
-                trades.append({"date": str(date.date()), "type": "buy", "price": round(px, 3),
-                              "shares": shares})
+    equity_curve, trades, metrics = engine.run(signals, prices)
 
-        nav = cash + position * px
-        equity.append({"date": str(date.date()), "total_value": round(nav, 2)})
+    # 基准对比（买入并持有）
+    bh_curve = buy_and_hold_curve(prices[stock_code], initial_capital=100000)
+    benchmark = benchmark_compare(equity_curve, bh_curve)
 
-    # 绩效
-    eq_df = pd.DataFrame(equity).set_index("date")
-    eq_df["returns"] = eq_df["total_value"].pct_change()
-    rets = eq_df["returns"].dropna()
-    metrics = {
-        "stock_code": stock_code,
-        "strategy": strategy,
-        "total_return": round((eq_df["total_value"].iloc[-1] / params["initial_capital"] - 1) * 100, 2),
-        "sharpe": round(float(rets.mean() / rets.std() * np.sqrt(252)) if rets.std() > 0 else 0, 3),
-        "max_drawdown": round(float((eq_df["total_value"] / eq_df["total_value"].cummax() - 1).min() * 100), 2),
-        "win_rate": round(float((rets > 0).mean() * 100), 2),
-        "total_trades": len(trades),
-    }
+    # 补充字段
+    metrics["stock_code"] = stock_code
+    metrics["strategy"] = strategy
 
     return {
         "metrics": metrics,
-        "trades": trades[-20:],  # 最近 20 笔
-        "equity": equity[-252:],  # 最近一年净值
+        "trades": trades[-50:],
+        "equity": equity_curve,
+        "benchmark": benchmark,
+        "buy_hold_equity": bh_curve,
+        "ai_confidence": ai_confidence_data,
     }
+
+
+def _load_ai_scores_for_stock(stock_code: str) -> pd.DataFrame | None:
+    """加载单只股票的 AI 打分历史（自动生成缓存）"""
+    import joblib
+
+    PREPROCESSED_DIR = BASE_DIR / "ml" / "preprocessed"
+    MODELS_DIR = BASE_DIR / "ml" / "models"
+    cache_path = PREPROCESSED_DIR / "backtest_scores.parquet"
+
+    # 优先用缓存
+    if cache_path.exists():
+        scores = pd.read_parquet(cache_path)
+        scores["trade_date"] = pd.to_datetime(scores["trade_date"])
+        stock_scores = scores[scores["stock_code"] == stock_code].copy()
+        if not stock_scores.empty:
+            return stock_scores
+
+    # 缓存不存在 → 在线评分
+    logger.info(f"  AI 缓存不存在，在线计算 {stock_code} 打分...")
+    try:
+        val = pd.read_parquet(PREPROCESSED_DIR / "val.parquet")
+        test = pd.read_parquet(PREPROCESSED_DIR / "test.parquet")
+    except Exception:
+        return None
+
+    df = pd.concat([val, test], ignore_index=True)
+    df["trade_date"] = pd.to_datetime(df["date"])
+    df = df.sort_values("trade_date")
+
+    with open(PREPROCESSED_DIR / "feature_cols.json") as f:
+        feature_cols = json.load(f)
+
+    df["pred_score"] = 0.0
+    for pkl_path in MODELS_DIR.glob("*.pkl"):
+        track = pkl_path.stem
+        try:
+            stock_mask = df["stock_code"] == stock_code
+            track_df = df[stock_mask].copy()
+            if track_df.empty:
+                continue
+            model = joblib.load(pkl_path)
+            X = track_df[feature_cols].fillna(0)
+            df.loc[stock_mask, "pred_score"] = model.predict_proba(X)[:, 1]
+        except Exception as e:
+            logger.warning(f"  {track} 评分失败: {e}")
+
+    scores = df[["trade_date", "stock_code", "pred_score"]].copy()
+    stock_scores = scores[scores["stock_code"] == stock_code].copy()
+    if stock_scores.empty:
+        return None
+    return stock_scores
 
 
 @router.post("/backtest/run", summary="手动运行回测")

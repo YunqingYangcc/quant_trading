@@ -1,248 +1,132 @@
 <template>
-  <div class="backtest-page">
+  <div class="strategy-lab">
     <div class="page-header">
-      <h2>📊 回测绩效</h2>
-      <div class="header-actions">
-        <el-select v-model="selectedStrategy" size="small" placeholder="选择策略" style="width:200px;margin-right:8px" @change="onStrategyChange">
-          <el-option-group label="── 基线策略 ──">
-            <el-option v-for="s in baselineStrats" :key="s.key" :label="s.name" :value="s.key" />
-          </el-option-group>
-          <el-option-group label="── 动量策略 ──">
-            <el-option v-for="s in momentumStrats" :key="s.key" :label="s.name" :value="s.key" />
-          </el-option-group>
-          <el-option-group label="── AI 策略 ──">
-            <el-option v-for="s in aiStrats" :key="s.key" :label="s.name" :value="s.key" />
-          </el-option-group>
-        </el-select>
-        <el-button type="primary" size="small" @click="runStrategyBt" :loading="strategyRunning">
-          {{ strategyRunning ? '回测中...' : '▶ 运行策略' }}
-        </el-button>
-        <el-button size="small" @click="loadBacktest" :loading="loadingReport">刷新</el-button>
-      </div>
-    </div>
-
-    <!-- 策略对比表 -->
-    <div v-if="strategyResults.length > 0" class="section-card" style="margin-bottom:16px">
-      <div class="section-header">
-        <div class="sh-left">
-          <div class="sh-icon">🏆</div>
-          <div>
-            <div class="sh-title">策略对比</div>
-            <div class="sh-sub">基线 vs 所选策略</div>
-          </div>
+      <div class="ph-left">
+        <div class="ph-icon">🔬</div>
+        <div>
+          <div class="ph-title">策略实验室</div>
+          <div class="ph-sub">选策略 · 多策略对比 · 看交易拆解 · 沉淀实验记录</div>
         </div>
       </div>
-      <table class="compare-table">
-        <thead>
-          <tr>
-            <th>策略</th>
-            <th>类型</th>
-            <th>夏普</th>
-            <th>总收益</th>
-            <th>年化收益</th>
-            <th>最大回撤</th>
-            <th>胜率</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(r, i) in strategyResults" :key="i" :class="{ 'row-best': i === bestIdx }">
-            <td>
-              <span v-if="i === bestIdx" class="best-badge">⭐</span>
-              {{ r.name }}
-            </td>
-            <td><el-tag size="small" :type="r.type === 'baseline' ? '' : 'primary'" effect="plain">{{ r.type }}</el-tag></td>
-            <td :class="scoreClass(r.sharpe_ratio, 1.2)">{{ r.sharpe_ratio?.toFixed(3) }}</td>
-            <td :class="scoreClass(r.total_return, 0)">{{ r.total_return?.toFixed(1) }}%</td>
-            <td :class="scoreClass(r.annual_return, 0)">{{ r.annual_return?.toFixed(1) }}%</td>
-            <td :class="scoreClass(-r.max_drawdown, -25, true)">{{ r.max_drawdown?.toFixed(1) }}%</td>
-            <td>{{ r.win_rate?.toFixed(1) }}%</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- 个股回测 -->
-    <div class="section-card" style="border-left:3px solid #3b82f6">
-      <div class="section-header">
-        <div class="sh-left">
-          <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">📈</div>
-          <div>
-            <div class="sh-title">个股回测</div>
-            <div class="sh-sub">选一只股票，调参数，看胜率</div>
-          </div>
-        </div>
-        <el-tag size="small" type="primary" effect="dark">NEW</el-tag>
-      </div>
-
-      <div class="single-bt-form">
-        <div class="sbf-row">
-          <div class="sbf-item">
-            <label class="form-label">股票</label>
-            <el-select v-model="singleStock" filterable placeholder="选股票" size="small" style="width:180px">
-              <el-option v-for="s in stockList" :key="s.code" :label="`${s.name} (${s.code})`" :value="s.code" />
-            </el-select>
-          </div>
-          <div class="sbf-item">
-            <label class="form-label">策略</label>
-            <el-select v-model="singleStrategy" size="small" style="width:160px">
-              <el-option label="20日趋势跟踪" value="momentum_20d" />
-              <el-option label="60日趋势跟踪" value="momentum_60d" />
-            </el-select>
-          </div>
-          <div class="sbf-item">
-            <label class="form-label">
-              动量周期
-              <el-tooltip content="趋势判断的回看天数，越长越稳定但反应越慢" placement="top">
-                <span class="label-help">?</span>
-              </el-tooltip>
-            </label>
-            <el-slider v-model="singleLookback" :min="10" :max="120" :step="10" show-input size="small" style="width:100%" />
-          </div>
-          <div class="sbf-item">
-            <label class="form-label">
-              止损%
-              <el-tooltip content="单笔亏损超过此比例强制卖出。0=不止损" placement="top">
-                <span class="label-help">?</span>
-              </el-tooltip>
-            </label>
-            <el-input-number v-model="singleStopLoss" :min="0" :max="30" :step="5" size="small" style="width:90px" />
-          </div>
-          <div class="sbf-item sbf-action">
-            <el-button type="primary" size="small" @click="runSingleBt" :loading="singleRunning">
-              {{ singleRunning ? '回测中...' : '▶ 跑回测' }}
-            </el-button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 个股回测结果 -->
-      <div v-if="singleResult" class="single-result">
-        <div class="sr-header">
-          <span class="sr-stock">{{ singleResult.metrics?.stock_code }}</span>
-          <el-tag :type="winRateLevel(singleResult.metrics?.win_rate).type" size="small" effect="dark">
-            {{ winRateLevel(singleResult.metrics?.win_rate).icon }}
-            胜率 {{ singleResult.metrics?.win_rate?.toFixed(1) }}%
-            {{ winRateLevel(singleResult.metrics?.win_rate).label }}
-          </el-tag>
-        </div>
-        <div class="sr-metrics">
-          <div class="srm-card">
-            <div class="srm-value" :style="{color:winColor(singleResult.metrics?.win_rate)}">{{ singleResult.metrics?.win_rate?.toFixed(1) }}%</div>
-            <div class="srm-label">胜率</div>
-          </div>
-          <div class="srm-card">
-            <div class="srm-value" :style="{color:(singleResult.metrics?.total_return||0)>=0?'#16a34a':'#dc2626'}">{{ singleResult.metrics?.total_return?.toFixed(1) }}%</div>
-            <div class="srm-label">总收益</div>
-          </div>
-          <div class="srm-card">
-            <div class="srm-value">{{ singleResult.metrics?.sharpe?.toFixed(3) }}</div>
-            <div class="srm-label">夏普</div>
-          </div>
-          <div class="srm-card">
-            <div class="srm-value" style="color:#dc2626">{{ singleResult.metrics?.max_drawdown?.toFixed(1) }}%</div>
-            <div class="srm-label">最大回撤</div>
-          </div>
-          <div class="srm-card">
-            <div class="srm-value">{{ singleResult.metrics?.total_trades }}</div>
-            <div class="srm-label">交易次数</div>
-          </div>
-        </div>
-
-        <!-- 指导建议 -->
-        <div class="sr-guide">
-          <div class="srg-title">💡 优化建议</div>
-          <div class="srg-text">{{ getGuidance(singleResult.metrics) }}</div>
-        </div>
-
-        <!-- 最近交易 -->
-        <div v-if="singleResult.trades?.length" class="sr-trades">
-          <div class="srt-title">最近交易</div>
-          <div class="srt-row" v-for="(t,i) in singleResult.trades.slice(-10).reverse()" :key="i">
-            <span class="srt-date">{{ t.date }}</span>
-            <el-tag :type="t.type==='buy'?'success':'danger'" size="small" effect="plain">{{ t.type==='buy'?'买入':'卖出' }}</el-tag>
-            <span class="srt-price">¥{{ t.price }}</span>
-            <span v-if="t.profit" :class="t.profit>=0?'srt-profit':'srt-loss'">{{ t.profit>=0?'+':'' }}{{ t.profit.toFixed(0) }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 回测参数配置 -->
-    <div class="section-card">
-      <div class="section-header">
-        <div class="sh-left">
-          <div class="sh-icon">⚙️</div>
-          <div>
-            <div class="sh-title">回测参数配置</div>
-            <div class="sh-sub">调整策略参数后点击运行，每次运行覆盖前次结果</div>
-          </div>
-        </div>
-        <el-tag size="small" type="info" effect="plain">可自定义</el-tag>
-      </div>
-
-      <!-- 预设方案 -->
-      <div class="preset-row">
-        <span class="preset-label">快速预设</span>
-        <el-radio-group v-model="presetKey" size="small" @change="applyPreset">
-          <el-radio-button value="conservative">🛡️ 保守</el-radio-button>
-          <el-radio-button value="balanced">⚖️ 均衡</el-radio-button>
-          <el-radio-button value="aggressive">🚀 激进</el-radio-button>
+      <div class="ph-actions">
+        <el-radio-group v-model="mode" size="small" @change="onModeChange">
+          <el-radio-button value="compare">策略对比</el-radio-button>
+          <el-radio-button value="single">个股回测</el-radio-button>
         </el-radio-group>
-        <el-tag v-if="presetKey !== 'custom'" size="small" type="success" effect="plain" class="preset-tag">推荐</el-tag>
-        <el-tag v-else size="small" type="warning" effect="plain" class="preset-tag">已修改</el-tag>
+        <el-button size="small" @click="showGuide = !showGuide" plain style="margin-left:8px">
+          {{ showGuide ? '收起指南' : '📖 使用指南' }}
+        </el-button>
       </div>
+    </div>
 
-      <div class="bt-form">
-        <div class="form-grid">
-          <!-- 资金 -->
-          <div class="form-group">
-            <div class="fg-label">💰 资金配置</div>
-            <div class="fg-fields">
-              <div class="form-item">
-                <label class="form-label">
-                  初始资金
-                  <el-tooltip content="回测起点的可用资金" placement="top">
-                    <span class="label-help">?</span>
-                  </el-tooltip>
-                </label>
-                <el-input-number v-model="btParams.initial_capital" :min="10000" :step="50000" :max="10000000" controls-position="right" style="width:100%" />
+    <!-- ── 使用指南 ── -->
+    <div v-if="showGuide" class="guide-card">
+      <div class="guide-grid">
+        <div class="guide-item"><strong>①</strong> 左侧勾选想对比的策略（建议 2-4 个）</div>
+        <div class="guide-item"><strong>②</strong> 选择赛道，调参数</div>
+        <div class="guide-item"><strong>③</strong> 点击「一键对比」跑回测</div>
+        <div class="guide-item"><strong>④</strong> 看净值曲线叠加、比指标、拆交易流水</div>
+        <div class="guide-item"><strong>⑤</strong> 历史记录自动保存，随时回溯</div>
+      </div>
+    </div>
+
+    <!-- ── 配置区 ── -->
+    <div class="section-card">
+      <div class="section-body">
+        <div class="config-grid">
+          <div v-if="mode === 'compare'" class="config-main">
+            <div class="config-group">
+              <label class="config-label">策略（多选）</label>
+              <div class="strategy-checklist">
+                <div v-for="g in strategyGroups" :key="g.label" class="strat-group">
+                  <div class="strat-group-label">{{ g.label }}</div>
+                  <el-checkbox-group v-model="selectedStrategies" class="strat-check-group">
+                    <div v-for="s in g.strategies" :key="s.key" class="strat-check-item">
+                      <el-checkbox :value="s.key" :label="s.name" size="small" />
+                      <el-tooltip :content="s.description" placement="right">
+                        <span class="label-help">?</span>
+                      </el-tooltip>
+                    </div>
+                  </el-checkbox-group>
+                </div>
               </div>
+            </div>
+            <div class="config-group">
+              <label class="config-label">赛道</label>
+              <el-select v-model="selectedTrack" filterable placeholder="选择赛道" size="default" style="width:100%">
+                <el-option v-for="t in trackList" :key="t.name" :label="t.display_name" :value="t.name" />
+              </el-select>
+            </div>
+          </div>
+          <div v-if="mode === 'single'" class="config-main">
+            <div class="config-group">
+              <label class="config-label">股票</label>
+              <el-select v-model="singleStock" filterable placeholder="搜索股票..." size="default" style="width:100%">
+                <el-option v-for="s in stockList" :key="s.code" :label="`${s.name} (${s.code})`" :value="s.code" />
+              </el-select>
+            </div>
+            <div class="config-group">
+              <label class="config-label">策略</label>
+              <el-select v-model="selectedStrategy" filterable placeholder="选择策略" size="default" style="width:100%" @change="onStrategyChange">
+                <el-option-group v-for="g in strategyGroups" :key="g.label" :label="g.label">
+                  <el-option v-for="s in g.strategies" :key="s.key" :label="s.name" :value="s.key">
+                    <span>{{ s.name }}</span>
+                    <span class="strat-desc">{{ s.description }}</span>
+                  </el-option>
+                </el-option-group>
+              </el-select>
+            </div>
+            <div class="config-group" v-if="selectedStrategy && !selectedStrategy.startsWith('equal_weight') && !selectedStrategy.startsWith('ai_scoring')">
+              <label class="config-label config-check">
+                <el-switch v-model="useAi" size="small" />
+                <span>AI 增强</span>
+                <el-tooltip content="用 AI 模型打分对策略选股结果二次排序" placement="top">
+                  <span class="label-help">?</span>
+                </el-tooltip>
+                <el-tag v-if="useAi" size="small" type="primary" effect="light" style="margin-left:6px">推荐</el-tag>
+              </label>
             </div>
           </div>
 
-          <!-- 选股 -->
-          <div class="form-group">
-            <div class="fg-label">📋 选股策略</div>
-            <div class="fg-fields">
-              <div class="form-item">
-                <label class="form-label">每赛道 Top-N</label>
-                <el-input-number v-model="btParams.top_n" :min="1" :max="10" controls-position="right" style="width:100%" />
+          <!-- 右侧：参数 -->
+          <div class="config-params">
+            <div class="param-row">
+              <div class="param-item">
+                <label class="param-label">
+                  Top-N
+                  <el-tooltip content="每次调仓买入几只" placement="top"><span class="label-help">?</span></el-tooltip>
+                </label>
+                <el-input-number v-model="params.topN" :min="1" :max="10" size="default" style="width:100%" />
               </div>
-              <div class="form-item">
-                <label class="form-label">调仓频率</label>
-                <el-radio-group v-model="btParams.rebalance_freq" class="freq-group">
-                  <el-radio-button value="W">📅 周频</el-radio-button>
-                  <el-radio-button value="M">📆 月频</el-radio-button>
+              <div class="param-item">
+                <label class="param-label">调仓频率</label>
+                <el-radio-group v-model="params.freq" size="small" style="width:100%">
+                  <el-radio-button value="W">周频</el-radio-button>
+                  <el-radio-button value="M">月频</el-radio-button>
                 </el-radio-group>
               </div>
             </div>
-          </div>
-
-          <!-- 风控 -->
-          <div class="form-group">
-            <div class="fg-label">🛡️ 风控限制</div>
-            <div class="fg-fields">
-              <div class="form-item">
-                <label class="form-label">单票上限</label>
-                <el-slider v-model="btParams.max_single_stock" :min="5" :max="50" :step="5" show-input>
-                  <template #append>%</template>
-                </el-slider>
+            <div class="param-row">
+              <div class="param-item">
+                <label class="param-label">初始资金</label>
+                <el-input-number v-model="params.capital" :min="10000" :max="10000000" :step="50000" size="default" style="width:100%" />
               </div>
-              <div class="form-item">
-                <label class="form-label">单赛道上限</label>
-                <el-slider v-model="btParams.max_single_track" :min="10" :max="80" :step="5" show-input>
-                  <template #append>%</template>
-                </el-slider>
+              <div class="param-item">
+                <label class="param-label">
+                  止损%
+                  <el-tooltip content="0=不止损" placement="top"><span class="label-help">?</span></el-tooltip>
+                </label>
+                <el-input-number v-model="params.stopLoss" :min="0" :max="30" :step="5" size="default" style="width:100%" />
+              </div>
+            </div>
+            <div class="param-row">
+              <div class="param-item">
+                <label class="param-label">单票上限</label>
+                <el-slider v-model="params.singleStockLimit" :min="5" :max="50" :step="5" show-input size="small" />
+              </div>
+              <div class="param-item">
+                <label class="param-label">单赛道上限</label>
+                <el-slider v-model="params.trackLimit" :min="10" :max="80" :step="10" show-input size="small" />
               </div>
             </div>
           </div>
@@ -250,264 +134,486 @@
 
         <!-- 操作栏 -->
         <div class="action-bar">
-          <div class="locked-hint">
-            <el-tag size="small" type="warning" effect="plain">🔒 锁定</el-tag>
+          <div class="locked-info">
+            <el-tag size="small" type="warning" effect="plain">锁定</el-tag>
             <span>滑点 0.1% · 手续费万三 · 涨跌停限制</span>
+            <el-tag v-if="selectedStrategies.length" size="small" type="primary" effect="plain">
+              已选 {{ selectedStrategies.length }} 个策略
+            </el-tag>
           </div>
-          <el-button type="primary" size="default" @click="runBacktest" :loading="running" :icon="CaretRight" class="run-btn">
-            {{ running ? '回测运行中...' : '开始回测' }}
+          <el-button
+            type="primary"
+            size="large"
+            @click="mode === 'compare' ? runComparison() : runSingleStock()"
+            :loading="running"
+            :disabled="mode === 'compare' && selectedStrategies.length < 1"
+            class="run-btn"
+          >
+            {{ running ? '回测中...' : mode === 'compare' ? '▶ 一键对比' : '▶ 开始回测' }}
           </el-button>
         </div>
       </div>
     </div>
 
-    <!-- 错误提示 -->
+    <!-- ── 进度/错误 ── -->
     <div v-if="error" class="error-card">
-      <el-alert :title="error" type="warning" :closable="false" show-icon />
+      <el-alert :title="error" type="error" :closable="false" show-icon />
+    </div>
+    <div v-if="running" class="progress-card">
+      <el-progress :percentage="progressPct" :stroke-width="6" striped striped-flow :duration="6" />
+      <div class="progress-text">正在运行 {{ progressStep }}...</div>
     </div>
 
-    <!-- 回测结果 -->
-    <template v-if="report">
-      <!-- 回测记录 -->
-      <div class="report-header">
-        <div class="rh-left">
-          <div class="rh-icon">📋</div>
-          <div>
-            <div class="rh-title">回测记录</div>
-            <div class="rh-sub">{{ report.metadata?.run_at || '' }} 执行</div>
+    <!-- ── 对比结果（策略对比模式）── -->
+    <div v-if="result && !running && mode === 'compare'">
+      <!-- 净值曲线叠加 -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669)">📈</div>
+            <div>
+              <div class="sh-title">净值曲线对比</div>
+              <div class="sh-sub">{{ selectedTrackName }} · {{ result.stock_count }} 只股票</div>
+            </div>
           </div>
+          <el-tag size="small" type="info" effect="plain">{{ totalEquityPoints }} 个交易日</el-tag>
         </div>
-        <el-tag size="small" type="success" effect="plain" v-if="report.metadata?.trade_count">
-          {{ report.metadata.trade_count }} 个交易日
-        </el-tag>
+        <StrategyComparisonChart
+          :curves="equityCurves"
+          :benchmark-curve="result.benchmark_curve"
+        />
       </div>
 
-      <!-- 上下文信息：参数 + 赛道 + 时间 -->
-      <div class="context-grid">
-        <div class="ctx-card">
-          <div class="ctx-title">🎯 策略参数</div>
-          <div class="ctx-rows">
-            <div class="ctx-row" v-for="(v, k) in report.params || {}" :key="k">
-              <span class="ctx-key">{{ k }}</span>
-              <span class="ctx-val">{{ v }}</span>
+      <!-- 指标对比排行榜 -->
+      <div class="section-card">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">🏆</div>
+            <div>
+              <div class="sh-title">指标排行榜</div>
+              <div class="sh-sub">按夏普比率降序 · 🥇最佳 / 🥈优秀 / 🥉一般</div>
             </div>
           </div>
         </div>
+        <div class="rank-table-wrap">
+          <table class="rank-table">
+            <thead>
+              <tr>
+                <th>排名</th>
+                <th>策略</th>
+                <th>夏普比率</th>
+                <th>总收益</th>
+                <th>年化收益</th>
+                <th>最大回撤</th>
+                <th>胜率</th>
+                <th>交易笔数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(r, i) in rankedStrategies" :key="r.key"
+                  :class="{ 'rank-gold': i === 0, 'rank-silver': i === 1, 'rank-bronze': i === 2 }">
+                <td class="td-rank">{{ ['🥇','🥈','🥉'][i] || i + 1 }}</td>
+                <td class="td-name">{{ r.name }}</td>
+                <td class="td-num" :class="sharpeClass(r.metrics.sharpe_ratio)">{{ r.metrics.sharpe_ratio?.toFixed(3) || '-' }}</td>
+                <td class="td-num" :class="r.metrics.total_return >= 0 ? 'up' : 'down'">{{ r.metrics.total_return?.toFixed(1) }}%</td>
+                <td class="td-num">{{ r.metrics.annual_return?.toFixed(1) }}%</td>
+                <td class="td-num down">{{ r.metrics.max_drawdown?.toFixed(1) }}%</td>
+                <td class="td-num">{{ r.metrics.win_rate?.toFixed(0) }}%</td>
+                <td class="td-num">{{ r.metrics.buy_count || r.metrics.total_trades || '-' }}</td>
+                <td>
+                  <el-button size="small" text @click="toggleTradeDetail(r.key)">
+                    {{ expandedTrade === r.key ? '收起' : '交易流水' }}
+                  </el-button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-        <div class="ctx-card">
-          <div class="ctx-title">📂 覆盖赛道</div>
-          <div class="ctx-rows">
-            <div v-if="report.metadata?.tracks?.length" v-for="t in report.metadata.tracks" :key="t.name" class="ctx-row">
-              <span class="ctx-key">{{ t.display_name }}</span>
-              <span class="ctx-val">{{ t.stock_count }} 只</span>
-            </div>
-            <div v-else class="ctx-row">
-              <span class="ctx-val" style="color:#94a3b8">暂无赛道数据</span>
+      <!-- 交易拆解 (按策略展开) -->
+      <div v-for="r in rankedStrategies" :key="r.key">
+        <div v-if="expandedTrade === r.key && r.trades?.length" class="section-card trade-detail-section">
+          <TradeBreakdownChart :strategy-name="r.name" :trades="r.trades" />
+        </div>
+      </div>
+
+      <!-- 策略学习要点 -->
+      <div class="section-card" v-if="rankedStrategies.length >= 2">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">💡</div>
+            <div>
+              <div class="sh-title">学习要点</div>
+              <div class="sh-sub">从这次对比中你学到了什么？</div>
             </div>
           </div>
         </div>
+        <div class="learn-points">
+          <div class="learn-point" v-if="bestSharpe > worstSharpeThreshold">
+            <span class="lp-tag best">最佳策略</span>
+            <span><strong>{{ bestStrategyName }}</strong> 夏普 {{ bestSharpe.toFixed(3) }}，是本轮表现最好的策略</span>
+          </div>
+          <div class="learn-point" v-if="aiVsTraditional">
+            <span class="lp-tag insight">AI 对比</span>
+            <span>{{ aiVsTraditional }}</span>
+          </div>
+          <div class="learn-point">
+            <span class="lp-tag tip">提示</span>
+            <span>不同策略在不同市场阶段表现不同。多次对比才能找到适合当前赛道的策略组合。</span>
+          </div>
+        </div>
+      </div>
+    </div>
 
-        <div class="ctx-card">
-          <div class="ctx-title">📅 回测区间</div>
-          <div class="ctx-rows">
-            <div class="ctx-row">
-              <span class="ctx-key">开始</span>
-              <span class="ctx-val">{{ report.metadata?.date_start || '-' }}</span>
+    <!-- ── 个股回测结果 ── -->
+    <div v-if="result && !running && mode === 'single'">
+      <!-- 核心指标卡 -->
+      <div class="section-card" style="border-left:3px solid #3b82f6">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb)">📊</div>
+            <div>
+              <div class="sh-title">绩效指标</div>
+              <div class="sh-sub">{{ singleStock }} · {{ strategyName }}</div>
             </div>
-            <div class="ctx-row">
-              <span class="ctx-key">结束</span>
-              <span class="ctx-val">{{ report.metadata?.date_end || '-' }}</span>
-            </div>
-            <div class="ctx-row">
-              <span class="ctx-key">锁定参数</span>
-              <span class="ctx-val" style="font-size:11px;color:#94a3b8">
-                滑点 0.1% / 万三 / 涨跌停限制
-              </span>
-            </div>
+          </div>
+          <el-tag v-if="result.metrics?.sharpe_ratio >= 1.5" size="small" type="success" effect="dark">优秀</el-tag>
+          <el-tag v-else-if="result.metrics?.sharpe_ratio >= 1" size="small" type="warning" effect="dark">一般</el-tag>
+          <el-tag v-else size="small" type="danger" effect="dark">待优化</el-tag>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-card" v-for="m in singleMetrics" :key="m.label">
+            <div class="metric-value" :style="{ color: m.color }">{{ m.value }}</div>
+            <div class="metric-label">{{ m.label }}</div>
+            <div class="metric-tip" v-if="m.tip">{{ m.tip }}</div>
           </div>
         </div>
       </div>
 
-      <!-- 绩效指标 -->
-      <div class="metrics-section-title">📊 绩效指标</div>
-      <div class="metrics-row">
-        <div class="metric-card" v-for="m in metrics" :key="m.label">
-          <div class="metric-value" :style="{ color: m.color }">{{ m.value }}</div>
-          <div class="metric-label">{{ m.label }}</div>
-          <div class="metric-pass" v-if="m.pass !== undefined">
-            <el-tag :type="m.pass ? 'success' : 'danger'" size="small" effect="plain">
-              {{ m.pass ? '✅ 达标' : '❌ 未达标' }}
-            </el-tag>
+      <!-- 权益曲线 -->
+      <div class="section-card" v-if="result.equity?.length">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#10b981,#059669)">📈</div>
+            <div>
+              <div class="sh-title">权益曲线</div>
+              <div class="sh-sub">策略 vs 买入持有</div>
+            </div>
+          </div>
+          <el-tag size="small" type="info" effect="plain">{{ result.equity?.length }} 个交易日</el-tag>
+        </div>
+        <StrategyComparisonChart
+          :curves="{ [strategyName]: result.equity }"
+          :benchmark-curve="result.buy_hold_equity"
+        />
+      </div>
+
+      <!-- AI 置信度 -->
+      <div class="section-card" v-if="result.ai_confidence" style="border-left:3px solid #8b5cf6">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#8b5cf6,#7c3aed)">🤖</div>
+            <div>
+              <div class="sh-title">AI 信号分析</div>
+              <div class="sh-sub">AI 打分置信度分布与仓位建议</div>
+            </div>
+          </div>
+        </div>
+        <div class="ai-grid">
+          <div class="ai-card">
+            <div class="ai-value">{{ result.ai_confidence.mean_score?.toFixed(3) }}</div>
+            <div class="ai-label">平均 AI 打分</div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-value">{{ (result.ai_confidence.mean_confidence * 100).toFixed(0) }}%</div>
+            <div class="ai-label">平均置信度</div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-value" style="color:#16a34a">{{ result.ai_confidence.high_conf_count }}</div>
+            <div class="ai-label">高置信信号 (&gt;60%)</div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-value" style="color:#e6a23c">{{ result.ai_confidence.med_conf_count }}</div>
+            <div class="ai-label">中置信信号 (20~60%)</div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-value" style="color:#94a3b8">{{ result.ai_confidence.low_conf_count }}</div>
+            <div class="ai-label">低置信信号 (&lt;20%)</div>
+          </div>
+          <div class="ai-card">
+            <div class="ai-value" style="color:#16a34a">{{ result.ai_confidence.strong_buy }}</div>
+            <div class="ai-label">强买入信号(重仓)</div>
           </div>
         </div>
       </div>
-    </template>
 
-    <div v-if="!report && !loadingReport && !error" class="empty-card">
-      <el-empty description="点击「开始回测」运行首次回测">
-        <el-button type="primary" size="small" @click="runBacktest" :loading="running">
-          开始回测
+      <!-- 基准对比 -->
+      <div class="section-card" v-if="result.benchmark && !result.benchmark.error">
+        <div class="section-header">
+          <div class="sh-left">
+            <div class="sh-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706)">🏆</div>
+            <div>
+              <div class="sh-title">基准对比</div>
+              <div class="sh-sub">vs 买入持有</div>
+            </div>
+          </div>
+        </div>
+        <div class="benchmark-grid">
+          <div class="bm-card" v-for="m in singleBenchmarkMetrics" :key="m.label">
+            <div class="bm-value" :class="m.good ? (m.good(m.value) ? 'good' : 'bad') : ''">{{ m.display }}</div>
+            <div class="bm-label">{{ m.label }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 交易记录 -->
+      <div class="section-card" v-if="result.trades?.length">
+        <TradeBreakdownChart :strategy-name="strategyName" :trades="result.trades" />
+      </div>
+    </div>
+
+    <!-- ── 空状态 ── -->
+    <div v-if="!result && !running && !error" class="empty-card">
+      <el-empty :description="mode === 'compare' ? '勾选策略，点击「一键对比」开始实验' : '选择股票和策略，点击「开始回测」'">
+        <el-button v-if="mode === 'compare'" type="primary" size="default" @click="selectDefaultStrategies">
+          快速选择默认策略
         </el-button>
       </el-empty>
+    </div>
+
+    <!-- ── 运行历史 ── -->
+    <div style="margin-top:16px">
+      <HistoryPanel @select="onHistorySelect" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
-import { CaretRight } from '@element-plus/icons-vue'
+import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getBacktestReport, runBacktest as runBacktestApi, listStrategies, runStrategyBacktest, runSingleStockBacktest, listTracks } from '@/api/track'
+import {
+  listTracks, listStrategies, compareStrategies,
+  getPipelineRuns, getBacktestDetail, getLearningStats,
+  runSingleStockBacktest,
+} from '@/api/track'
+import StrategyComparisonChart from '@/components/trade/StrategyComparisonChart.vue'
+import TradeBreakdownChart from '@/components/trade/TradeBreakdownChart.vue'
+import HistoryPanel from '@/components/trade/HistoryPanel.vue'
 
-const loadingReport = ref(false)
+// ── 状态 ──
+const mode = ref<'compare' | 'single'>('compare')
+const showGuide = ref(false)
 const running = ref(false)
 const error = ref('')
-const report = ref<any>(null)
+const result = ref<any>(null)
+const progressPct = ref(0)
+const progressStep = ref('')
+const expandedTrade = ref<string | null>(null)
 
-// ── 策略选择 ──
-const selectedStrategy = ref('momentum_20d')
-const strategyRunning = ref(false)
+// 策略
 const allStrategies = ref<any[]>([])
-const strategyResults = ref<any[]>([])
+const selectedStrategies = ref<string[]>([])
 
-const baselineStrats = computed(() => allStrategies.value.filter(s => s.type === 'baseline'))
-const momentumStrats = computed(() => allStrategies.value.filter(s => s.type === 'momentum'))
-const aiStrats = computed(() => allStrategies.value.filter(s => s.type === 'ai'))
+// 个股回测
+const stockList = ref<any[]>([])
+const singleStock = ref('')
+const selectedStrategy = ref('momentum_20d')
+const useAi = ref(false)
 
-const bestIdx = computed(() => {
-  if (strategyResults.value.length === 0) return -1
-  return strategyResults.value.reduce((best, r, i) => (r.sharpe_ratio || 0) > (strategyResults.value[best]?.sharpe_ratio || 0) ? i : best, 0)
+// 赛道
+const trackList = ref<any[]>([])
+const selectedTrack = ref('semiconductor')
+
+// 参数
+const params = reactive({
+  topN: 3,
+  freq: 'W' as 'W' | 'M',
+  capital: 100000,
+  stopLoss: 15,
+  singleStockLimit: 20,
+  trackLimit: 50,
 })
 
-function scoreClass(value: number, threshold: number, inverted = false) {
-  if (value == null || isNaN(value)) return ''
-  const ok = inverted ? value > threshold : value >= threshold
-  return ok ? 'score-good' : 'score-bad'
-}
+// ── 计算属性 ──
+const selectedTrackName = computed(() => {
+  const t = trackList.value.find(t => t.name === selectedTrack.value)
+  return t?.display_name || selectedTrack.value
+})
 
-async function loadStrategies() {
-  try {
-    allStrategies.value = await listStrategies()
-  } catch { /* ignore */ }
-}
-
-function onStrategyChange() {
-  // 切换策略时重置结果
-}
-
-async function runStrategyBt() {
-  strategyRunning.value = true
-  try {
-    // 跑所选策略
-    const result = await runStrategyBacktest(selectedStrategy.value)
-    result.type = allStrategies.value.find(s => s.key === selectedStrategy.value)?.type || 'unknown'
-    
-    // 跑基线
-    const promises = ['equal_weight', 'momentum_20d']
-      .filter(k => k !== selectedStrategy.value)
-      .map(k => runStrategyBacktest(k).then(r => ({ ...r, type: allStrategies.value.find(s => s.key === k)?.type || 'baseline', isBaseline: true })))
-    
-    const baselines = await Promise.all(promises)
-    strategyResults.value = [result, ...baselines]
-      .sort((a, b) => (b.sharpe_ratio || 0) - (a.sharpe_ratio || 0))
-    
-    ElMessage.success('策略回测完成')
-  } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '回测失败')
-  } finally {
-    strategyRunning.value = false
+const strategyGroups = computed(() => {
+  const types: Record<string, string> = {
+    baseline: '基线策略',
+    momentum: '动量策略',
+    technical: '技术指标策略',
+    mean_reversion: '均值回归策略',
+    composite: '复合策略 (AI投票)',
+    ai: 'AI 策略',
   }
-}
-
-const btParams = reactive({
-  initial_capital: 100000,
-  top_n: 3,
-  rebalance_freq: 'W',
-  max_single_stock: 20,
-  max_single_track: 50,
+  const groups: { label: string; strategies: any[] }[] = []
+  for (const [type, label] of Object.entries(types)) {
+    const ss = allStrategies.value.filter(s => s.type === type)
+    if (ss.length) groups.push({ label: `── ${label} ──`, strategies: ss })
+  }
+  return groups
 })
 
-const presetKey = ref('balanced')
+const equityCurves = computed(() => {
+  if (!result.value?.strategies) return {}
+  const curves: Record<string, any[]> = {}
+  for (const [key, s] of Object.entries(result.value.strategies) as [string, any][]) {
+    if (s.equity_curve?.length) {
+      curves[s.name || key] = s.equity_curve
+    }
+  }
+  return curves
+})
 
-const PRESETS: Record<string, Partial<typeof btParams>> = {
-  conservative: { initial_capital: 50000, top_n: 2, rebalance_freq: 'M', max_single_stock: 10, max_single_track: 30 },
-  balanced: { initial_capital: 100000, top_n: 3, rebalance_freq: 'W', max_single_stock: 20, max_single_track: 50 },
-  aggressive: { initial_capital: 200000, top_n: 5, rebalance_freq: 'W', max_single_stock: 30, max_single_track: 70 },
+const rankedStrategies = computed(() => {
+  if (!result.value?.strategies) return []
+  const entries = Object.entries(result.value.strategies) as [string, any][]
+  const valid = entries
+    .filter(([_, s]) => s.metrics && !s.error)
+    .map(([key, s]) => ({
+      key,
+      name: s.name || key,
+      metrics: s.metrics,
+      trades: s.trades || [],
+    }))
+  valid.sort((a, b) => (b.metrics.sharpe_ratio || 0) - (a.metrics.sharpe_ratio || 0))
+  return valid
+})
+
+const totalEquityPoints = computed(() => {
+  const curves = Object.values(equityCurves.value)
+  return curves[0]?.length || 0
+})
+
+const bestSharpe = computed(() => rankedStrategies.value[0]?.metrics.sharpe_ratio || 0)
+const bestStrategyName = computed(() => rankedStrategies.value[0]?.name || '')
+const worstSharpeThreshold = 0.3
+
+const aiVsTraditional = computed(() => {
+  const aiStrat = rankedStrategies.value.find(s => s.key.includes('ai') || s.key === 'multi_vote')
+  const tradStrat = rankedStrategies.value.find(s => !s.key.includes('ai') && s.key !== 'multi_vote' && s.key !== 'equal_weight')
+  if (aiStrat && tradStrat) {
+    const aiSharpe = aiStrat.metrics.sharpe_ratio || 0
+    const tradSharpe = tradStrat.metrics.sharpe_ratio || 0
+    if (aiSharpe > tradSharpe * 1.1) {
+      return `AI 策略 ${aiStrat.name}（夏普 ${aiSharpe.toFixed(3)}）优于 ${tradStrat.name}（夏普 ${tradSharpe.toFixed(3)}），AI 加分效果明显`
+    } else if (tradSharpe > aiSharpe * 1.1) {
+      return `传统策略 ${tradStrat.name}（夏普 ${tradSharpe.toFixed(3)}）优于 ${aiStrat.name}（夏普 ${aiSharpe.toFixed(3)}），当前市场可能更适合技术指标`
+    }
+    return `AI 与传统策略差距不大，建议多时段对比确认`
+  }
+  return ''
+})
+
+function sharpeClass(v: number) {
+  if (!v) return ''
+  if (v >= 1.5) return 'up'
+  if (v >= 1.0) return ''
+  return 'down'
 }
 
-function applyPreset(key: string) {
-  const p = PRESETS[key]
-  if (!p) return
-  Object.assign(btParams, p)
-}
+// ── 个股回测计算属性 ──
+const strategyName = computed(() => {
+  const s = allStrategies.value.find((s: any) => s.key === selectedStrategy.value)
+  return s?.name || selectedStrategy.value
+})
 
-const metrics = computed(() => {
-  if (!report.value) return []
-  const r = report.value.metrics || (Array.isArray(report.value) ? report.value[0] : report.value) || {}
-  const params = report.value.params || {}
+const singleMetrics = computed(() => {
+  if (!result.value?.metrics) return []
+  const m = result.value.metrics
   return [
-    { label: '初始资金', value: `¥${(params.initial_capital || 100000).toLocaleString()}`, color: '#909399' },
-    { label: '最终净值', value: `¥${(r.final_value || 0).toLocaleString()}`, color: (r.total_return || 0) >= 0 ? '#67c23a' : '#f56c6c' },
-    { label: '总收益', value: `${r.total_return || 0}%`, color: (r.total_return || 0) >= 0 ? '#67c23a' : '#f56c6c' },
-    { label: '年化收益', value: `${r.annual_return || 0}%`, color: (r.annual_return || 0) >= 0 ? '#67c23a' : '#f56c6c' },
-    { label: '夏普比率', value: r.sharpe_ratio?.toFixed(3) || '-', color: (r.sharpe_ratio || 0) >= 1.2 ? '#67c23a' : '#f56c6c', pass: (r.sharpe_ratio || 0) >= 1.2 },
-    { label: '年化波动', value: `${r.annual_volatility || 0}%`, color: '#e6a23c' },
-    { label: '最大回撤', value: `${r.max_drawdown || 0}%`, color: (r.max_drawdown || 100) < 25 ? '#67c23a' : '#f56c6c', pass: (r.max_drawdown || 100) < 25 },
-    { label: '胜率', value: `${r.win_rate || 0}%`, color: (r.win_rate || 0) >= 50 ? '#67c23a' : '#e6a23c' },
-    { label: '交易次数', value: r.total_trades || 0, color: '#909399' },
+    { label: '夏普比率', value: m.sharpe_ratio?.toFixed(3) || '-', color: (m.sharpe_ratio || 0) >= 1.2 ? '#16a34a' : '#dc2626', tip: (m.sharpe_ratio || 0) >= 1.2 ? '达标' : '偏低' },
+    { label: '总收益', value: `${m.total_return?.toFixed(1)}%`, color: (m.total_return || 0) >= 0 ? '#16a34a' : '#dc2626', tip: (m.total_return || 0) >= 0 ? '盈利' : '亏损' },
+    { label: '年化收益', value: `${m.annual_return?.toFixed(1)}%`, color: (m.annual_return || 0) >= 10 ? '#16a34a' : '#e6a23c' },
+    { label: '最大回撤', value: `${m.max_drawdown?.toFixed(1)}%`, color: (m.max_drawdown || 100) < 25 ? '#16a34a' : '#dc2626', tip: (m.max_drawdown || 100) < 25 ? '可控' : '偏高' },
+    { label: '胜率', value: `${m.win_rate?.toFixed(1)}%`, color: (m.win_rate || 0) >= 50 ? '#16a34a' : '#dc2626' },
+    { label: '交易次数', value: m.total_trades || m.buy_count || 0, color: '#64748b' },
   ]
 })
 
-async function runBacktest() {
+const singleBenchmarkMetrics = computed(() => {
+  if (!result.value?.benchmark || result.value.benchmark.error) return []
+  const b = result.value.benchmark
+  return [
+    { label: '超额收益', display: `${b.excess_return?.toFixed(1)}%`, value: b.excess_return, good: (v: number) => v > 0 },
+    { label: 'Alpha', display: `${b.alpha?.toFixed(2)}%`, value: b.alpha, good: (v: number) => v > 0 },
+    { label: 'Beta', display: b.beta?.toFixed(3), value: b.beta, good: (v: number) => v < 1 },
+    { label: '信息比率', display: b.information_ratio?.toFixed(3), value: b.information_ratio, good: (v: number) => v > 0.5 },
+    { label: '跟踪误差', display: `${b.tracking_error?.toFixed(1)}%`, value: b.tracking_error },
+    { label: '相关性', display: b.correlation?.toFixed(3), value: b.correlation },
+  ]
+})
+
+// ── 模式切换 ──
+function onModeChange() {
+  result.value = null
+  error.value = ''
+}
+
+function onStrategyChange() {
+  result.value = null
+  error.value = ''
+}
+
+// ── 操作 ──
+
+function selectDefaultStrategies() {
+  selectedStrategies.value = ['momentum_20d', 'ma_cross', 'rsi_reversal', 'ai_scoring']
+}
+
+function toggleTradeDetail(key: string) {
+  expandedTrade.value = expandedTrade.value === key ? null : key
+}
+
+function onHistorySelect(run: any) {
+  ElMessage.info(`已选择回测记录 #${run.id}，详情加载中...`)
+}
+
+// ── 个股回测 ──
+async function runSingleStock() {
+  if (!singleStock.value) {
+    ElMessage.warning('请选择股票')
+    return
+  }
   running.value = true
   error.value = ''
+  result.value = null
+
   try {
-    report.value = await runBacktestApi({
-      initial_capital: btParams.initial_capital,
-      top_n: btParams.top_n,
-      rebalance_freq: btParams.rebalance_freq,
-      max_single_stock: btParams.max_single_stock / 100,
-      max_single_track: btParams.max_single_track / 100,
-    })
-    ElMessage.success('回测完成')
+    const res: any = await runSingleStockBacktest(
+      singleStock.value,
+      selectedStrategy.value,
+      params.topN,
+      params.stopLoss,
+      useAi.value,
+    )
+    result.value = res
+    ElMessage.success('个股回测完成')
   } catch (e: any) {
-    error.value = e.response?.data?.detail || e.message || '回测执行失败'
-    report.value = null
+    error.value = e.response?.data?.detail || e.message || '回测失败'
   } finally {
     running.value = false
   }
 }
 
-async function loadBacktest() {
-  loadingReport.value = true
-  error.value = ''
+// ── 加载数据 ──
+async function loadData() {
   try {
-    report.value = await getBacktestReport()
-  } catch (e: any) {
-    error.value = e.response?.data?.detail || e.message || '加载失败'
-    report.value = null
-  } finally {
-    loadingReport.value = false
-  }
-}
-
-onMounted(() => { loadBacktest(); loadStrategies(); loadStockList() })
-
-// ── 个股回测 ──
-const singleStock = ref('002371.SZ')
-const singleStrategy = ref('momentum_20d')
-const singleLookback = ref(20)
-const singleStopLoss = ref(0)
-const singleRunning = ref(false)
-const singleResult = ref<any>(null)
-const stockList = ref<any[]>([])
-
-async function loadStockList() {
+    allStrategies.value = await listStrategies() as any
+  } catch { /* ignore */ }
   try {
     const res: any = await listTracks()
+    trackList.value = (res?.items || res || []).filter((t: any) => t.is_active)
+    // 构建股票列表
     const stocks: any[] = []
     const seen = new Set<string>()
-    for (const track of res?.items || res || []) {
+    for (const track of (res?.items || res || [])) {
       for (const s of track.stocks || []) {
         if (!seen.has(s.code)) {
           seen.add(s.code)
@@ -516,61 +622,78 @@ async function loadStockList() {
       }
     }
     stockList.value = stocks
+    if (stocks.length && !singleStock.value) {
+      singleStock.value = stocks[0].code
+    }
+    if (trackList.value.length && !selectedStrategies.value.length) {
+      selectDefaultStrategies()
+    }
   } catch { /* ignore */ }
 }
 
-async function runSingleBt() {
-  singleRunning.value = true
+// ── 一键对比 ──
+async function runComparison() {
+  if (!selectedStrategies.value.length) {
+    ElMessage.warning('请至少选择一个策略')
+    return
+  }
+
+  running.value = true
+  error.value = ''
+  result.value = null
+  expandedTrade.value = null
+
+  // 模拟进度
+  progressPct.value = 0
+  progressStep.value = '初始化...'
+  const progTimer = setInterval(() => {
+    if (progressPct.value < 90) {
+      progressPct.value += Math.random() * 15
+      if (progressPct.value > 90) progressPct.value = 90
+    }
+  }, 800)
+
   try {
-    singleResult.value = await runSingleStockBacktest(singleStock.value, singleStrategy.value, singleLookback.value, singleStopLoss.value)
-    ElMessage.success(`${singleStock.value} 回测完成`)
+    progressStep.value = '运行回测...'
+    const res: any = await compareStrategies({
+      strategies: selectedStrategies.value,
+      track_name: selectedTrack.value,
+      initial_capital: params.capital,
+      top_n: params.topN,
+      rebalance_freq: params.freq,
+      max_single_stock: params.singleStockLimit / 100,
+      max_single_track: params.trackLimit / 100,
+      stop_loss_pct: -Math.abs(params.stopLoss) / 100,
+      take_profit_pct: 0.30,
+    })
+    result.value = res
+    progressPct.value = 100
+    progressStep.value = '完成!'
+
+    const count = Object.keys(res.strategies || {}).length
+    const successCount = Object.values(res.strategies || {}).filter((s: any) => !s.error).length
+    ElMessage.success(`${successCount}/${count} 个策略回测完成`)
   } catch (e: any) {
-    ElMessage.error(e.response?.data?.detail || '回测失败')
+    error.value = e.response?.data?.detail || e.message || '回测失败'
   } finally {
-    singleRunning.value = false
+    clearInterval(progTimer)
+    running.value = false
   }
 }
 
-function winRateLevel(rate: number) {
-  if (rate == null || isNaN(rate)) return { icon: '❓', label: '', type: '' as any }
-  if (rate >= 60) return { icon: '🔥', label: '优秀', type: 'success' as any }
-  if (rate >= 55) return { icon: '✅', label: '良好', type: 'success' as any }
-  if (rate >= 50) return { icon: '⚠️', label: '接近随机', type: 'warning' as any }
-  return { icon: '❌', label: '不如抛硬币', type: 'danger' as any }
-}
-
-function winColor(rate: number) {
-  if (rate >= 60) return '#16a34a'
-  if (rate >= 55) return '#65a30d'
-  if (rate >= 50) return '#e6a23c'
-  return '#dc2626'
-}
-
-function getGuidance(metrics: any) {
-  if (!metrics) return '请先运行回测'
-  const wr = metrics.win_rate || 0
-  const dd = Math.abs(metrics.max_drawdown || 0)
-  const ret = metrics.total_return || 0
-  const trades = metrics.total_trades || 0
-  
-  // 决策树
-  if (trades < 10) return '交易次数太少（<10），加长回测周期或放宽入场条件（减小动量周期）'
-  if (wr < 50) return '胜率 < 50%，趋势跟踪对该股无效。建议：①换逆向策略；②换其他股票；③该股可能不适合趋势交易'
-  if (wr >= 50 && wr < 55) return '胜率勉强 > 50%，但接近随机。试试加止损（-10%~-15%）过滤掉大亏交易，看胜率是否改善'
-  if (wr >= 55 && dd > 30) return '胜率不错但回撤太大！加止损控制单笔亏损，建议 -10% 止损'
-  if (wr >= 55 && ret < 0) return '胜率高但总收益为负？盈亏比有问题——每次赢的少亏的多。试试加止盈（+20%）锁定利润'
-  if (wr >= 60) return '👏 胜率 > 60%，策略有效！下一步：①加仓（调大资金比例）；②在其他同类股票上验证是否通用'
-  return '调整参数后再看'
-}
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
-.backtest-page {
+.strategy-lab {
   min-height: 100%;
   padding: 24px 32px;
   background: #f5f7fa;
 }
 
+/* ── 页面标题 ── */
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -578,22 +701,48 @@ function getGuidance(metrics: any) {
   margin-bottom: 20px;
 }
 
-.page-header h2 {
-  margin: 0;
+.ph-left { display: flex; align-items: center; gap: 12px; }
+.ph-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
   font-size: 22px;
-  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+}
+.ph-title { font-size: 22px; font-weight: 700; color: #1e293b; }
+.ph-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+
+/* ── 指南 ── */
+.guide-card {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 14px 20px;
+  margin-bottom: 16px;
 }
 
-.header-actions {
+.guide-grid {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 8px 20px;
 }
 
-/* ── 配置卡片 ── */
+.guide-item {
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.guide-item strong {
+  color: #2563eb;
+  margin-right: 4px;
+}
+
+/* ── 卡片通用 ── */
 .section-card {
   background: #fff;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px 24px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
   margin-bottom: 16px;
 }
@@ -605,133 +754,69 @@ function getGuidance(metrics: any) {
   margin-bottom: 16px;
 }
 
-.sh-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
+.sh-left { display: flex; align-items: center; gap: 12px; }
 .sh-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  width: 40px; height: 40px;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   font-size: 20px;
-  box-shadow: 0 2px 6px rgba(59,130,246,0.2);
+}
+.sh-title { font-size: 16px; font-weight: 700; color: #1e293b; }
+.sh-sub { font-size: 12px; color: #94a3b8; margin-top: 1px; }
+
+/* ── 配置 ── */
+.config-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  margin-bottom: 16px;
 }
 
-.sh-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
-  line-height: 1.3;
-}
+.config-main { display: flex; flex-direction: column; gap: 14px; }
+.config-group { display: flex; flex-direction: column; gap: 6px; }
+.config-label { font-size: 12px; font-weight: 600; color: #475569; }
 
-.sh-sub {
-  font-size: 12px;
-  color: #94a3b8;
-  line-height: 1.4;
-  margin-top: 1px;
-}
-
-/* ── 预设 ── */
-.preset-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  background: #f8fafc;
+.strategy-checklist {
+  max-height: 320px;
+  overflow-y: auto;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  margin-bottom: 18px;
+  padding: 8px 12px;
 }
 
-.preset-label {
-  font-size: 12px;
+.strat-group { margin-bottom: 8px; }
+.strat-group-label {
+  font-size: 11px;
+  color: #94a3b8;
   font-weight: 600;
-  color: #64748b;
-  white-space: nowrap;
+  margin-bottom: 4px;
+  padding-left: 2px;
 }
 
-.preset-tag {
-  margin-left: auto;
-}
+.strat-check-group { display: flex; flex-direction: column; gap: 2px; }
 
-/* ── 表单网格 ── */
-.bt-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-
-.form-group {
-  background: #fafbfc;
-  border: 1px solid #eef2f6;
-  border-radius: 10px;
-  padding: 14px 16px;
-}
-
-.fg-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #eef2f6;
-}
-
-.fg-fields {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.form-item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.form-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: #64748b;
+.strat-check-item {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
 }
+
+.strat-check-item:hover {
+  background: #f1f5f9;
+}
+
+.config-params { display: flex; flex-direction: column; gap: 14px; }
+.param-row { display: flex; gap: 14px; }
+.param-item { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.param-label { font-size: 12px; font-weight: 500; color: #64748b; display: flex; align-items: center; gap: 4px; }
 
 .label-help {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #e2e8f0;
-  color: #64748b;
-  font-size: 10px;
-  font-weight: 700;
-  cursor: help;
-}
-
-.freq-group {
-  display: flex;
-  width: 100%;
-}
-
-.freq-group :deep(.el-radio-button__inner) {
-  width: 100%;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #e2e8f0; color: #64748b;
+  font-size: 10px; font-weight: 700; cursor: help;
 }
 
 /* ── 操作栏 ── */
@@ -745,7 +830,7 @@ function getGuidance(metrics: any) {
   border-radius: 8px;
 }
 
-.locked-hint {
+.locked-info {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -754,229 +839,174 @@ function getGuidance(metrics: any) {
 }
 
 .run-btn {
-  padding: 10px 28px;
-  font-size: 14px;
+  padding: 10px 32px;
+  font-size: 15px;
   font-weight: 600;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(59,130,246,0.25);
 }
 
-/* ── 指标 ── */
-.metrics-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 12px;
+/* ── 进度 ── */
+.progress-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 20px 24px;
   margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.progress-text {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* ── 排行榜 ── */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
 }
 
 .metric-card {
-  background: #fff;
-  border-radius: 8px;
+  background: #f8fafc;
+  border-radius: 10px;
   padding: 14px 12px;
   text-align: center;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.metric-value {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
+.metric-value { font-size: 22px; font-weight: 700; line-height: 1.2; }
+.metric-label { font-size: 11px; color: #909399; margin-top: 2px; }
+.metric-tip { font-size: 10px; margin-top: 2px; opacity: 0.6; }
 
-.metric-label {
-  font-size: 11px;
-  color: #909399;
-  margin-top: 2px;
-}
-
-.metric-pass {
-  margin-top: 4px;
-}
-
-.error-card, .empty-card {
-  background: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-/* ── 回测记录 ── */
-.report-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
-  margin-bottom: 16px;
-}
-
-.rh-left {
-  display: flex;
-  align-items: center;
+.ai-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 12px;
 }
 
-.rh-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, #10b981, #059669);
+.ai-card {
+  background: #f8fafc;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  box-shadow: 0 2px 6px rgba(16,185,129,0.2);
+  padding: 14px 12px;
+  text-align: center;
 }
 
-.rh-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #1e293b;
+.ai-value { font-size: 20px; font-weight: 700; color: #1e293b; }
+.ai-label { font-size: 11px; color: #909399; margin-top: 2px; }
+
+.benchmark-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
 }
 
-.rh-sub {
-  font-size: 12px;
+.bm-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+}
+
+.bm-value { font-size: 18px; font-weight: 700; }
+.bm-value.good { color: #16a34a; }
+.bm-value.bad { color: #dc2626; }
+.bm-label { font-size: 11px; color: #909399; margin-top: 2px; }
+
+.strat-desc {
+  display: block;
+  font-size: 11px;
   color: #94a3b8;
   margin-top: 1px;
 }
 
-/* ── 上下文网格 ── */
-.context-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 20px;
+.trade-detail-section {
+  padding: 0;
+  overflow: hidden;
 }
 
-.ctx-card {
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px 20px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  border: 1px solid #f0f2f5;
+.rank-table-wrap {
+  overflow-x: auto;
 }
 
-.ctx-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #f0f2f5;
-}
-
-.ctx-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.ctx-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.ctx-key {
-  color: #64748b;
-}
-
-.ctx-val {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.metrics-section-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-
-/* ── 策略对比表 ── */
-.compare-table {
+.rank-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
 }
 
-.compare-table th {
+.rank-table th {
   text-align: left;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: #f8fafc;
   color: #64748b;
   font-weight: 600;
   font-size: 11px;
   border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
 }
 
-.compare-table td {
+.rank-table td {
   padding: 10px 12px;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
 }
 
-.compare-table tr.row-best {
-  background: #fefce8;
+.rank-gold { background: #fffbeb; }
+.rank-silver { background: #f8fafc; }
+.rank-bronze { background: #fefce8; }
+
+.td-rank { font-size: 18px; text-align: center; }
+.td-name { font-weight: 600; }
+.td-num { font-family: monospace; font-weight: 600; }
+.up { color: #16a34a; }
+.down { color: #dc2626; }
+
+/* ── 学习要点 ── */
+.learn-points {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.compare-table tr.row-best td:first-child {
+.learn-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.lp-tag {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 11px;
   font-weight: 700;
 }
 
-.best-badge {
-  margin-right: 4px;
+.lp-tag.best { background: #dcfce7; color: #16a34a; }
+.lp-tag.insight { background: #ede9fe; color: #7c3aed; }
+.lp-tag.tip { background: #e0f2fe; color: #0284c7; }
+
+/* ── 错误/空 ── */
+.error-card, .empty-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 16px;
 }
 
-.score-good {
-  color: #16a34a;
-  font-weight: 600;
+.trade-detail-section {
+  padding: 0;
+  overflow: hidden;
 }
 
-.score-bad {
-  color: #dc2626;
+@media (max-width: 860px) {
+  .config-grid { grid-template-columns: 1fr; }
+  .strategy-lab { padding: 16px; }
 }
-
-/* ── 个股回测 ── */
-.single-bt-form { margin-bottom: 12px; }
-.sbf-row {
-  display: grid;
-  grid-template-columns: 180px 150px 160px 100px auto;
-  gap: 12px;
-  align-items: end;
-}
-
-@media (max-width: 900px) {
-  .sbf-row { grid-template-columns: 1fr 1fr; }
-}
-
-.sbf-item { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.sbf-action { justify-content: flex-end; }
-.sbf-item :deep(.el-slider) { margin-bottom: 0; }
-.sbf-item :deep(.el-slider__input) { width: 48px !important; }
-
-.single-result { margin-top: 12px; }
-.sr-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.sr-stock { font-weight: 700; font-size: 15px; color: #1e293b; }
-
-.sr-metrics { display: flex; gap: 12px; margin-bottom: 10px; }
-.srm-card { flex: 1; text-align: center; padding: 10px 8px; background: #f8fafc; border-radius: 8px; }
-.srm-value { font-size: 20px; font-weight: 700; }
-.srm-label { font-size: 10px; color: #94a3b8; margin-top: 2px; }
-
-.sr-guide { background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 14px; margin-bottom: 10px; }
-.srg-title { font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 4px; }
-.srg-text { font-size: 12px; color: #78350f; line-height: 1.5; }
-
-.sr-trades { max-height: 200px; overflow-y: auto; }
-.srt-title { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 4px; }
-.srt-row { display: flex; gap: 12px; align-items: center; padding: 3px 0; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
-.srt-date { color: #94a3b8; width: 80px; font-family: monospace; }
-.srt-price { color: #475569; }
-.srt-profit { color: #16a34a; font-weight: 600; }
-.srt-loss { color: #dc2626; font-weight: 600; }
 </style>

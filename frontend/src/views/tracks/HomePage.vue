@@ -122,6 +122,54 @@
             </div>
           </div>
         </div>
+
+        <!-- 学习看板 -->
+        <div class="qs-divider" />
+        <div class="qs-section-label">
+          <span>📚 学习看板</span>
+        </div>
+        <div class="qs-grid">
+          <div class="qs-item">
+            <div class="qs-item-top">
+              <span class="qs-item-icon">🧪</span>
+              <span class="qs-value">{{ learningStats.total_experiments }}</span>
+            </div>
+            <span class="qs-label">已实验次数</span>
+            <div class="qs-bar">
+              <div class="qs-bar-fill" :style="{ width: Math.min(100, learningStats.total_experiments * 5) + '%', background: '#6366f1' }" />
+            </div>
+          </div>
+          <div class="qs-item">
+            <div class="qs-item-top">
+              <span class="qs-item-icon">🏆</span>
+              <span class="qs-value" style="font-size:14px">{{ learningStats.best_sharpe_strategy }}</span>
+            </div>
+            <span class="qs-label">最佳策略 (夏普 {{ learningStats.best_sharpe }})</span>
+            <div class="qs-bar">
+              <div class="qs-bar-fill" :style="{ width: Math.min(100, learningStats.best_sharpe * 40) + '%', background: '#16a34a' }" />
+            </div>
+          </div>
+          <div class="qs-item">
+            <div class="qs-item-top">
+              <span class="qs-item-icon">📉</span>
+              <span class="qs-value" style="font-size:14px">{{ learningStats.worst_drawdown_strategy }}</span>
+            </div>
+            <span class="qs-label">最大回撤 {{ learningStats.worst_drawdown }}%</span>
+            <div class="qs-bar">
+              <div class="qs-bar-fill" :style="{ width: Math.min(100, learningStats.worst_drawdown * 2) + '%', background: '#dc2626' }" />
+            </div>
+          </div>
+          <div class="qs-item">
+            <div class="qs-item-top">
+              <span class="qs-item-icon">🎯</span>
+              <span class="qs-value">{{ learningStats.total_tracks }}</span>
+            </div>
+            <span class="qs-label">覆盖赛道</span>
+            <div class="qs-bar">
+              <div class="qs-bar-fill" :style="{ width: (learningStats.total_tracks / 6 * 100) + '%', background: '#8b5cf6' }" />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -130,7 +178,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, type Track } from '@/api/track'
+import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, getLearningStats, type Track } from '@/api/track'
 import PipelineStatus from '@/components/tracks/PipelineStatus.vue'
 
 const router = useRouter()
@@ -143,6 +191,15 @@ const stats = ref({
   whitelist: 0,
   models: 0,
   backtestReturn: '-',
+})
+
+const learningStats = ref({
+  total_experiments: 0,
+  total_tracks: 0,
+  best_sharpe: 0,
+  best_sharpe_strategy: '无',
+  worst_drawdown: 0,
+  worst_drawdown_strategy: '无',
 })
 
 const trackColors: Record<string, string> = {
@@ -254,6 +311,12 @@ onMounted(async () => {
         const m = bt?.metrics || (Array.isArray(bt) ? bt[0] : bt) || {}
         stats.value.backtestReturn = (m.total_return || 0).toFixed(1) + '%'
       } catch {}
+    } catch {}
+
+    // 学习看板统计
+    try {
+      const ls = await getLearningStats()
+      if (ls) learningStats.value = ls
     } catch {}
   } catch {
     // silent fail
@@ -535,6 +598,13 @@ onMounted(async () => {
   height: 1px;
   background: linear-gradient(90deg, #e2e8f0 0%, #e2e8f0 60%, transparent 100%);
   margin: 14px 0 16px;
+}
+
+.qs-section-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin: 0 0 12px 2px;
 }
 
 .qs-grid {

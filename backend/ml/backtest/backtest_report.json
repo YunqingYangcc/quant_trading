@@ -62,5 +62,37 @@
     "rebalance_count": 42,
     "stop_loss_count": 16,
     "take_profit_count": 9
+  },
+  {
+    "initial_capital": 100000,
+    "final_value": 215027.59,
+    "total_return": 115.03,
+    "annual_return": 25.58,
+    "annual_volatility": 630.07,
+    "sharpe_ratio": 1.302,
+    "max_drawdown": -87.84,
+    "win_rate": 50.47,
+    "total_trades": 846,
+    "name": "等权持有",
+    "trades": 2504,
+    "rebalance_count": 41,
+    "stop_loss_count": 320,
+    "take_profit_count": 255
+  },
+  {
+    "initial_capital": 100000,
+    "final_value": 137395.98,
+    "total_return": 37.4,
+    "annual_return": 9.91,
+    "annual_volatility": 132.34,
+    "sharpe_ratio": 0.626,
+    "max_drawdown": -57.75,
+    "win_rate": 34.28,
+    "total_trades": 846,
+    "name": "20日动量 Top-3",
+    "trades": 111,
+    "rebalance_count": 40,
+    "stop_loss_count": 20,
+    "take_profit_count": 17
   }
 ]

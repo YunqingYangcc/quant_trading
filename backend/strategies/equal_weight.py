@@ -8,11 +8,13 @@
 import numpy as np
 import pandas as pd
 
+from strategies.signal_base import SignalGenerator
 
-class EqualWeightStrategy:
+
+class EqualWeightStrategy(SignalGenerator):
     """等权持有全部股票。"""
 
-    def generate_signals(self, prices: pd.DataFrame, features: pd.DataFrame | None = None) -> pd.DataFrame:
+    def generate(self, prices: pd.DataFrame, features=None, ai_scores=None) -> pd.DataFrame:
         """每月初重新等权分配。
 
         Returns:

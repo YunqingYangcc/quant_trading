@@ -1,6 +1,6 @@
 {
   "version": "v1",
-  "screening_date": "2026-06-20",
+  "screening_date": "2026-06-21",
   "thresholds": {
     "ic_min": 0.005,
     "ir_min": 0.05,

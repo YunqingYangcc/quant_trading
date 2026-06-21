@@ -137,8 +137,10 @@ export function runStrategyBacktest(strategyName: string) {
   return request.post(`/backtest/strategy/${strategyName}`)
 }
 
-export function runSingleStockBacktest(stockCode: string, strategy?: string, lookback?: number, stopLoss?: number) {
-  return request.post(`/backtest/single/${stockCode}`, null, { params: { strategy, lookback, stop_loss: stopLoss } })
+export function runSingleStockBacktest(stockCode: string, strategy?: string, lookback?: number, stopLoss?: number, useAi?: boolean) {
+  const params: Record<string, any> = { strategy, lookback, stop_loss: stopLoss }
+  if (useAi) params.use_ai = true
+  return request.post(`/backtest/single/${stockCode}`, null, { params })
 }
 
 export function runBacktest(data: {
@@ -185,4 +187,32 @@ export function getPipelineRuns(limit = 10, runType?: string) {
   const params: Record<string, any> = { limit }
   if (runType) params.run_type = runType
   return request.get('/ml/pipeline-runs', { params })
+}
+
+// ── 量化交易员学习和成长平台 API ──
+
+export function compareStrategies(data: {
+  strategies: string[]
+  track_name: string
+  initial_capital?: number
+  top_n?: number
+  rebalance_freq?: string
+  max_single_stock?: number
+  max_single_track?: number
+  stop_loss_pct?: number
+  take_profit_pct?: number
+}) {
+  return request.post('/backtest/compare', data)
+}
+
+export function getBacktestHistory(limit = 20) {
+  return request.get('/backtest/history', { params: { limit } })
+}
+
+export function getBacktestDetail(runId: number) {
+  return request.get(`/backtest/history/${runId}`)
+}
+
+export function getLearningStats() {
+  return request.get('/learning/stats')
 }

@@ -533,7 +533,7 @@ def run_strategy_baselines(prices: pd.DataFrame) -> list[dict]:
         if not entry:
             continue
         gen = entry["generator"]
-        signals = gen.generate_signals(prices)
+        signals = gen.generate(prices)
         if signals.empty:
             logger.warning(f"  {entry['name']}: 无信号")
             continue
@@ -551,7 +551,7 @@ def run_strategy_by_name(strategy_name: str, prices: pd.DataFrame, params: dict 
     if not entry:
         raise ValueError(f"未知策略: {strategy_name}")
     gen = entry["generator"]
-    signals = gen.generate_signals(prices)
+    signals = gen.generate(prices)
     if signals.empty:
         return {"name": entry["name"], "error": "无信号"}
     bt_params = {**BACKTEST_PARAMS, **(params or {})}

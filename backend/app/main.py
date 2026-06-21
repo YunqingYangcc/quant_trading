@@ -40,9 +40,11 @@ app.add_middleware(
 # 注册路由
 from app.api.track import router as track_router
 from app.api.ml_api import router as ml_router
+from app.api.backtest_api import router as backtest_router
 
 app.include_router(track_router, prefix="/api/v1/track", tags=["赛道管理"])
 app.include_router(ml_router, prefix="/api/v1", tags=["AI 模型"])
+app.include_router(backtest_router, prefix="/api/v1", tags=["回测对比与学习"])
 
 
 @app.get("/", summary="根路由")

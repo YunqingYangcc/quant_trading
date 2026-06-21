@@ -2,6 +2,7 @@
 AI 打分策略（将现有模型封装为策略接口）。
 
 使用已训练的 LightGBM 模型生成选股信号。
+支持组合模式和单股模式。
 """
 
 import json
@@ -9,18 +10,17 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 
+from strategies.signal_base import SignalGenerator
+
 MODELS_DIR = Path(__file__).resolve().parent / "ml" / "models"
 PREPROCESSED_DIR = Path(__file__).resolve().parent / "ml" / "preprocessed"
 
 
-class AIScoringStrategy:
+class AIScoringStrategy(SignalGenerator):
     """AI 模型打分轮动策略。"""
 
-    def generate_signals(self, prices: pd.DataFrame, features: pd.DataFrame | None = None) -> pd.DataFrame:
-        """用 AI 模型预测信号。
-
-        优先用缓存打分，否则实时加载模型预测。
-        """
+    def generate(self, prices: pd.DataFrame, features=None, ai_scores=None) -> pd.DataFrame:
+        """用 AI 模型预测信号。"""
         # 尝试从缓存加载
         cache_path = PREPROCESSED_DIR / "backtest_scores.parquet"
         if cache_path.exists():
