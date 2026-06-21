@@ -675,25 +675,35 @@ async def run_backtest(params: BacktestRunParams = Body(...)):
     bt = _util.module_from_spec(spec)
     spec.loader.exec_module(bt)
 
-    # 注入可配置参数（覆盖默认锁定参数）
-    bt.BACKTEST_PARAMS.update({
+    # 构建局部参数（不污染全局 BACKTEST_PARAMS）
+    bt_params = {
+        **bt.BACKTEST_PARAMS,
         "initial_capital": params.initial_capital,
         "top_n": params.top_n,
         "rebalance_freq": params.rebalance_freq,
         "max_single_stock": params.max_single_stock,
         "max_single_track": params.max_single_track,
-    })
+    }
 
-    # 在后台线程中运行回测
+    # 在后台线程中运行回测（使用 run_single_strategy，完整实现）
     loop = asyncio.get_event_loop()
     try:
         scores, prices = await loop.run_in_executor(None, bt.load_historical_scores)
-        signals = await loop.run_in_executor(None, bt.generate_signals, scores)
-        trades, equity_curve = await loop.run_in_executor(None, bt.simulate_trades, signals, prices)
-        metrics = await loop.run_in_executor(None, bt.calculate_metrics, equity_curve)
+        result = await loop.run_in_executor(
+            None, bt.run_single_strategy, "用户配置回测", bt_params, scores, prices
+        )
     except Exception as e:
         logger.error(f"回测执行失败: {e}")
         raise HTTPException(status_code=500, detail=f"回测执行失败: {e}")
+
+    # 从 result 提取净值曲线（用回测报告缓存读取）
+    equity_curve = []
+    eq_csv = BACKTEST_DIR / "equity_curve_用户配置回测.csv"
+    if eq_csv.exists():
+        import csv as _csv
+        with open(eq_csv) as f:
+            for row in _csv.DictReader(f):
+                equity_curve.append(row)
 
     # 获取赛道与股票元数据
     track_info = []
@@ -702,8 +712,8 @@ async def run_backtest(params: BacktestRunParams = Body(...)):
         from sqlalchemy import select
         from app.models.track import Track
         async with async_session_maker() as session:
-            result = await session.execute(select(Track).where(Track.is_active == 1))
-            tracks = result.scalars().all()
+            track_result = await session.execute(select(Track).where(Track.is_active == 1))
+            tracks = track_result.scalars().all()
             for t in tracks:
                 track_info.append({
                     "name": t.name,
@@ -738,14 +748,15 @@ async def run_backtest(params: BacktestRunParams = Body(...)):
             "date_end": date_end,
             "run_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
         },
-        "metrics": metrics,
+        "metrics": {k: v for k, v in result.items() if k not in ("name",)},
     }
 
     # 保存结果（含上下文）
     report_path = BACKTEST_DIR / "backtest_report.json"
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2, ensure_ascii=False, default=str)
-    pd.DataFrame(equity_curve).to_csv(BACKTEST_DIR / "equity_curve.csv", index=False)
+    if equity_curve:
+        pd.DataFrame(equity_curve).to_csv(BACKTEST_DIR / "equity_curve.csv", index=False)
 
     return report
 
