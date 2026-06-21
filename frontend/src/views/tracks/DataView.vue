@@ -297,11 +297,11 @@ const pipelineStatus = reactive<Record<string, string>>({
 })
 
 const pipelineSteps = [
-  { key: 'compute', label: 'Phase B 特征计算', desc: '93通用+18赛道特征', action: '计算' },
-  { key: 'screen', label: 'Phase C 因子筛选', desc: 'Alphalens 白/黑名单', action: '筛选' },
-  { key: 'preprocess', label: 'Phase D 特征预处理', desc: '标准化+去共线+时序分割', action: '预处理' },
-  { key: 'train', label: 'Phase E 模型训练', desc: '6 赛道 LightGBM', action: '训练' },
-  { key: 'backtest', label: 'Phase G 回测校验', desc: '轮动策略+夏普/回撤', action: '回测' },
+  { key: 'compute', label: '特征计算', desc: '93通用+18赛道特征', action: '计算' },
+  { key: 'incremental_compute', label: '增量特征追加', desc: '仅新增交易日', action: '增量' },
+  { key: 'screen', label: '因子筛选', desc: 'Alphalens 白/黑名单', action: '筛选' },
+  { key: 'preprocess', label: '特征预处理', desc: '标准化+去共线+时序分割', action: '预处理' },
+  { key: 'train', label: '模型训练', desc: '6 赛道 LightGBM', action: '训练' },
 ]
 
 function stepClass(key: string) {
@@ -316,12 +316,18 @@ async function runPipeline(step: string) {
   running.value = step
   pipelineLog.value = ''
 
-  const steps = step === 'all' ? ['compute', 'screen', 'preprocess', 'train', 'backtest'] : [step]
+  const steps = step === 'all' ? ['compute', 'screen', 'preprocess', 'train'] : [step]
 
   for (const s of steps) {
     pipelineStatus[s] = 'running'
     try {
-      const res: any = await runPipelineApi(s)
+      let res: any
+      if (s === 'incremental_compute') {
+        const { incrementalCompute } = await import('@/api/track')
+        res = await incrementalCompute()
+      } else {
+        res = await runPipelineApi(s)
+      }
       if (step === 'all' && res?.steps?.[s]?.status === 'failed') {
         pipelineStatus[s] = 'failed'
         ElMessage.warning(`${s} 失败: ${res.steps[s].error}`)
@@ -330,6 +336,9 @@ async function runPipeline(step: string) {
       pipelineStatus[s] = 'done'
       if (res?.steps?.[s]?.log) {
         pipelineLog.value += `[${s}] ${res.steps[s].log.slice(0, 200)}\n`
+      }
+      if (res?.status === 'success') {
+        pipelineLog.value += `[${s}] ${JSON.stringify(res)}\n`
       }
       ElMessage.success(`${s} 完成`)
     } catch (e: any) {

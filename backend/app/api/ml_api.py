@@ -14,7 +14,14 @@ import joblib
 import pandas as pd
 from fastapi import APIRouter, Body, HTTPException
 
-from app.schemas.track import BacktestRunParams, PipelineRunResponse, TrainModelParams
+from app.schemas.track import (
+    BacktestRunParams,
+    PipelineRunResponse,
+    TrainModelParams,
+    FeatureConfigCreate,
+    FeatureConfigUpdate,
+    FeatureConfigResponse,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -156,12 +163,11 @@ async def train_all_models():
 
 @router.get("/ml/models/all", summary="获取所有模型元信息")
 async def list_all_models():
-    """获取4个赛道模型的元信息"""
+    """获取所有赛道模型的元信息"""
     models = []
     for meta_path in MODELS_DIR.glob("*_meta.json"):
         with open(meta_path) as f:
             meta = json.load(f)
-            # 获取模型文件修改时间
             pkl_path = MODELS_DIR / f"{meta['track_name']}.pkl"
             if pkl_path.exists():
                 import datetime
@@ -169,6 +175,12 @@ async def list_all_models():
                 meta["trained_at"] = mtime.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 meta["trained_at"] = None
+            # 兼容：如果 meta 缺失 train_r2，从 train_acc 复制
+            if "train_r2" not in meta and "train_acc" in meta:
+                meta["train_r2"] = meta["train_acc"]
+                meta["val_r2"] = meta.get("val_acc", 0)
+                meta["test_r2"] = meta.get("test_acc", 0)
+                meta["cv_mean_r2"] = meta.get("cv_mean_acc", 0)
             models.append(meta)
     return models
 
@@ -792,6 +804,268 @@ async def get_portfolio_summary():
         "tracks": track_config,
         "risk_metrics": risk_metrics,
         "total_sentiment": round(total_sentiment, 2),
+    }
+
+
+# ══════════════════════════════════════════════
+# 特征配置 CRUD (Feature Config)
+# ══════════════════════════════════════════════
+
+
+@router.get("/features/configs", summary="获取全部特征配置")
+async def list_feature_configs(
+    category: str | None = None,
+    enabled_only: bool = False,
+):
+    """列出所有特征配置，可按分类筛选"""
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        q = select(FeatureConfig).order_by(FeatureConfig.category, FeatureConfig.feature_name)
+        if category:
+            q = q.where(FeatureConfig.category == category)
+        if enabled_only:
+            q = q.where(FeatureConfig.is_enabled == 1)
+        result = await session.execute(q)
+        configs = result.scalars().all()
+        return [FeatureConfigResponse.model_validate(c) for c in configs]
+
+
+@router.get("/features/configs/{config_id}", summary="获取特征配置详情")
+async def get_feature_config(config_id: int):
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FeatureConfig).where(FeatureConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(status_code=404, detail="特征配置不存在")
+        return FeatureConfigResponse.model_validate(config)
+
+
+@router.post("/features/configs", summary="创建特征配置", status_code=201)
+async def create_feature_config(data: FeatureConfigCreate):
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        existing = await session.execute(
+            select(FeatureConfig).where(FeatureConfig.feature_name == data.feature_name)
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail=f"特征 '{data.feature_name}' 已存在")
+
+        config = FeatureConfig(**data.model_dump())
+        session.add(config)
+        await session.commit()
+        await session.refresh(config)
+        return FeatureConfigResponse.model_validate(config)
+
+
+@router.put("/features/configs/{config_id}", summary="更新特征配置")
+async def update_feature_config(config_id: int, data: FeatureConfigUpdate):
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FeatureConfig).where(FeatureConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(status_code=404, detail="特征配置不存在")
+
+        for key, val in data.model_dump(exclude_none=True).items():
+            setattr(config, key, val)
+        await session.commit()
+        await session.refresh(config)
+        return FeatureConfigResponse.model_validate(config)
+
+
+@router.delete("/features/configs/{config_id}", summary="删除特征配置")
+async def delete_feature_config(config_id: int):
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FeatureConfig).where(FeatureConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(status_code=404, detail="特征配置不存在")
+        await session.delete(config)
+        await session.commit()
+        return {"message": "Deleted"}
+
+
+@router.put("/features/configs/{config_id}/toggle", summary="切换特征启用状态")
+async def toggle_feature_config(config_id: int):
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig
+    from sqlalchemy import select
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FeatureConfig).where(FeatureConfig.id == config_id)
+        )
+        config = result.scalar_one_or_none()
+        if not config:
+            raise HTTPException(status_code=404, detail="特征配置不存在")
+        config.is_enabled = 1 - config.is_enabled  # 0↔1 切换
+        await session.commit()
+        await session.refresh(config)
+        return FeatureConfigResponse.model_validate(config)
+
+
+@router.post("/features/sync", summary="从白名单同步特征配置")
+async def sync_feature_configs():
+    """从 FeatureWhiteList 中自动导入配置（动态生成释义/公式/解读）"""
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureConfig, FeatureWhiteList
+    from sqlalchemy import select
+
+    # 导入动态释义生成器
+    from scripts.fill_feature_descriptions import gen_description, gen_formula, gen_interpretation
+
+    # 中文名生成（按特征名模式）
+    def _gen_display_name(fname: str, category: str | None) -> str:
+        cn_map = {
+            "rsi_6": "6日RSI", "rsi_14": "14日RSI", "rsi_24": "24日RSI",
+            "stoch_k": "随机指标K", "stoch_d": "随机指标D", "stoch_j": "随机指标J",
+            "willr_14": "14日威廉指标", "willr_28": "28日威廉指标",
+            "roc_5": "5日变动率", "roc_20": "20日变动率", "roc_60": "60日变动率",
+            "ao": "动量震荡", "ppo": "PPO百分比", "ppo_signal": "PPO信号线",
+            "sma_5": "5日均线", "sma_10": "10日均线", "sma_20": "20日均线", "sma_60": "60日均线",
+            "sma_dev_5": "5日偏离度", "sma_dev_10": "10日偏离度", "sma_dev_20": "20日偏离度", "sma_dev_60": "60日偏离度",
+            "ema_12": "12日指数均线", "ema_26": "26日指数均线",
+            "ema_dev_12": "12日指数偏离", "ema_dev_26": "26日指数偏离",
+            "macd": "MACD快线", "macd_signal": "MACD信号线", "macd_hist": "MACD柱",
+            "adx": "ADX趋势强度", "adx_pos": "正向方向指标", "adx_neg": "负向方向指标",
+            "aroon_up": "阿隆上升", "aroon_down": "阿隆下降",
+            "cci_14": "14日CCI", "cci_20": "20日CCI",
+            "trix": "TRIX三重指数",
+            "atr_5": "5日ATR", "atr_14": "14日ATR", "atr_20": "20日ATR",
+            "bb_upper": "布林上轨", "bb_lower": "布林下轨", "bb_mid": "布林中轨", "bb_width": "布林带宽", "bb_pct": "布林位置",
+            "dc_upper": "唐奇安上轨", "dc_lower": "唐奇安下轨", "dc_mid": "唐奇安中轨",
+            "ulcer_14": "溃疡指数",
+            "obv": "OBV能量潮", "ad": "A/D资金流", "cmf": "资金流指标",
+            "emv": "简易波动", "fi_13": "13日力量指数", "mfi": "资金流量",
+            "vpt": "量价趋势", "vwap": "均价线",
+            "vol_ratio_5": "5日量比", "vol_ratio_20": "20日量比",
+            "vol_roc_5": "5日量能变化", "vol_roc_20": "20日量能变化",
+            "ret_skew_20": "20日收益偏度", "ret_skew_60": "60日收益偏度",
+            "ret_kurt_20": "20日收益峰度",
+            "ret_pctile_20": "20日收益分位", "ret_pctile_60": "60日收益分位",
+            "consec_up": "连续上涨", "consec_down": "连续下跌",
+            "sharpe_20": "20日夏普比",
+            "pv_corr_10": "10日量价相关", "pv_corr_20": "20日量价相关",
+            "price_pos_20": "20日价格位置", "price_pos_60": "60日价格位置",
+        }
+        if fname in cn_map:
+            return cn_map[fname]
+        # 赛道特征自动生成中文名
+        if fname.startswith("track_"):
+            short = fname.replace("track_", "", 1)
+            # 去掉 metric 和 period 后缀
+            for suffix in ["_amihud_illiq", "_money_flow_ratio", "_money_flow",
+                           "_volume_ratio", "_volatility", "_trend",
+                           "_max_ret", "_min_ret", "_avg_ret", "_mom"]:
+                if suffix in short:
+                    parts = short.split(suffix)[0]
+                    return f"赛道{parts.replace('-','/')}特征" + suffix
+            return f"赛道特征({short})"
+        return fname
+
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(FeatureWhiteList).where(FeatureWhiteList.is_active == 1)
+        )
+        whitelist = result.scalars().all()
+
+        existing = await session.execute(select(FeatureConfig))
+        existing_names = {c.feature_name for c in existing.scalars().all()}
+
+        created = 0
+        for f in whitelist:
+            if f.factor_name in existing_names:
+                continue
+            cfg = FeatureConfig(
+                feature_name=f.factor_name,
+                display_name=_gen_display_name(f.factor_name, f.category or f.factor_type),
+                category=f.category or f.factor_type or "generic",
+                description=gen_description(f.factor_name),
+                formula=gen_formula(f.factor_name),
+                interpretation=gen_interpretation(f.factor_name),
+                is_enabled=1,
+                is_user_defined=0,
+            )
+            session.add(cfg)
+            existing_names.add(f.factor_name)
+            created += 1
+
+        await session.commit()
+        return {"synced": created, "total": len(existing_names)}
+
+
+@router.post("/features/compute/incremental", summary="增量特征计算（仅新增交易日）")
+async def incremental_compute_features():
+    """增量计算特征：仅计算 FeatureStore 中缺失的交易日"""
+    try:
+        from scripts.compute_features import run_incremental_compute
+        result = await run_incremental_compute()
+        return result
+    except Exception as e:
+        logger.error(f"增量特征计算失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/features/metadata", summary="获取特征元数据（版本/最新日期）")
+async def get_features_metadata():
+    from app.db.database import async_session_maker
+    from app.models.track import FeatureStore
+    from sqlalchemy import select, func as sa_func
+
+    async with async_session_maker() as session:
+        # 最新交易日
+        result = await session.execute(
+            select(sa_func.max(FeatureStore.trade_date))
+        )
+        latest_date = result.scalar()
+
+        # 总行数
+        result = await session.execute(
+            select(sa_func.count(FeatureStore.id))
+        )
+        total_records = result.scalar()
+
+        # 股票数
+        result = await session.execute(
+            select(sa_func.count(sa_func.distinct(FeatureStore.stock_code)))
+        )
+        stock_count = result.scalar()
+
+        # 最新创建时间
+        result = await session.execute(
+            select(sa_func.max(FeatureStore.created_at))
+        )
+        latest_created = result.scalar()
+
+    return {
+        "version": "v1",
+        "latest_trade_date": latest_date,
+        "total_records": total_records,
+        "stock_count": stock_count,
+        "last_computed_at": latest_created.isoformat() if latest_created else None,
     }
 
 

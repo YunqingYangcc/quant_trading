@@ -16,6 +16,18 @@ const router = createRouter({
       component: () => import('@/views/tracks/DataView.vue'),
     },
     {
+      path: '/features',
+      name: 'features',
+      meta: { title: 'Feature Config' },
+      component: () => import('@/views/tracks/FeatureConfigPage.vue'),
+    },
+    {
+      path: '/factors',
+      name: 'factors',
+      meta: { title: 'Factor Config' },
+      component: () => import('@/views/tracks/FactorConfigPage.vue'),
+    },
+    {
       path: '/alpha',
       name: 'alpha',
       meta: { title: 'Alpha Research' },
@@ -42,14 +54,8 @@ const router = createRouter({
     {
       path: '/runner',
       name: 'runner',
-      meta: { title: 'Pipeline Runner' },
+      meta: { title: '量化流水线' },
       component: () => import('@/views/tracks/PipelineRunnerPage.vue'),
-    },
-    {
-      path: '/portfolio',
-      name: 'portfolio',
-      meta: { title: 'Portfolio Monitor' },
-      component: () => import('@/views/tracks/PortfolioPage.vue'),
     },
   ],
 })

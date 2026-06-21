@@ -2,7 +2,12 @@
   <div class="model-factory-page">
     <div class="page-header">
       <h2>🤖 Model Factory</h2>
-      <el-button size="small" @click="loadData" :loading="loading">重新加载</el-button>
+      <div style="display:flex;gap:8px">
+        <el-button size="small" type="primary" @click="retrainAll" :loading="trainingTrack === '__all__'">
+          {{ trainingTrack === '__all__' ? '训练中...' : '▶ 一键全部训练' }}
+        </el-button>
+        <el-button size="small" @click="loadData" :loading="loading">重新加载</el-button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -18,9 +23,6 @@
             <div class="card-name" :style="{ color: trackColor(m.track_name) }">
               {{ m.track_name?.toUpperCase() }}
             </div>
-            <el-tag :type="m.status === 'trained' ? 'success' : 'warning'" size="small" effect="dark" round>
-              {{ m.overfitting ? '⚠️ Overfit' : '✅ Ready' }}
-            </el-tag>
           </div>
           <div class="card-meta">
             <span class="meta-label">Training</span>
@@ -28,20 +30,22 @@
           </div>
           <div class="card-metrics">
             <div class="metric">
-              <span class="m-label">Train R²</span>
-              <span class="m-value" :style="{ color: m.train_r2 > 0 ? '#67c23a' : '#f56c6c' }">{{ (m.train_r2 || 0).toFixed(4) }}</span>
+              <span class="m-label">Train Acc</span>
+              <span class="m-value" :style="{ color: !m.is_trained ? '#94a3b8' : (m.train_acc > 0.5 ? '#67c23a' : '#f56c6c') }">
+                {{ m.is_trained ? ((m.train_acc || 0) * 100).toFixed(1) + '%' : '未训练' }}
+              </span>
             </div>
             <div class="metric">
-              <span class="m-label">Val R²</span>
-              <span class="m-value">{{ (m.val_r2 || 0).toFixed(4) }}</span>
+              <span class="m-label">Val Acc</span>
+              <span class="m-value">{{ m.is_trained ? ((m.val_acc || 0) * 100).toFixed(1) + '%' : '—' }}</span>
             </div>
             <div class="metric">
-              <span class="m-label">Test R²</span>
-              <span class="m-value">{{ (m.test_r2 || 0).toFixed(4) }}</span>
+              <span class="m-label">Test Acc</span>
+              <span class="m-value">{{ m.is_trained ? ((m.test_acc || 0) * 100).toFixed(1) + '%' : '—' }}</span>
             </div>
             <div class="metric">
               <span class="m-label">CV Mean</span>
-              <span class="m-value">{{ (m.cv_mean_r2 || 0).toFixed(4) }}</span>
+              <span class="m-value">{{ m.is_trained ? ((m.cv_mean_acc || 0) * 100).toFixed(1) + '%' : '—' }}</span>
             </div>
             <div class="metric">
               <span class="m-label">Stocks</span>
@@ -54,7 +58,7 @@
           </div>
           <div class="card-actions" style="display:flex;gap:6px;">
             <el-button size="small" type="primary" plain @click="retrain(m.track_name)" :loading="trainingTrack === m.track_name">
-              {{ trainingTrack === m.track_name ? 'Training...' : '🔄 Retrain' }}
+              {{ trainingTrack === m.track_name ? 'Training...' : (m.is_trained ? '🔄 Retrain' : '▶ 开始训练') }}
             </el-button>
             <el-button size="small" @click="openParamDialog(m.track_name)">
               ⚙️ 参数训练
@@ -265,8 +269,12 @@ const currentModel = computed(() => {
 async function loadData() {
   loading.value = true
   try {
-    const res = await getAllModels()
-    models.value = (res as any) || []
+    const res: any = await getAllModels()
+    const rawData = Array.isArray(res) ? res : []
+    models.value = rawData.map((m: any) => ({
+      ...m,
+      is_trained: !!(m.train_acc && m.train_acc > 0),
+    }))
     if (models.value.length > 0 && !selectedModelForFeat.value) {
       selectedModelForFeat.value = models.value[0].track_name
       historyTrackName.value = models.value[0].track_name
@@ -277,6 +285,42 @@ async function loadData() {
   loading.value = false
   nextTick(renderFeatChart)
   loadScoreHistory()
+  loadAllLatestScores()
+}
+
+async function loadAllLatestScores() {
+  for (const m of models.value) {
+    try {
+      const res: any = await getScoreHistory(m.track_name, 1)
+      if (Array.isArray(res) && res.length > 0) {
+        const latest = res[0]
+        // 计算赛道景气度
+        const sc = latest.scores || []
+        const avgScore = sc.length > 0 ? sc.reduce((s: number, x: any) => s + x.score, 0) / sc.length : 0
+        latestScores.value[m.track_name] = {
+          track_sentiment: Math.round(avgScore * 100 * 100) / 100,
+          scores: sc,
+          scored_at: latest.scored_at,
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function retrainAll() {
+  trainingTrack.value = '__all__'
+  for (const m of models.value) {
+    try {
+      await trainTrackModel(m.track_name)
+    } catch (e: any) {
+      console.error(`Failed to train ${m.track_name}:`, e)
+    }
+  }
+  trainingTrack.value = ''
+  ElMessage.success('全部训练完成')
+  await loadData()
 }
 
 async function retrain(trackName: string) {
@@ -298,7 +342,21 @@ async function retrain(trackName: string) {
 
 function openParamDialog(trackName: string) {
   paramDialogTrack.value = trackName
-  // 如果有历史参数，用最后一次的
+  // 按赛道设置不同的参数默认值（小赛道用更强的正则）
+  const model = models.value.find(m => m.track_name === trackName)
+  const nStocks = model?.n_stocks || 10
+  const isSmallTrack = nStocks < 10
+  trainParams.value = {
+    num_leaves: isSmallTrack ? 15 : 31,
+    max_depth: isSmallTrack ? 5 : 8,
+    learning_rate: 0.05,
+    n_estimators: 1000,
+    reg_alpha: isSmallTrack ? 1.0 : 0.1,
+    reg_lambda: isSmallTrack ? 2.0 : 1.0,
+    feature_fraction: isSmallTrack ? 0.6 : 0.8,
+    bagging_fraction: isSmallTrack ? 0.7 : 0.9,
+    min_child_samples: isSmallTrack ? 30 : 20,
+  }
   paramDialogVisible.value = true
 }
 

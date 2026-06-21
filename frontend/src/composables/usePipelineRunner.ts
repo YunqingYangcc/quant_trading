@@ -23,11 +23,11 @@ const state = reactive<{
 })
 
 const STEP_NAMES: Record<string, string> = {
-  compute: 'Phase B 特征计算',
-  screen: 'Phase C 因子筛选',
-  preprocess: 'Phase D 特征预处理',
-  train: 'Phase E 模型训练',
-  backtest: 'Phase G 回测校验',
+  compute: '特征计算',
+  screen: '因子筛选',
+  preprocess: '特征预处理',
+  train: '模型训练',
+  incremental_compute: '增量特征追加',
 }
 
 const STEP_DESCS: Record<string, string> = {
@@ -36,6 +36,7 @@ const STEP_DESCS: Record<string, string> = {
   preprocess: '标准化+去共线+时序分割 → parquet',
   train: '6赛道 LightGBM 二分类训练',
   backtest: 'AI打分轮动策略 + 绩效报告',
+  incremental_compute: '仅补算 FeatureStore 中缺失的交易日',
 }
 
 export function usePipelineRunner() {
@@ -125,7 +126,7 @@ export function usePipelineRunner() {
 
   /** 获取所有步骤 */
   function getAllSteps() {
-    return ['compute', 'screen', 'preprocess', 'train', 'backtest']
+    return ['compute', 'screen', 'preprocess', 'train']
   }
 
   return {

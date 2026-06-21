@@ -20,6 +20,10 @@
   "train_acc": 0.6868,
   "val_acc": 0.5259,
   "test_acc": 0.5111,
+  "train_r2": 0.6868,
+  "val_r2": 0.5259,
+  "test_r2": 0.5111,
+  "cv_mean_r2": 0.5397,
   "acc_gap": 0.1608,
   "overfitting": true,
   "params": {

@@ -50,6 +50,10 @@ class CompareBacktestParams(BaseModel):
     max_single_track: float = Field(default=0.50, ge=0.10, le=0.80)
     stop_loss_pct: float = Field(default=-0.15, ge=-0.50, le=0)
     take_profit_pct: float = Field(default=0.30, ge=0, le=0.50)
+    strategy_overrides: dict[str, dict] = Field(
+        default={},
+        description="策略参数覆盖 {strategy_key: {param_name: value}}",
+    )
 
 
 # ── 数据加载 ──
@@ -106,11 +110,22 @@ def _load_strategy(strategy_name: str):
     bt = _util.module_from_spec(spec)
     spec.loader.exec_module(bt)
 
-    from strategies import STRATEGY_REGISTRY
+    from strategies import STRATEGY_REGISTRY, get_strategy
     entry = STRATEGY_REGISTRY.get(strategy_name)
     if not entry:
         raise HTTPException(status_code=404, detail=f"未知策略: {strategy_name}")
     return entry["generator"], entry["name"]
+
+
+@router.get("/backtest/strategies/{name}", summary="获取策略详情")
+async def get_strategy_detail(name: str):
+    """返回单个策略的完整元数据（含机制说明/适用行情/预期效果等）"""
+    from strategies import list_strategies
+    strategies = list_strategies()
+    for s in strategies:
+        if s["key"] == name:
+            return s
+    raise HTTPException(status_code=404, detail=f"策略 '{name}' 不存在")
 
 
 def _run_single_strategy(

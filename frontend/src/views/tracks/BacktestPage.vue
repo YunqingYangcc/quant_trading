@@ -46,6 +46,7 @@
                       <el-tooltip :content="s.description" placement="right">
                         <span class="label-help">?</span>
                       </el-tooltip>
+                      <el-button text size="small" class="strat-detail-btn" @click="showStrategyDetail(s)">详情</el-button>
                     </div>
                   </el-checkbox-group>
                 </div>
@@ -384,6 +385,68 @@
       </el-empty>
     </div>
 
+    <!-- ── 策略详情弹窗 ── -->
+    <el-dialog v-model="detailDialogVisible" :title="detailStrategy?.name || '策略详情'" width="600px" :close-on-click-modal="true">
+      <div v-if="detailStrategy" class="strategy-detail-body">
+        <div class="detail-section">
+          <div class="detail-label">简介</div>
+          <div class="detail-value">{{ detailStrategy.description }}</div>
+        </div>
+        <div class="detail-section" v-if="detailStrategy.mechanism">
+          <div class="detail-label">📌 运行机制</div>
+          <div class="detail-value">{{ detailStrategy.mechanism }}</div>
+        </div>
+        <div class="detail-section" v-if="detailStrategy.market_condition">
+          <div class="detail-label">🌤️ 适用行情</div>
+          <div class="detail-value">{{ detailStrategy.market_condition }}</div>
+        </div>
+        <div class="detail-section" v-if="detailStrategy.expected_effect">
+          <div class="detail-label">📈 预期效果</div>
+          <div class="detail-value">{{ detailStrategy.expected_effect }}</div>
+        </div>
+        <div class="detail-section" v-if="detailStrategy.limitations">
+          <div class="detail-label">⚠️ 注意事项</div>
+          <div class="detail-value">{{ detailStrategy.limitations }}</div>
+        </div>
+        <div class="detail-section" v-if="Object.keys(detailStrategy.params_detail || {}).length">
+          <div class="detail-label">🔧 参数说明</div>
+          <div class="params-table">
+            <div v-for="(desc, param) in detailStrategy.params_detail" :key="param" class="param-row-detail">
+              <code class="param-name">{{ param }}</code>
+              <span class="param-arrow">→</span>
+              <span class="param-desc">{{ desc }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </el-dialog>
+
+    <!-- ── 策略对比指南 ── -->
+    <div v-if="mode === 'compare' && allStrategies.length && !result" class="section-card">
+      <div class="section-header">
+        <div class="sh-left">
+          <div class="sh-icon" style="background:linear-gradient(135deg,#06b6d4,#0891b2)">🧭</div>
+          <div>
+            <div class="sh-title">策略选择指南</div>
+            <div class="sh-sub">根据当前市场行情或你的交易风格选择合适的策略</div>
+          </div>
+        </div>
+      </div>
+      <div class="guide-scenario-grid">
+        <div class="scenario-card" v-for="sg in scenarioGuide" :key="sg.scenario">
+          <div class="scenario-icon">{{ sg.icon }}</div>
+          <div class="scenario-name">{{ sg.scenario }}</div>
+          <div class="scenario-strategies">
+            <el-tag v-for="s in sg.strategies" :key="s.key" size="small"
+              :type="sg.type || 'info'" effect="plain"
+              style="cursor:pointer" @click="showStrategyDetail(s)">
+              {{ s.name }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ── 运行历史 ── -->
     <div style="margin-top:16px">
       <HistoryPanel @select="onHistorySelect" />
@@ -423,6 +486,52 @@ const singleStock = ref('')
 const selectedStrategy = ref('momentum_20d')
 const useAi = ref(false)
 
+// 策略详情
+const detailDialogVisible = ref(false)
+const detailStrategy = ref<any>(null)
+
+function showStrategyDetail(s: any) {
+  detailStrategy.value = s
+  detailDialogVisible.value = true
+}
+
+// ── 策略选择指南 ──
+const scenarioGuide = computed(() => {
+  const s = allStrategies.value
+  return [
+    {
+      icon: '📈',
+      scenario: '上涨趋势市',
+      type: 'success',
+      strategies: s.filter(x => ['momentum_20d', 'momentum_60d', 'momentum_20d_vol', 'ma_cross', 'breakout'].includes(x.key)),
+    },
+    {
+      icon: '📊',
+      scenario: '震荡整理市',
+      type: 'warning',
+      strategies: s.filter(x => ['rsi_reversal', 'bollinger_reversal', 'kdj_oversold', 'bollinger_squeeze'].includes(x.key)),
+    },
+    {
+      icon: '🚀',
+      scenario: '强势突破市',
+      type: 'danger',
+      strategies: s.filter(x => ['volume_breakout', 'turtle', 'bollinger_squeeze', 'triple_ma'].includes(x.key)),
+    },
+    {
+      icon: '🤖',
+      scenario: 'AI 驱动（全自动）',
+      type: 'primary',
+      strategies: s.filter(x => ['ai_scoring', 'ai_confidence', 'multi_vote'].includes(x.key)),
+    },
+    {
+      icon: '🧪',
+      scenario: 'AI 增强版（传统+AI）',
+      type: 'info',
+      strategies: s.filter(x => x.key.endsWith('_ai') || x.key === 'ma_cross_ai'),
+    },
+  ]
+})
+
 // 赛道
 const trackList = ref<any[]>([])
 const selectedTrack = ref('semiconductor')
@@ -449,6 +558,8 @@ const strategyGroups = computed(() => {
     momentum: '动量策略',
     technical: '技术指标策略',
     mean_reversion: '均值回归策略',
+    volatility: '波动率策略',
+    trend: '趋势跟踪策略',
     composite: '复合策略 (AI投票)',
     ai: 'AI 策略',
   }
@@ -717,34 +828,34 @@ onMounted(() => {
 .guide-card {
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  border-radius: 10px;
-  padding: 14px 20px;
-  margin-bottom: 16px;
+  border-radius: 8px;
+  padding: 8px 14px;
+  margin-bottom: 8px;
 }
 
 .guide-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 4px 16px;
 }
 
 .guide-item {
-  font-size: 13px;
+  font-size: 12px;
   color: #1e40af;
 }
 
 .guide-item strong {
   color: #2563eb;
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
 /* ── 卡片通用 ── */
 .section-card {
   background: #fff;
-  border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.03);
-  margin-bottom: 16px;
+  border-radius: 10px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+  margin-bottom: 10px;
 }
 
 .section-header {
@@ -768,49 +879,50 @@ onMounted(() => {
 .config-grid {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
-  gap: 20px;
-  margin-bottom: 16px;
+  gap: 14px;
+  margin-bottom: 10px;
 }
 
-.config-main { display: flex; flex-direction: column; gap: 14px; }
-.config-group { display: flex; flex-direction: column; gap: 6px; }
-.config-label { font-size: 12px; font-weight: 600; color: #475569; }
+.config-main { display: flex; flex-direction: column; gap: 8px; }
+.config-group { display: flex; flex-direction: column; gap: 4px; }
+.config-label { font-size: 11px; font-weight: 600; color: #475569; }
 
 .strategy-checklist {
-  max-height: 320px;
+  max-height: 260px;
   overflow-y: auto;
   border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 8px 12px;
+  border-radius: 6px;
+  padding: 6px 10px;
 }
 
-.strat-group { margin-bottom: 8px; }
+.strat-group { margin-bottom: 4px; }
 .strat-group-label {
-  font-size: 11px;
+  font-size: 10px;
   color: #94a3b8;
   font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   padding-left: 2px;
 }
 
-.strat-check-group { display: flex; flex-direction: column; gap: 2px; }
+.strat-check-group { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; }
 
 .strat-check-item {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
-  border-radius: 4px;
+  gap: 3px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 12px;
 }
 
 .strat-check-item:hover {
   background: #f1f5f9;
 }
 
-.config-params { display: flex; flex-direction: column; gap: 14px; }
-.param-row { display: flex; gap: 14px; }
-.param-item { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.param-label { font-size: 12px; font-weight: 500; color: #64748b; display: flex; align-items: center; gap: 4px; }
+.config-params { display: flex; flex-direction: column; gap: 10px; }
+.param-row { display: flex; gap: 10px; }
+.param-item { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.param-label { font-size: 11px; font-weight: 500; color: #64748b; display: flex; align-items: center; gap: 4px; }
 
 .label-help {
   display: inline-flex; align-items: center; justify-content: center;
@@ -824,25 +936,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px 14px;
   background: #f8fafc;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .locked-info {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 12px;
+  gap: 6px;
+  font-size: 11px;
   color: #94a3b8;
 }
 
 .run-btn {
-  padding: 10px 32px;
-  font-size: 15px;
+  padding: 8px 24px;
+  font-size: 14px;
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: 6px;
   box-shadow: 0 2px 8px rgba(59,130,246,0.25);
 }
 
@@ -919,6 +1031,87 @@ onMounted(() => {
   font-size: 11px;
   color: #94a3b8;
   margin-top: 1px;
+}
+
+/* ── 策略详情 ── */
+.strategy-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.detail-section {
+  border-left: 3px solid #e2e8f0;
+  padding-left: 12px;
+}
+.detail-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+.detail-value {
+  font-size: 14px;
+  color: #1e293b;
+  line-height: 1.6;
+}
+.params-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.param-row-detail {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+}
+.param-name {
+  font-size: 12px;
+  padding: 1px 6px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  color: #475569;
+}
+.param-arrow {
+  color: #94a3b8;
+}
+.param-desc {
+  color: #475569;
+}
+
+/* ── 策略选择指南 ── */
+.guide-scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.scenario-card {
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 14px;
+  border: 1px solid #e2e8f0;
+}
+.scenario-icon {
+  font-size: 24px;
+  margin-bottom: 4px;
+}
+.scenario-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 8px;
+}
+.scenario-strategies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.strat-detail-btn {
+  font-size: 11px;
+  color: #3b82f6 !important;
+  padding: 0 4px !important;
+  margin-left: 2px;
 }
 
 .trade-detail-section {

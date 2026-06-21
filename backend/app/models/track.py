@@ -143,6 +143,29 @@ class ScoreHistory(Base):
     scored_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class FeatureConfig(Base):
+    """特征配置表 - 特征的定义/释义/参数/启用状态"""
+
+    __tablename__ = "feature_configs"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    feature_name = Column(String(100), unique=True, nullable=False, index=True)  # rsi_6, sma_5 等
+    display_name = Column(String(100), nullable=False, default="")  # 中文名: "6日RSI"
+    category = Column(String(50), nullable=True)  # momentum / trend / volatility / volume / statistical / track_specific
+    description = Column(Text, nullable=True)  # 大白话释义
+    formula = Column(Text, nullable=True)  # 计算公式
+    interpretation = Column(Text, nullable=True)  # 解读方法
+    default_params = Column(JSON, nullable=True)  # 默认参数 {"window": 14}
+    is_enabled = Column(Integer, default=1)  # 是否启用
+    is_user_defined = Column(Integer, default=0)  # 用户自定义标记
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+
+
 class PipelineRun(Base):
     """流水线运行记录 - 每次训练/回测的日志"""
 

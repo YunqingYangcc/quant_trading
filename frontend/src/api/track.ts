@@ -133,6 +133,10 @@ export function listStrategies() {
   return request.get('/backtest/strategies')
 }
 
+export function getStrategyDetail(name: string) {
+  return request.get(`/backtest/strategies/${name}`)
+}
+
 export function runStrategyBacktest(strategyName: string) {
   return request.post(`/backtest/strategy/${strategyName}`)
 }
@@ -187,6 +191,76 @@ export function getPipelineRuns(limit = 10, runType?: string) {
   const params: Record<string, any> = { limit }
   if (runType) params.run_type = runType
   return request.get('/ml/pipeline-runs', { params })
+}
+
+// ── 特征配置 CRUD ──
+
+export interface FeatureConfig {
+  id: number
+  feature_name: string
+  display_name: string
+  category: string | null
+  description: string | null
+  formula: string | null
+  interpretation: string | null
+  default_params: Record<string, any> | null
+  is_enabled: number
+  is_user_defined: number
+  created_at: string
+  updated_at: string | null
+}
+
+export interface FeatureConfigCreate {
+  feature_name: string
+  display_name?: string
+  category?: string
+  description?: string
+  formula?: string
+  interpretation?: string
+  default_params?: Record<string, any>
+  is_enabled?: number
+}
+
+export interface FeatureConfigUpdate {
+  display_name?: string
+  category?: string
+  description?: string
+  formula?: string
+  interpretation?: string
+  default_params?: Record<string, any>
+  is_enabled?: number
+}
+
+export function listFeatureConfigs(params?: { category?: string; enabled_only?: boolean }) {
+  return request.get('/features/configs', { params })
+}
+
+export function getFeatureConfig(id: number) {
+  return request.get(`/features/configs/${id}`)
+}
+
+export function createFeatureConfig(data: FeatureConfigCreate) {
+  return request.post('/features/configs', data)
+}
+
+export function updateFeatureConfig(id: number, data: FeatureConfigUpdate) {
+  return request.put(`/features/configs/${id}`, data)
+}
+
+export function deleteFeatureConfig(id: number) {
+  return request.delete(`/features/configs/${id}`)
+}
+
+export function toggleFeatureConfig(id: number) {
+  return request.put(`/features/configs/${id}/toggle`)
+}
+
+export function syncFeatureConfigs() {
+  return request.post('/features/sync')
+}
+
+export function incrementalCompute() {
+  return request.post('/features/compute/incremental')
 }
 
 // ── 量化交易员学习和成长平台 API ──

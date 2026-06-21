@@ -24,19 +24,23 @@
   "val_rows": 4598,
   "test_rows": 10898,
   "objective": "binary",
-  "cv_mean_acc": 0.5433,
-  "cv_std_acc": 0.0131,
-  "train_acc": 0.5582,
-  "val_acc": 0.535,
-  "test_acc": 0.5329,
-  "acc_gap": 0.0232,
+  "cv_mean_acc": 0.544,
+  "cv_std_acc": 0.0132,
+  "train_acc": 0.55,
+  "val_acc": 0.5357,
+  "test_acc": 0.5305,
+  "train_r2": 0.55,
+  "val_r2": 0.5357,
+  "test_r2": 0.5305,
+  "cv_mean_r2": 0.544,
+  "acc_gap": 0.0143,
   "overfitting": false,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
     "boosting_type": "gbdt",
     "num_leaves": 31,
-    "max_depth": 6,
+    "max_depth": 8,
     "min_child_samples": 20,
     "min_child_weight": 0.001,
     "learning_rate": 0.05,
@@ -52,43 +56,43 @@
   "top_features": [
     {
       "name": "obv",
-      "importance": 18
+      "importance": 11
     },
     {
       "name": "vpt",
-      "importance": 12
-    },
-    {
-      "name": "track_semiconductor_min_ret_20d",
-      "importance": 12
-    },
-    {
-      "name": "ad",
-      "importance": 9
+      "importance": 11
     },
     {
       "name": "ret_skew_60",
-      "importance": 9
-    },
-    {
-      "name": "pv_corr_20",
-      "importance": 7
-    },
-    {
-      "name": "track_semiconductor_volatility_20d",
-      "importance": 7
+      "importance": 10
     },
     {
       "name": "sma_5",
-      "importance": 6
+      "importance": 8
     },
     {
       "name": "adx",
-      "importance": 5
+      "importance": 6
     },
     {
-      "name": "price_pos_60",
-      "importance": 5
+      "name": "ad",
+      "importance": 6
+    },
+    {
+      "name": "track_semiconductor_volatility_20d",
+      "importance": 6
+    },
+    {
+      "name": "track_semiconductor_min_ret_20d",
+      "importance": 6
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 4
+    },
+    {
+      "name": "pv_corr_20",
+      "importance": 4
     }
   ]
 }

@@ -20,9 +20,17 @@
               <el-icon><Monitor /></el-icon>
               <span>Dashboard</span>
             </el-menu-item>
-            <el-menu-item index="/pipeline">
-              <el-icon><Connection /></el-icon>
-              <span>Data Pipeline</span>
+            <el-menu-item index="/features">
+              <el-icon><List /></el-icon>
+              <span>Feature Config</span>
+            </el-menu-item>
+            <el-menu-item index="/factors">
+              <el-icon><Coin /></el-icon>
+              <span>Factor Config</span>
+            </el-menu-item>
+            <el-menu-item index="/model-factory">
+              <el-icon><Cpu /></el-icon>
+              <span>Model Factory</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -37,7 +45,7 @@
             </el-menu-item>
             <el-menu-item index="/track/ai">
               <el-icon><TrendCharts /></el-icon>
-              <span>AI</span>
+              <span>AI算力</span>
             </el-menu-item>
             <el-menu-item index="/track/robot">
               <el-icon><TrendCharts /></el-icon>
@@ -53,7 +61,7 @@
             </el-menu-item>
             <el-menu-item index="/track/ai-power">
               <el-icon><TrendCharts /></el-icon>
-              <span>电力AI</span>
+              <span>算力能源</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -62,17 +70,13 @@
           <div class="section-label">TOOLS</div>
           <div class="section-divider" />
           <el-menu :default-active="activeMenu" router>
-            <el-menu-item index="/backtest">
-              <el-icon><Coin /></el-icon>
-              <span>Backtest Lab</span>
-            </el-menu-item>
             <el-menu-item index="/runner">
               <el-icon><Operation /></el-icon>
-              <span>Pipeline Runner</span>
+              <span>量化流水线</span>
             </el-menu-item>
-            <el-menu-item index="/portfolio">
-              <el-icon><PieChart /></el-icon>
-              <span>Portfolio</span>
+            <el-menu-item index="/backtest">
+              <el-icon><Coin /></el-icon>
+              <span>策略实验室</span>
             </el-menu-item>
           </el-menu>
         </div>
@@ -103,7 +107,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, Connection, TrendCharts, Coin, Operation, PieChart } from '@element-plus/icons-vue'
+import { Monitor, List, Coin, Cpu, TrendCharts, Operation } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => {
@@ -113,12 +117,12 @@ const activeMenu = computed(() => {
 
 const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
-  '/pipeline': 'Data Pipeline',
+  '/features': 'Feature Config',
+  '/factors': 'Factor Config',
   '/alpha': 'Alpha Research',
   '/model-factory': 'Model Factory',
-  '/backtest': 'Backtest Lab',
-  '/runner': 'Pipeline Runner',
-  '/portfolio': 'Portfolio',
+  '/backtest': '策略实验室',
+  '/runner': '量化流水线',
 }
 const pageTitle = computed(() => {
   if (route.path.startsWith('/track/')) return 'Alpha Workstation · ' + (route.params.name as string || '')

@@ -189,3 +189,44 @@ class PipelineRunResponse(BaseModel):
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ── 特征配置 ──────────────────────────────────────
+
+
+class FeatureConfigCreate(BaseModel):
+    feature_name: str = Field(..., description="特征标识名", examples=["rsi_6"])
+    display_name: str = Field(default="", description="中文名", examples=["6日RSI"])
+    category: str | None = Field(default=None, description="分类")
+    description: str | None = Field(default=None, description="大白话释义")
+    formula: str | None = Field(default=None, description="计算公式")
+    interpretation: str | None = Field(default=None, description="解读方法")
+    default_params: dict | None = Field(default=None, description="默认参数")
+    is_enabled: int = 1
+
+
+class FeatureConfigUpdate(BaseModel):
+    display_name: str | None = None
+    category: str | None = None
+    description: str | None = None
+    formula: str | None = None
+    interpretation: str | None = None
+    default_params: dict | None = None
+    is_enabled: int | None = None
+
+
+class FeatureConfigResponse(BaseModel):
+    id: int
+    feature_name: str
+    display_name: str
+    category: str | None = None
+    description: str | None = None
+    formula: str | None = None
+    interpretation: str | None = None
+    default_params: dict | None = None
+    is_enabled: int
+    is_user_defined: int
+    created_at: datetime
+    updated_at: datetime | None = None
+
+    model_config = ConfigDict(from_attributes=True)
