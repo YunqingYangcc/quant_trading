@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "track_quant"
     DEBUG: bool = True
     DATABASE_URL: str = Field(
-        default="sqlite+aiosqlite:///./track_quant.db",
+        default="sqlite+aiosqlite:///" + str(Path(__file__).resolve().parent.parent / "track_quant.db"),
         description="数据库连接 URL",
     )
     DB_AUTO_CREATE_SCHEMA: bool = True
