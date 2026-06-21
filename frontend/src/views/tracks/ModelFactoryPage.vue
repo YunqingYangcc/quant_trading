@@ -426,7 +426,17 @@ watch(selectedModelForFeat, renderFeatChart)
 watch(models, () => { nextTick(renderFeatChart) })
 watch(historyTrackName, loadScoreHistory)
 
-onMounted(loadData)
+onMounted(async () => {
+  await loadData()
+  checkPipelineRefresh()
+})
+
+function checkPipelineRefresh() {
+  if (localStorage.getItem('pipeline_model_refresh')) {
+    localStorage.removeItem('pipeline_model_refresh')
+    loadData()
+  }
+}
 </script>
 
 <style scoped>

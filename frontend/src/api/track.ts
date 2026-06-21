@@ -290,3 +290,28 @@ export function getBacktestDetail(runId: number) {
 export function getLearningStats() {
   return request.get('/learning/stats')
 }
+
+// ── Dashboard 交易建议 ──
+
+export interface SuggestionItem {
+  track_name: string
+  display_name: string
+  stock_count: number
+  trend: 'up' | 'neutral' | 'down'
+  trend_label: string
+  best_strategy: {
+    key: string
+    name: string
+    sharpe: number
+  } | null
+  top_picks: { code: string; name: string }[]
+}
+
+export interface SuggestionsResponse {
+  suggestions: SuggestionItem[]
+  updated_at: string
+}
+
+export function getSuggestions() {
+  return request.get('/dashboard/suggestions')
+}

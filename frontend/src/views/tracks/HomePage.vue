@@ -13,8 +13,16 @@
       <el-skeleton :rows="3" animated />
     </div>
 
-    <!-- 4 赛道卡片 -->
-    <div v-else class="track-grid">
+    <template v-else>
+      <!-- 每日交易建议 -->
+      <SuggestionPanel
+        :suggestions="suggestions"
+        :loading="suggestionsLoading"
+        :updated-at="suggestionsUpdatedAt"
+      />
+
+      <!-- 赛道卡片 -->
+      <div class="track-grid">
       <div
         v-for="track in tracksWithProsperity"
         :key="track.name"
@@ -178,8 +186,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, getLearningStats, type Track } from '@/api/track'
+import { listTracks, getTrackScore, getAllTrackScores, getWhitelist, getBlacklist, getBacktestReport, getLearningStats, getSuggestions, type Track, type SuggestionItem } from '@/api/track'
 import PipelineStatus from '@/components/tracks/PipelineStatus.vue'
+import SuggestionPanel from '@/components/dashboard/SuggestionPanel.vue'
 
 const router = useRouter()
 const tracks = ref<Track[]>([])
@@ -201,6 +210,10 @@ const learningStats = ref({
   worst_drawdown: 0,
   worst_drawdown_strategy: '无',
 })
+
+const suggestions = ref<SuggestionItem[]>([])
+const suggestionsLoading = ref(true)
+const suggestionsUpdatedAt = ref('')
 
 const trackColors: Record<string, string> = {
   semiconductor: '#3b82f6',
@@ -318,6 +331,16 @@ onMounted(async () => {
       const ls = await getLearningStats()
       if (ls) learningStats.value = ls
     } catch {}
+
+    // 每日交易建议
+    try {
+      const sugRes = await getSuggestions()
+      if (sugRes?.suggestions) {
+        suggestions.value = sugRes.suggestions
+        suggestionsUpdatedAt.value = sugRes.updated_at?.slice(0, 10) || ''
+      }
+    } catch {}
+    suggestionsLoading.value = false
   } catch {
     // silent fail
   }

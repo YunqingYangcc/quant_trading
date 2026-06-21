@@ -70,10 +70,6 @@
           <div class="section-label">TOOLS</div>
           <div class="section-divider" />
           <el-menu :default-active="activeMenu" router>
-            <el-menu-item index="/runner">
-              <el-icon><Operation /></el-icon>
-              <span>量化流水线</span>
-            </el-menu-item>
             <el-menu-item index="/backtest">
               <el-icon><Coin /></el-icon>
               <span>策略实验室</span>
@@ -107,7 +103,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, List, Coin, Cpu, TrendCharts, Operation } from '@element-plus/icons-vue'
+import { Monitor, List, Coin, Cpu, TrendCharts } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => {
@@ -122,7 +118,6 @@ const pageTitles: Record<string, string> = {
   '/alpha': 'Alpha Research',
   '/model-factory': 'Model Factory',
   '/backtest': '策略实验室',
-  '/runner': '量化流水线',
 }
 const pageTitle = computed(() => {
   if (route.path.startsWith('/track/')) return 'Alpha Workstation · ' + (route.params.name as string || '')

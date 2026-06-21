@@ -501,7 +501,16 @@ onMounted(() => {
   loadConfigs()
   loadWhitelist()
   loadMetadata()
+  checkPipelineRefresh()
 })
+
+function checkPipelineRefresh() {
+  if (localStorage.getItem('pipeline_feature_refresh')) {
+    localStorage.removeItem('pipeline_feature_refresh')
+    loadConfigs()
+    loadMetadata()
+  }
+}
 
 async function loadWhitelist() {
   try {

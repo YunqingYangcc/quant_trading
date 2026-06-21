@@ -264,7 +264,19 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  checkPipelineRefresh()
 })
+
+function checkPipelineRefresh() {
+  if (localStorage.getItem('pipeline_factor_refresh')) {
+    localStorage.removeItem('pipeline_factor_refresh')
+    loading.value = true
+    Promise.all([getWhitelist(), getBlacklist()]).then(([wl, bl]) => {
+      whitelist.value = Array.isArray(wl) ? wl : []
+      blacklist.value = Array.isArray(bl) ? bl : []
+    }).finally(() => { loading.value = false })
+  }
+}
 </script>
 
 <style scoped>
