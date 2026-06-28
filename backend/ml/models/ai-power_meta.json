@@ -26,18 +26,18 @@
   "n_stocks": 21,
   "train_rows": 64335,
   "val_rows": 5082,
-  "test_rows": 12054,
+  "test_rows": 12134,
   "objective": "binary",
-  "cv_mean_acc": 0.5296,
-  "cv_std_acc": 0.0135,
-  "train_acc": 0.6057,
-  "val_acc": 0.5447,
-  "test_acc": 0.5199,
-  "train_r2": 0.6057,
-  "val_r2": 0.5447,
-  "test_r2": 0.5199,
-  "cv_mean_r2": 0.5296,
-  "acc_gap": 0.061,
+  "cv_mean_acc": 0.5267,
+  "cv_std_acc": 0.0124,
+  "train_acc": 0.5932,
+  "val_acc": 0.548,
+  "test_acc": 0.5174,
+  "train_r2": 0.5932,
+  "val_r2": 0.548,
+  "test_r2": 0.5174,
+  "cv_mean_r2": 0.5267,
+  "acc_gap": 0.0452,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -59,28 +59,24 @@
   },
   "top_features": [
     {
-      "name": "obv",
-      "importance": 60
-    },
-    {
-      "name": "sma_5",
-      "importance": 57
-    },
-    {
       "name": "vpt",
       "importance": 53
     },
     {
-      "name": "track_ai-power_min_ret_20d",
-      "importance": 41
+      "name": "sma_5",
+      "importance": 43
+    },
+    {
+      "name": "obv",
+      "importance": 38
     },
     {
       "name": "atr_5",
-      "importance": 39
+      "importance": 34
     },
     {
-      "name": "track_ai-power_max_ret_20d",
-      "importance": 34
+      "name": "track_ai-power_min_ret_20d",
+      "importance": 33
     },
     {
       "name": "adx",
@@ -88,15 +84,19 @@
     },
     {
       "name": "ret_skew_60",
-      "importance": 30
-    },
-    {
-      "name": "price_pos_60",
-      "importance": 21
+      "importance": 22
     },
     {
       "name": "track_ai-power_trend_60d",
       "importance": 21
+    },
+    {
+      "name": "track_ai-power_volatility_20d",
+      "importance": 21
+    },
+    {
+      "name": "ppo_signal",
+      "importance": 17
     }
   ]
 }

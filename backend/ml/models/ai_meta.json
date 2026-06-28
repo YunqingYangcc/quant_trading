@@ -37,18 +37,18 @@
   "n_stocks": 32,
   "train_rows": 56418,
   "val_rows": 7684,
-  "test_rows": 18332,
+  "test_rows": 18402,
   "objective": "binary",
-  "cv_mean_acc": 0.5114,
-  "cv_std_acc": 0.0095,
-  "train_acc": 0.5268,
-  "val_acc": 0.5049,
-  "test_acc": 0.5002,
-  "train_r2": 0.5268,
-  "val_r2": 0.5049,
-  "test_r2": 0.5002,
-  "cv_mean_r2": 0.5114,
-  "acc_gap": 0.0219,
+  "cv_mean_acc": 0.5147,
+  "cv_std_acc": 0.0089,
+  "train_acc": 0.5249,
+  "val_acc": 0.5044,
+  "test_acc": 0.5035,
+  "train_r2": 0.5249,
+  "val_r2": 0.5044,
+  "test_r2": 0.5035,
+  "cv_mean_r2": 0.5147,
+  "acc_gap": 0.0204,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -70,44 +70,44 @@
   },
   "top_features": [
     {
-      "name": "vpt",
+      "name": "track_ai_max_ret_20d",
       "importance": 8
     },
     {
+      "name": "track_ai_min_ret_20d",
+      "importance": 7
+    },
+    {
       "name": "obv",
-      "importance": 7
-    },
-    {
-      "name": "track_ai_max_ret_20d",
-      "importance": 7
-    },
-    {
-      "name": "ret_skew_60",
       "importance": 6
     },
     {
-      "name": "sma_5",
+      "name": "atr_5",
       "importance": 5
     },
     {
-      "name": "track_ai_min_ret_20d",
+      "name": "track_ai_trend_60d",
       "importance": 4
+    },
+    {
+      "name": "sma_5",
+      "importance": 3
+    },
+    {
+      "name": "macd_hist",
+      "importance": 3
     },
     {
       "name": "adx",
       "importance": 3
     },
     {
-      "name": "pv_corr_20",
+      "name": "ret_skew_20",
       "importance": 3
     },
     {
-      "name": "sma_dev_60",
-      "importance": 2
-    },
-    {
-      "name": "macd_hist",
-      "importance": 2
+      "name": "track_ai_volatility_20d",
+      "importance": 3
     }
   ]
 }

@@ -26,19 +26,19 @@
   "n_stocks": 21,
   "train_rows": 29287,
   "val_rows": 5014,
-  "test_rows": 12010,
+  "test_rows": 12080,
   "objective": "binary",
-  "cv_mean_acc": 0.5287,
-  "cv_std_acc": 0.0121,
-  "train_acc": 0.5969,
-  "val_acc": 0.5028,
-  "test_acc": 0.5042,
-  "train_r2": 0.5969,
-  "val_r2": 0.5028,
-  "test_r2": 0.5042,
-  "cv_mean_r2": 0.5287,
-  "acc_gap": 0.0941,
-  "overfitting": false,
+  "cv_mean_acc": 0.526,
+  "cv_std_acc": 0.0149,
+  "train_acc": 0.6269,
+  "val_acc": 0.5122,
+  "test_acc": 0.5093,
+  "train_r2": 0.6269,
+  "val_r2": 0.5122,
+  "test_r2": 0.5093,
+  "cv_mean_r2": 0.526,
+  "acc_gap": 0.1147,
+  "overfitting": true,
   "params": {
     "objective": "binary",
     "metric": "binary_logloss",
@@ -59,44 +59,44 @@
   },
   "top_features": [
     {
-      "name": "sma_5",
-      "importance": 59
-    },
-    {
       "name": "obv",
-      "importance": 54
+      "importance": 86
     },
     {
-      "name": "vpt",
-      "importance": 43
+      "name": "sma_5",
+      "importance": 76
     },
     {
       "name": "atr_5",
-      "importance": 34
+      "importance": 48
+    },
+    {
+      "name": "track_material_min_ret_20d",
+      "importance": 48
+    },
+    {
+      "name": "track_material_max_ret_20d",
+      "importance": 46
+    },
+    {
+      "name": "vpt",
+      "importance": 39
+    },
+    {
+      "name": "track_material_trend_60d",
+      "importance": 33
+    },
+    {
+      "name": "ret_skew_20",
+      "importance": 30
     },
     {
       "name": "adx",
       "importance": 26
     },
     {
-      "name": "track_material_max_ret_20d",
-      "importance": 25
-    },
-    {
-      "name": "track_material_min_ret_20d",
-      "importance": 25
-    },
-    {
-      "name": "track_material_trend_60d",
-      "importance": 22
-    },
-    {
       "name": "ret_skew_60",
-      "importance": 18
-    },
-    {
-      "name": "ret_skew_20",
-      "importance": 14
+      "importance": 22
     }
   ]
 }

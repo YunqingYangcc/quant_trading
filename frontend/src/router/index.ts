@@ -57,6 +57,30 @@ const router = createRouter({
       meta: { title: '量化流水线' },
       component: () => import('@/views/tracks/PipelineRunnerPage.vue'),
     },
+    {
+      path: '/unsupervised',
+      name: 'unsupervised',
+      meta: { title: '智能分析' },
+      component: () => import('@/views/tracks/UnsupervisedPage.vue'),
+    },
+    {
+      path: '/strategy/:key',
+      name: 'strategy-detail',
+      meta: { title: '策略详情' },
+      component: () => import('@/views/tracks/StrategyDetailPage.vue'),
+    },
+    {
+      path: '/daily-report',
+      name: 'daily-report',
+      meta: { title: '每日日报' },
+      component: () => import('@/views/tracks/DailyReportPage.vue'),
+    },
+    {
+      path: '/sector-leaders',
+      name: 'sector-leaders',
+      meta: { title: '业务逻辑分析' },
+      component: () => import('@/views/tracks/SectorLeadersPage.vue'),
+    },
   ],
 })
 

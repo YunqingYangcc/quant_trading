@@ -21,7 +21,7 @@
   "n_stocks": 16,
   "train_rows": 30095,
   "val_rows": 3701,
-  "test_rows": 9156,
+  "test_rows": 9216,
   "objective": "binary",
   "cv_mean_acc": 0.524,
   "cv_std_acc": 0.0093,
@@ -54,43 +54,43 @@
   },
   "top_features": [
     {
-      "name": "vpt",
-      "importance": 6
-    },
-    {
       "name": "sma_5",
       "importance": 4
     },
     {
+      "name": "ppo_signal",
+      "importance": 2
+    },
+    {
+      "name": "bb_width",
+      "importance": 2
+    },
+    {
       "name": "obv",
-      "importance": 4
+      "importance": 2
+    },
+    {
+      "name": "ret_skew_60",
+      "importance": 2
     },
     {
       "name": "track_storage_trend_60d",
       "importance": 2
     },
     {
-      "name": "track_storage_max_ret_20d",
+      "name": "track_storage_money_flow_20d",
       "importance": 2
     },
     {
-      "name": "roc_60",
+      "name": "roc_10",
+      "importance": 1
+    },
+    {
+      "name": "ao",
       "importance": 1
     },
     {
       "name": "ppo",
-      "importance": 1
-    },
-    {
-      "name": "macd_hist",
-      "importance": 1
-    },
-    {
-      "name": "adx",
-      "importance": 1
-    },
-    {
-      "name": "aroon_up",
       "importance": 1
     }
   ]

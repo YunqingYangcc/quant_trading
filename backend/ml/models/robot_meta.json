@@ -30,17 +30,17 @@
   "n_stocks": 25,
   "train_rows": 46298,
   "val_rows": 6050,
-  "test_rows": 14335,
+  "test_rows": 14405,
   "objective": "binary",
-  "cv_mean_acc": 0.5113,
-  "cv_std_acc": 0.0239,
+  "cv_mean_acc": 0.51,
+  "cv_std_acc": 0.0225,
   "train_acc": 0.5231,
   "val_acc": 0.52,
-  "test_acc": 0.5196,
+  "test_acc": 0.5195,
   "train_r2": 0.5231,
   "val_r2": 0.52,
-  "test_r2": 0.5196,
-  "cv_mean_r2": 0.5113,
+  "test_r2": 0.5195,
+  "cv_mean_r2": 0.51,
   "acc_gap": 0.0031,
   "overfitting": false,
   "params": {
@@ -63,31 +63,31 @@
   },
   "top_features": [
     {
-      "name": "ret_skew_60",
-      "importance": 5
-    },
-    {
-      "name": "adx",
-      "importance": 4
-    },
-    {
       "name": "track_robot_max_ret_20d",
-      "importance": 4
+      "importance": 6
     },
     {
       "name": "sma_5",
-      "importance": 3
+      "importance": 4
     },
     {
       "name": "obv",
+      "importance": 4
+    },
+    {
+      "name": "vpt",
+      "importance": 4
+    },
+    {
+      "name": "atr_5",
       "importance": 3
+    },
+    {
+      "name": "ret_skew_20",
+      "importance": 2
     },
     {
       "name": "pv_corr_20",
-      "importance": 3
-    },
-    {
-      "name": "track_robot_trend_60d",
       "importance": 2
     },
     {
@@ -95,11 +95,11 @@
       "importance": 2
     },
     {
-      "name": "atr_5",
+      "name": "sma_dev_60",
       "importance": 1
     },
     {
-      "name": "vpt",
+      "name": "adx",
       "importance": 1
     }
   ]

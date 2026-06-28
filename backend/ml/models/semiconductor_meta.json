@@ -56,18 +56,18 @@
   "n_stocks": 51,
   "train_rows": 82338,
   "val_rows": 12100,
-  "test_rows": 29176,
+  "test_rows": 29286,
   "objective": "binary",
-  "cv_mean_acc": 0.5224,
-  "cv_std_acc": 0.0115,
-  "train_acc": 0.58,
-  "val_acc": 0.5193,
-  "test_acc": 0.5151,
-  "train_r2": 0.58,
-  "val_r2": 0.5193,
-  "test_r2": 0.5151,
-  "cv_mean_r2": 0.5224,
-  "acc_gap": 0.0608,
+  "cv_mean_acc": 0.5228,
+  "cv_std_acc": 0.0096,
+  "train_acc": 0.5656,
+  "val_acc": 0.52,
+  "test_acc": 0.5141,
+  "train_r2": 0.5656,
+  "val_r2": 0.52,
+  "test_r2": 0.5141,
+  "cv_mean_r2": 0.5228,
+  "acc_gap": 0.0456,
   "overfitting": false,
   "params": {
     "objective": "binary",
@@ -89,44 +89,44 @@
   },
   "top_features": [
     {
-      "name": "obv",
-      "importance": 55
-    },
-    {
       "name": "vpt",
-      "importance": 46
-    },
-    {
-      "name": "sma_5",
-      "importance": 35
-    },
-    {
-      "name": "pv_corr_20",
-      "importance": 31
-    },
-    {
-      "name": "adx",
-      "importance": 28
-    },
-    {
-      "name": "track_semiconductor_trend_60d",
-      "importance": 28
+      "importance": 45
     },
     {
       "name": "ret_skew_60",
-      "importance": 25
+      "importance": 26
     },
     {
-      "name": "track_semiconductor_max_ret_20d",
+      "name": "obv",
       "importance": 20
     },
     {
-      "name": "macd_hist",
-      "importance": 19
+      "name": "pv_corr_20",
+      "importance": 17
+    },
+    {
+      "name": "sma_5",
+      "importance": 16
+    },
+    {
+      "name": "track_semiconductor_max_ret_20d",
+      "importance": 15
+    },
+    {
+      "name": "consec_up",
+      "importance": 14
     },
     {
       "name": "ulcer_14",
-      "importance": 17
+      "importance": 13
+    },
+    {
+      "name": "track_semiconductor_trend_60d",
+      "importance": 12
+    },
+    {
+      "name": "pv_corr_10",
+      "importance": 11
     }
   ]
 }

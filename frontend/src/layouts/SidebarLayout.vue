@@ -78,6 +78,18 @@
               <el-icon><Coin /></el-icon>
               <span>策略实验室</span>
             </el-menu-item>
+            <el-menu-item index="/unsupervised">
+              <el-icon><DataAnalysis /></el-icon>
+              <span>智能分析</span>
+            </el-menu-item>
+            <el-menu-item index="/daily-report">
+              <el-icon><Document /></el-icon>
+              <span>每日日报</span>
+            </el-menu-item>
+            <el-menu-item index="/sector-leaders">
+              <el-icon><Star /></el-icon>
+              <span>业务逻辑分析</span>
+            </el-menu-item>
           </el-menu>
         </div>
       </div>
@@ -107,7 +119,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Monitor, List, Coin, Cpu, TrendCharts, Operation } from '@element-plus/icons-vue'
+import { Monitor, List, Coin, Cpu, TrendCharts, Operation, DataAnalysis, Document, Star } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const activeMenu = computed(() => {
@@ -123,6 +135,9 @@ const pageTitles: Record<string, string> = {
   '/model-factory': 'Model Factory',
   '/backtest': '策略实验室',
   '/runner': '量化流水线',
+  '/unsupervised': '智能分析',
+  '/daily-report': '每日日报',
+  '/sector-leaders': '业务逻辑分析',
 }
 const pageTitle = computed(() => {
   if (route.path.startsWith('/track/')) return 'Alpha Workstation · ' + (route.params.name as string || '')

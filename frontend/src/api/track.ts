@@ -127,14 +127,14 @@ export function getBacktestEquity() {
   return request.get('/backtest/equity')
 }
 
-// ── 策略回测 ──
+// ── 策略管理 ──
 
 export function listStrategies() {
-  return request.get('/backtest/strategies')
+  return request.get('/strategies/list')
 }
 
-export function getStrategyDetail(name: string) {
-  return request.get(`/backtest/strategies/${name}`)
+export function getStrategyDetail(key: string) {
+  return request.get(`/strategies/${key}`)
 }
 
 export function runStrategyBacktest(strategyName: string) {
@@ -322,4 +322,51 @@ export interface SuggestionsResponse {
 
 export function getSuggestions() {
   return request.get('/dashboard/suggestions')
+}
+
+/* ── 无监督学习 API ────────────────────────── */
+export function runUnsupervised(types: string = 'all') {
+  return request.post('/unsupervised/run', null, { params: { types } })
+}
+
+export function getRegimeResult() {
+  return request.get('/unsupervised/regime', { params: { limit: 1 } })
+}
+
+export function getPCAResult() {
+  return request.get('/unsupervised/pca', { params: { limit: 1 } })
+}
+
+export function getAnomalyResult() {
+  return request.get('/unsupervised/anomaly', { params: { limit: 1 } })
+}
+
+/* ── 每日日报 API ────────────────────────── */
+export function getDailyReportLatest() {
+  return request.get('/daily-report/latest')
+}
+
+export function getDailyReportHistory(limit: number = 20) {
+  return request.get('/daily-report/history', { params: { limit } })
+}
+
+/* ── 个股分析 + 预测追踪 API ───────────────── */
+export function getStockAnalysis(stockCode: string) {
+  return request.get(`/ml/analysis/${stockCode}`)
+}
+
+export function savePrediction(data: any) {
+  return request.post('/ml/predictions/save', data)
+}
+
+export function listPredictions(stockCode?: string, limit?: number) {
+  return request.get('/ml/predictions/list', { params: { stock_code: stockCode, limit: limit || 20 } })
+}
+
+export function reviewPredictions() {
+  return request.post('/ml/predictions/review')
+}
+
+export function predictionStats(stockCode?: string) {
+  return request.get('/ml/predictions/stats', { params: { stock_code: stockCode } })
 }

@@ -130,6 +130,101 @@
         </el-tab-pane>
       </el-tabs>
     </el-drawer>
+
+    <!-- AI 量化分析面板 (RichOne 风格) -->
+    <div v-if="selectedStock" class="ai-analysis-panel">
+      <div class="ai-panel-header">
+        <div class="ai-panel-title">
+          <el-icon><TrendCharts /></el-icon> AI 量化分析 · {{ selectedStock }}
+        </div>
+        <div class="ai-panel-actions">
+          <span v-if="analysis?.generated_at" class="ai-gen-time">生成于 {{ analysis.generated_at }}</span>
+          <el-button size="small" type="primary" :loading="analysisLoading" @click="runAnalysis">重新分析</el-button>
+          <el-button size="small" :loading="saveLoading" @click="saveCurrentPrediction">保存预测</el-button>
+        </div>
+      </div>
+
+      <div v-if="analysisLoading" class="ai-loading"><el-skeleton :rows="3" animated /></div>
+
+      <template v-if="analysis && analysis.dimensions">
+        <!-- 评级卡片行 -->
+        <el-row :gutter="12" class="rating-row">
+          <el-col :span="4">
+            <div class="rating-card">
+              <div class="rating-big" :class="'rating-' + (analysis.overall_rating || '').toLowerCase()">{{ analysis.overall_rating }}</div>
+              <div class="rating-action">{{ analysis.action === 'BUY' ? '建议买入' : analysis.action === 'SELL' ? '建议卖出' : '持有观望' }}</div>
+            </div>
+          </el-col>
+          <el-col :span="10">
+            <div class="dual-score-card">
+              <div class="score-item opp">
+                <div class="score-num">{{ analysis.opportunity_score?.toFixed(1) }}</div>
+                <div class="score-tag">机会评分</div>
+              </div>
+              <div class="score-item risk">
+                <div class="score-num">{{ analysis.risk_score?.toFixed(1) }}</div>
+                <div class="score-tag">风险评分</div>
+              </div>
+            </div>
+          </el-col>
+          <el-col :span="10">
+            <div class="price-advice-card">
+              <div class="advice-row"><span class="adv-label">建议买入</span><span class="adv-val">{{ analysis.price_advice?.suggested_buy }}</span></div>
+              <div class="advice-row"><span class="adv-label">目标 / 止损</span><span class="adv-val">{{ analysis.price_advice?.target_price }} / {{ analysis.price_advice?.stop_loss }}</span></div>
+              <div class="advice-row"><span class="adv-label">MA5 / MA20</span><span class="adv-val">{{ analysis.indicators?.ma5 }} / {{ analysis.indicators?.ma20 }}</span></div>
+              <div class="advice-row"><span class="adv-label">RSI14 / 动量</span><span class="adv-val">{{ analysis.indicators?.rsi14 }} / {{ analysis.indicators?.momentum_20d }}%</span></div>
+            </div>
+          </el-col>
+        </el-row>
+
+        <!-- 7维度明细 -->
+        <div class="dimension-grid">
+          <div v-for="(dim, key) in analysis.dimensions" :key="key" class="dim-item">
+            <div class="dim-header">
+              <span class="dim-label">{{ dim.label }}</span>
+              <span class="dim-score" :style="{ color: dim.score > 55 ? '#67c23a' : dim.score > 40 ? '#e6a23c' : '#f56c6c' }">{{ dim.score }}</span>
+            </div>
+            <el-progress :percentage="dim.score" :color="dim.score > 55 ? '#67c23a' : dim.score > 40 ? '#e6a23c' : '#f56c6c'" :stroke-width="6" />
+            <div class="dim-footer">
+              <span class="dim-desc">{{ dim.description }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 预测追踪 -->
+        <div class="prediction-tracker">
+          <div class="pt-header">
+            <span class="pt-title">预测追踪</span>
+            <div class="pt-actions">
+              <el-tag :type="predStats.win_rate > 50 ? 'success' : 'warning'" size="small">胜率 {{ predStats.win_rate }}% ({{ predStats.total }}次)</el-tag>
+              <el-button size="small" text @click="doReviewPredictions">刷新复盘</el-button>
+            </div>
+          </div>
+          <el-table v-if="predictions.length" :data="predictions" size="small" stripe max-height="250">
+            <el-table-column prop="created_at" label="时间" width="140">
+              <template #default="{ row }">{{ row.created_at?.slice(0,16) }}</template>
+            </el-table-column>
+            <el-table-column prop="overall_rating" label="评级" width="60">
+              <template #default="{ row }"><el-tag :type="row.overall_rating==='A'?'success':row.overall_rating==='D'?'danger':'warning'" size="small">{{ row.overall_rating }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="action" label="建议" width="80">
+              <template #default="{ row }"><el-tag :type="row.action==='BUY'?'success':row.action==='SELL'?'danger':'info'" size="small">{{ row.action }}</el-tag></template>
+            </el-table-column>
+            <el-table-column prop="suggested_buy" label="建议买入价" width="110" />
+            <el-table-column prop="target_price" label="目标价" width="80" align="right" />
+            <el-table-column label="结果" width="80">
+              <template #default="{ row }">
+                <el-tag v-if="row.review_result === 'GOOD'" type="success" size="small">准确</el-tag>
+                <el-tag v-else-if="row.review_result === 'BAD'" type="danger" size="small">失误</el-tag>
+                <el-tag v-else-if="row.review_result === 'MISSED'" type="info" size="small">未触发</el-tag>
+                <span v-else class="pending-tag">待复盘</span>
+              </template>
+            </el-table-column>
+          </el-table>
+          <el-empty v-else description="暂无预测记录，保存分析后可见" :image-size="40" />
+        </div>
+      </template>
+    </div>
   </div>
 </template>
 
@@ -161,6 +256,11 @@ import {
   getLabels,
   getWhitelist,
   getBlacklist,
+  getStockAnalysis,
+  savePrediction,
+  listPredictions,
+  reviewPredictions,
+  predictionStats,
   type Track,
   type TrackStock,
 } from '@/api/track'
@@ -229,6 +329,73 @@ let klineChart: echarts.ECharts | null = null
 const selectedStockName = computed(() => {
   const s = stocks.value.find(x => x.code === selectedStock.value)
   return s ? `${s.name} (${s.code})` : ''
+})
+
+// AI 分析
+const analysis = ref<any>(null)
+const analysisLoading = ref(false)
+const saveLoading = ref(false)
+const predictions = ref<any[]>([])
+const predStats = ref({ total: 0, good: 0, bad: 0, missed: 0, win_rate: 0 })
+
+async function runAnalysis() {
+  if (!selectedStock.value) return
+  analysisLoading.value = true
+  try {
+    const resp: any = await getStockAnalysis(selectedStock.value)
+    analysis.value = resp
+    await loadPredictions()
+  } catch (e: any) { ElMessage.error('分析失败: ' + (e.message || '')) }
+  finally { analysisLoading.value = false }
+}
+
+async function saveCurrentPrediction() {
+  if (!analysis.value) return
+  saveLoading.value = true
+  try {
+    const payload = {
+      stock_code: selectedStock.value,
+      stock_name: selectedStockName.value,
+      overall_rating: analysis.value.overall_rating,
+      action: analysis.value.action,
+      opportunity_score: analysis.value.opportunity_score,
+      risk_score: analysis.value.risk_score,
+      suggested_buy: analysis.value.price_advice?.suggested_buy || '',
+      target_price: analysis.value.price_advice?.target_price || 0,
+      stop_loss: analysis.value.price_advice?.stop_loss || 0,
+      ...analysis.value,
+    }
+    await savePrediction(payload)
+    ElMessage.success('预测已保存')
+    await loadPredictions()
+  } catch (e: any) { ElMessage.error('保存失败: ' + (e.message || '')) }
+  finally { saveLoading.value = false }
+}
+
+async function loadPredictions() {
+  try {
+    const [preds, stats]: any[] = await Promise.all([
+      listPredictions(selectedStock.value, 20),
+      predictionStats(selectedStock.value),
+    ])
+    predictions.value = preds || []
+    predStats.value = stats || { total: 0, good: 0, bad: 0, missed: 0, win_rate: 0 }
+  } catch { /* ignore */ }
+}
+
+async function doReviewPredictions() {
+  try {
+    await reviewPredictions()
+    await loadPredictions()
+    ElMessage.success('复盘完成')
+  } catch (e: any) { ElMessage.error('复盘失败: ' + (e.message || '')) }
+}
+
+watch(selectedStock, async (newStock) => {
+  if (newStock) {
+    analysis.value = null
+    await runAnalysis()
+  }
 })
 
 async function refreshData() {
@@ -556,6 +723,7 @@ watch(() => route.params.name, (name) => {
   display: flex;
   flex-direction: column;
   background: #fff;
+  overflow-y: auto;
 }
 
 /* 赛道 Tab 栏 */
@@ -680,9 +848,9 @@ watch(() => route.params.name, (name) => {
 
 /* K 线主区域 */
 .main-body {
-  flex: 1;
+  flex-shrink: 0;
+  min-height: 500px;
   display: flex;
-  min-height: 0;
   overflow: hidden;
 }
 
@@ -815,4 +983,102 @@ watch(() => route.params.name, (name) => {
   color: #909399;
   text-decoration: line-through;
 }
+
+/* AI 分析面板 */
+.ai-analysis-panel {
+  margin: 12px 16px 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.ai-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f0f2f5;
+}
+.ai-panel-title { font-size: 14px; font-weight: 600; color: #1a1a2e; display: flex; align-items: center; gap: 6px; }
+.ai-panel-actions { display: flex; align-items: center; gap: 8px; }
+.ai-gen-time { font-size: 11px; color: #94a3b8; }
+.ai-loading { padding: 20px; }
+
+.rating-row { margin: 16px 20px; }
+.rating-card {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: 8px;
+  padding: 16px 12px;
+  text-align: center;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.rating-big { font-size: 36px; font-weight: 800; line-height: 1; }
+.rating-a { color: #16a34a; }
+.rating-b { color: #2563eb; }
+.rating-c { color: #d97706; }
+.rating-d { color: #dc2626; }
+.rating-action { font-size: 12px; color: #475569; margin-top: 4px; }
+
+.dual-score-card {
+  display: flex;
+  gap: 12px;
+  height: 100%;
+}
+.score-item {
+  flex: 1;
+  border-radius: 8px;
+  padding: 16px 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.score-item.opp { background: #f0fdf4; }
+.score-item.risk { background: #fef2f2; }
+.score-num { font-size: 28px; font-weight: 700; }
+.score-item.opp .score-num { color: #16a34a; }
+.score-item.risk .score-num { color: #dc2626; }
+.score-tag { font-size: 11px; color: #64748b; margin-top: 2px; }
+
+.price-advice-card {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  justify-content: center;
+}
+.advice-row { display: flex; justify-content: space-between; font-size: 12px; }
+.adv-label { color: #94a3b8; }
+.adv-val { color: #334155; font-weight: 600; }
+
+.dimension-grid {
+  padding: 0 20px 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.dim-item { padding: 6px 0; }
+.dim-header { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.dim-label { font-size: 12px; color: #475569; }
+.dim-score { font-size: 14px; font-weight: 700; }
+.dim-desc { font-size: 10px; color: #94a3b8; }
+.dim-footer { margin-top: 2px; }
+
+.prediction-tracker {
+  margin: 0 20px 16px;
+  background: #fafbfc;
+  border-radius: 8px;
+  padding: 12px 16px;
+}
+.pt-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.pt-title { font-size: 13px; font-weight: 600; color: #475569; }
+.pt-actions { display: flex; align-items: center; gap: 8px; }
+.pending-tag { font-size: 11px; color: #94a3b8; }
 </style>

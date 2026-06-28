@@ -166,6 +166,63 @@ class FeatureConfig(Base):
     )
 
 
+class UnsupervisedResult(Base):
+    """无监督学习分析结果表 - 市场状态/因子降维/异常检测"""
+
+    __tablename__ = "unsupervised_results"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    analysis_type = Column(String(20), nullable=False, index=True)  # regime / pca / anomaly / daily_report
+    track_name = Column(String(50), nullable=True)  # 赛道名，pca/全市场时为空
+    result_date = Column(String(10), nullable=False)  # 分析运行日期
+    payload = Column(JSON, nullable=False)  # 分析结果 JSON
+    params_snapshot = Column(JSON, nullable=True)  # 分析参数快照
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Recommendation(Base):
+    """推荐记录表 - 每日推荐 + 次日复盘评分"""
+
+    __tablename__ = "recommendations"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_code = Column(String(20), nullable=False, index=True)
+    stock_name = Column(String(50), nullable=True)
+    rec_date = Column(String(10), nullable=False)  # 推荐日期
+    buy_price_range = Column(String(50), nullable=True)  # 建议买入区间: "15.20-15.80"
+    target_price = Column(Float, nullable=True)  # 目标价
+    stop_loss = Column(Float, nullable=True)  # 止损价
+    reasoning = Column(Text, nullable=True)  # 推荐理由
+    status = Column(String(20), default="pending")  # pending / reviewed
+    review_result = Column(String(20), nullable=True)  # GOOD / BAD / MISSED
+    actual_performance = Column(Float, nullable=True)  # 实际收益%
+    review_date = Column(String(10), nullable=True)  # 复盘日期
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Prediction(Base):
+    """AI预测记录表 - 每次分析的快照 + 复盘追踪"""
+
+    __tablename__ = "predictions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    stock_code = Column(String(20), nullable=False, index=True)
+    stock_name = Column(String(50), nullable=True)
+    overall_rating = Column(String(5), nullable=True)
+    action = Column(String(10), nullable=True)
+    opportunity_score = Column(Float, default=0)
+    risk_score = Column(Float, default=0)
+    suggested_buy = Column(String(50), nullable=True)
+    target_price = Column(Float, nullable=True)
+    stop_loss = Column(Float, nullable=True)
+    analysis_snapshot = Column(JSON, nullable=True)
+    status = Column(String(20), default="pending")
+    review_result = Column(String(20), nullable=True)
+    actual_return = Column(Float, nullable=True)
+    review_date = Column(String(10), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class PipelineRun(Base):
     """流水线运行记录 - 每次训练/回测的日志"""
 
